@@ -54,7 +54,18 @@ export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) 
 
   const signup = mode === 'signup';
 
-  const kakaoLogin = () => onLogin('buyer');
+  const kakaoLogin = () => {
+    if (process.env.NEXT_PUBLIC_API_MOCKING === 'enabled') {
+      window.location.href = '/auth/kakao/callback?code=mock-kakao-code-001';
+    } else {
+      const params = new URLSearchParams({
+        client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID ?? '',
+        redirect_uri: `${window.location.origin}/auth/kakao/callback`,
+        response_type: 'code',
+      });
+      window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`;
+    }
+  };
   const emailLogin = () => onLogin(resolveRole(email), email);
 
   return (

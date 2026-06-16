@@ -110,6 +110,46 @@ Base URL: `http://localhost:3000/api/v1` (MSW Mock)
 
 ---
 
+### POST /api/v1/auth/oauth/kakao
+
+Kakao authorization code를 서버가 처리하여 앱 토큰을 발급한다.
+
+클라이언트는 Kakao OAuth 인증 페이지로 리다이렉트 후 받은 `code`를 이 엔드포인트로 전달한다.
+
+**Kakao 인증 URL**
+```
+https://kauth.kakao.com/oauth/authorize
+  ?client_id={KAKAO_CLIENT_ID}
+  &redirect_uri={origin}/auth/kakao/callback
+  &response_type=code
+```
+
+**Request**
+```json
+{ "code": "authorization-code-from-kakao" }
+```
+
+**Response 200** — 로그인과 동일한 형식
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "user-kakao-1718500000000",
+      "name": "카카오사용자",
+      "email": "kakao@user.com",
+      "role": "buyer"
+    },
+    "token": "mock-token::user-kakao-1718500000000"
+  },
+  "message": "success"
+}
+```
+
+> Kakao OAuth 플로우: 버튼 클릭 → Kakao 인증 페이지 → `/auth/kakao/callback?code=...` 콜백 → 이 API 호출 → 로그인 완료
+
+---
+
 ## Products
 
 ### GET /api/v1/products
