@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { Sparkles, X, MessageCircle, Info } from 'lucide-react';
+import api from '@/lib/api';
+import { useAuthStore } from '@/store/useAuthStore';
 
 /* ── 타입 ──────────────────────────────────────────────── */
 
@@ -10,16 +12,7 @@ export type UserRole = 'buyer' | 'seller';
 export interface LoginModalProps {
   open: boolean;
   onClose: () => void;
-  onLogin: (role: UserRole, email?: string) => void;
-}
-
-/* ── 역할 결정 ─────────────────────────────────────────── */
-
-const SELLER_ACCOUNTS = ['seller@prompthub.kr', 'promptlab@prompthub.kr'];
-
-function resolveRole(email: string): UserRole {
-  const e = (email || '').trim().toLowerCase();
-  return SELLER_ACCOUNTS.includes(e) || /seller|판매/.test(e) ? 'seller' : 'buyer';
+  onLogin?: (role: UserRole, email?: string) => void;
 }
 
 /* ── Logo (모달 내부용) ─────────────────────────────────── */
@@ -39,14 +32,24 @@ function Logo() {
 
 /* ── LoginModal ────────────────────────────────────────── */
 
-export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) {
+export default function LoginModal({ open, onClose }: LoginModalProps) {
+  const { login } = useAuthStore();
   const [mode, setMode] = React.useState<'login' | 'signup'>('login');
+  const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  const isMocking = process.env.NEXT_PUBLIC_API_MOCKING === 'enabled';
 
   React.useEffect(() => {
     if (open) {
       setMode('login');
+      setName('');
       setEmail('');
+      setPassword('');
+      setError('');
     }
   }, [open]);
 
@@ -55,7 +58,7 @@ export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) 
   const signup = mode === 'signup';
 
   const kakaoLogin = () => {
-    if (process.env.NEXT_PUBLIC_API_MOCKING === 'enabled') {
+    if (isMocking) {
       window.location.href = '/auth/kakao/callback?code=mock-kakao-code-001';
     } else {
       const params = new URLSearchParams({
@@ -66,7 +69,24 @@ export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) 
       window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`;
     }
   };
-  const emailLogin = () => onLogin(resolveRole(email), email);
+
+  const handleEmailSubmit = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const endpoint = signup ? '/api/v1/auth/signup' : '/api/v1/auth/login';
+      const body = signup ? { name, email, password } : { email, password };
+      const res = await api.post(endpoint, body);
+      const { user, token } = res.data.data;
+      login(user, token);
+      onClose();
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(message ?? '요청에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -114,7 +134,7 @@ export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) 
 
         {/* 이메일 폼 */}
         <form
-          onSubmit={(e) => { e.preventDefault(); emailLogin(); }}
+          onSubmit={(e) => { e.preventDefault(); handleEmailSubmit(); }}
           style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
         >
           {signup && (
@@ -122,6 +142,8 @@ export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) 
               닉네임
               <input
                 placeholder="프롬이"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 style={{ height: 44, padding: '0 14px', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-md)', fontFamily: 'var(--ph-font-family)', fontSize: 15, color: 'var(--ph-text)', outline: 'none', background: '#fff' }}
               />
             </label>
@@ -141,26 +163,36 @@ export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) 
             <input
               type="password"
               placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               style={{ height: 44, padding: '0 14px', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-md)', fontFamily: 'var(--ph-font-family)', fontSize: 15, color: 'var(--ph-text)', outline: 'none', background: '#fff' }}
             />
           </label>
+          {error && (
+            <div style={{ fontSize: 13, color: 'var(--ph-error)', padding: '6px 10px', background: '#fff1f1', borderRadius: 'var(--ph-radius-sm)', border: '1px solid #fecaca' }}>
+              {error}
+            </div>
+          )}
           <button
             type="submit"
-            style={{ marginTop: 4, height: 52, borderRadius: 'var(--ph-radius-md)', border: 'none', cursor: 'pointer', background: 'var(--ph-primary)', color: '#fff', fontFamily: 'var(--ph-font-family)', fontSize: 16, fontWeight: 700 }}
+            disabled={loading}
+            style={{ marginTop: 4, height: 52, borderRadius: 'var(--ph-radius-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', background: 'var(--ph-primary)', color: '#fff', fontFamily: 'var(--ph-font-family)', fontSize: 16, fontWeight: 700, opacity: loading ? 0.7 : 1 }}
           >
-            {signup ? '가입하고 시작하기' : '로그인'}
+            {loading ? '처리 중...' : signup ? '가입하고 시작하기' : '로그인'}
           </button>
         </form>
 
-        {/* 데모 안내 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, padding: '10px 12px', background: 'var(--ph-gray-50)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-md)', fontSize: 12.5, color: 'var(--ph-text-muted)', lineHeight: 1.5 }}>
-          <Info style={{ width: 14, height: 14, flexShrink: 0 }} />
-          <span>
-            데모: 로그인 시 계정 권한이 자동 확인돼요. 판매자 화면은{' '}
-            <b style={{ color: 'var(--ph-text-secondary)' }}>seller@prompthub.kr</b>
-            {' '}로 로그인해 보세요.
-          </span>
-        </div>
+        {/* 데모 안내 — MSW Mock 활성화 시에만 표시 */}
+        {isMocking && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, padding: '10px 12px', background: 'var(--ph-gray-50)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-md)', fontSize: 12.5, color: 'var(--ph-text-muted)', lineHeight: 1.5 }}>
+            <Info style={{ width: 14, height: 14, flexShrink: 0 }} />
+            <span>
+              데모: 로그인 시 계정 권한이 자동 확인돼요. 판매자 화면은{' '}
+              <b style={{ color: 'var(--ph-text-secondary)' }}>seller@prompthub.kr</b>
+              {' '}로 로그인해 보세요.
+            </span>
+          </div>
+        )}
 
         {/* 모드 전환 */}
         <div style={{ textAlign: 'center', marginTop: 18, fontSize: 14, color: 'var(--ph-text-secondary)' }}>
