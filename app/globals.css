@@ -1,26 +1,204 @@
 @import "tailwindcss";
 
+/* ─── Design Tokens: --ph-* variables ─── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Primitive colors */
+  --ph-white: #ffffff;
+  --ph-black: #000000;
+  --ph-blue: #1b64da;
+  --ph-blue-pale: #e8f3ff;
+  --ph-gray-line: #e5e7eb;
+  --ph-red: #d92d20;
+  --ph-gray-50: #f8f9fb;
+  --ph-gray-100: #f1f3f5;
+  --ph-gray-400: #8b95a1;
+  --ph-gray-600: #4e5968;
+  --ph-blue-hover: #1957bd;
+
+  /* Semantic colors */
+  --ph-background: var(--ph-white);
+  --ph-surface: var(--ph-white);
+  --ph-surface-muted: var(--ph-gray-50);
+  --ph-text: var(--ph-black);
+  --ph-text-secondary: var(--ph-gray-600);
+  --ph-text-muted: var(--ph-gray-400);
+  --ph-on-surface: var(--ph-black);
+  --ph-on-accent: var(--ph-white);
+  --ph-accent: var(--ph-blue);
+  --ph-primary: var(--ph-blue);
+  --ph-secondary: var(--ph-blue-pale);
+  --ph-tertiary: var(--ph-gray-line);
+  --ph-border: var(--ph-gray-line);
+  --ph-border-strong: var(--ph-black);
+  --ph-error: var(--ph-red);
+
+  /* Typography */
+  --ph-font-family: "Pretendard Variable", "Pretendard", -apple-system,
+    BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --ph-weight-regular: 400;
+  --ph-weight-semibold: 600;
+  --ph-weight-bold: 700;
+
+  --ph-headline-display-size: 40px;
+  --ph-headline-display-lh: 46.8px;
+  --ph-headline-display-weight: 700;
+  --ph-headline-lg-size: 33px;
+  --ph-headline-lg-lh: 46.8px;
+  --ph-headline-lg-weight: 700;
+  --ph-headline-md-size: 27px;
+  --ph-headline-md-lh: 36px;
+  --ph-headline-md-weight: 700;
+
+  --ph-body-lg-size: 18px;
+  --ph-body-lg-lh: 27px;
+  --ph-body-lg-weight: 400;
+  --ph-body-md-size: 15px;
+  --ph-body-md-lh: 22px;
+  --ph-body-md-weight: 400;
+  --ph-body-sm-size: 14px;
+  --ph-body-sm-lh: 20px;
+  --ph-body-sm-weight: 400;
+
+  --ph-label-lg-size: 15px;
+  --ph-label-lg-lh: 22px;
+  --ph-label-lg-weight: 600;
+  --ph-label-md-size: 15px;
+  --ph-label-md-lh: 22px;
+  --ph-label-md-weight: 600;
+  --ph-label-sm-size: 14px;
+  --ph-label-sm-lh: 20px;
+  --ph-label-sm-weight: 600;
+
+  --ph-letter-spacing: 0px;
+
+  /* Spacing */
+  --ph-space-2xs: 6px;
+  --ph-space-xs: 10px;
+  --ph-space-4: 4px;
+  --ph-space-8: 8px;
+  --ph-space-12: 12px;
+  --ph-space-16: 16px;
+  --ph-space-24: 24px;
+  --ph-space-40: 40px;
+  --ph-space-sm: 20px;
+  --ph-space-md: 30px;
+  --ph-space-lg: 50px;
+  --ph-space-xl: 166px;
+
+  /* Border radius */
+  --ph-radius-none: 0px;
+  --ph-radius-sm: 4px;
+  --ph-radius-md: 7px;
+  --ph-radius-lg: 8px;
+  --ph-radius-xl: 16px;
+  --ph-radius-full: 9999px;
+
+  /* Shadow */
+  --ph-shadow-none: none;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* ─── Tailwind v4 theme mapping ─── */
+@theme {
+  /* Colors */
+  --color-ph-white: var(--ph-white);
+  --color-ph-black: var(--ph-black);
+  --color-ph-blue: var(--ph-blue);
+  --color-ph-blue-pale: var(--ph-blue-pale);
+  --color-ph-blue-hover: var(--ph-blue-hover);
+  --color-ph-gray-line: var(--ph-gray-line);
+  --color-ph-red: var(--ph-red);
+  --color-ph-gray-50: var(--ph-gray-50);
+  --color-ph-gray-100: var(--ph-gray-100);
+  --color-ph-gray-400: var(--ph-gray-400);
+  --color-ph-gray-600: var(--ph-gray-600);
+  --color-ph-background: var(--ph-background);
+  --color-ph-surface: var(--ph-surface);
+  --color-ph-surface-muted: var(--ph-surface-muted);
+  --color-ph-text: var(--ph-text);
+  --color-ph-text-secondary: var(--ph-text-secondary);
+  --color-ph-text-muted: var(--ph-text-muted);
+  --color-ph-on-surface: var(--ph-on-surface);
+  --color-ph-on-accent: var(--ph-on-accent);
+  --color-ph-accent: var(--ph-accent);
+  --color-ph-primary: var(--ph-primary);
+  --color-ph-secondary: var(--ph-secondary);
+  --color-ph-tertiary: var(--ph-tertiary);
+  --color-ph-border: var(--ph-border);
+  --color-ph-border-strong: var(--ph-border-strong);
+  --color-ph-error: var(--ph-error);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Font family */
+  --font-family-ph: var(--ph-font-family);
+
+  /* Font weight */
+  --font-weight-ph-regular: var(--ph-weight-regular);
+  --font-weight-ph-semibold: var(--ph-weight-semibold);
+  --font-weight-ph-bold: var(--ph-weight-bold);
+
+  /* Font size */
+  --font-size-ph-headline-display: var(--ph-headline-display-size);
+  --font-size-ph-headline-lg: var(--ph-headline-lg-size);
+  --font-size-ph-headline-md: var(--ph-headline-md-size);
+  --font-size-ph-body-lg: var(--ph-body-lg-size);
+  --font-size-ph-body-md: var(--ph-body-md-size);
+  --font-size-ph-body-sm: var(--ph-body-sm-size);
+  --font-size-ph-label-lg: var(--ph-label-lg-size);
+  --font-size-ph-label-md: var(--ph-label-md-size);
+  --font-size-ph-label-sm: var(--ph-label-sm-size);
+
+  /* Line height */
+  --line-height-ph-headline-display: var(--ph-headline-display-lh);
+  --line-height-ph-headline-lg: var(--ph-headline-lg-lh);
+  --line-height-ph-headline-md: var(--ph-headline-md-lh);
+  --line-height-ph-body-lg: var(--ph-body-lg-lh);
+  --line-height-ph-body-md: var(--ph-body-md-lh);
+  --line-height-ph-body-sm: var(--ph-body-sm-lh);
+  --line-height-ph-label-lg: var(--ph-label-lg-lh);
+  --line-height-ph-label-md: var(--ph-label-md-lh);
+  --line-height-ph-label-sm: var(--ph-label-sm-lh);
+
+  /* Spacing */
+  --spacing-ph-2xs: var(--ph-space-2xs);
+  --spacing-ph-xs: var(--ph-space-xs);
+  --spacing-ph-4: var(--ph-space-4);
+  --spacing-ph-8: var(--ph-space-8);
+  --spacing-ph-12: var(--ph-space-12);
+  --spacing-ph-16: var(--ph-space-16);
+  --spacing-ph-24: var(--ph-space-24);
+  --spacing-ph-40: var(--ph-space-40);
+  --spacing-ph-sm: var(--ph-space-sm);
+  --spacing-ph-md: var(--ph-space-md);
+  --spacing-ph-lg: var(--ph-space-lg);
+  --spacing-ph-xl: var(--ph-space-xl);
+
+  /* Border radius */
+  --radius-ph-none: var(--ph-radius-none);
+  --radius-ph-sm: var(--ph-radius-sm);
+  --radius-ph-md: var(--ph-radius-md);
+  --radius-ph-lg: var(--ph-radius-lg);
+  --radius-ph-xl: var(--ph-radius-xl);
+  --radius-ph-full: var(--ph-radius-full);
+
+  /* Shadow */
+  --shadow-ph-none: var(--ph-shadow-none);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ph-background);
+  color: var(--ph-text);
+  font-family: var(--ph-font-family);
+  letter-spacing: var(--ph-letter-spacing);
+}
+
+/* ─── Header 반응형 (원본 그대로) ─── */
+.ph-hamburger { display: none; }
+
+@media (max-width: 768px) {
+  .ph-card-media { display: none !important; }
+  .ph-grid { grid-template-columns: 1fr !important; }
+  .ph-desktop-nav { display: none !important; }
+  .ph-header-search { display: none !important; }
+  .ph-hamburger { display: inline-flex !important; }
 }
