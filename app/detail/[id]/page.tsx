@@ -462,9 +462,20 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
     addItem({ id: String(p.id), title: p.title, price: p.price, thumbnailUrl: p.thumbnail_url ?? null });
   };
 
-  const onWish = () => {
+  const onWish = async () => {
     if (!isLoggedIn) { openLoginModal(); return; }
-    toggle({ id: String(p.id), title: p.title, price: p.price, thumbnailUrl: p.thumbnail_url ?? null });
+    const item = { id: String(p.id), title: p.title, price: p.price, thumbnailUrl: p.thumbnail_url ?? null };
+    const wasInWish = inWish;
+    toggle(item); // 낙관적 업데이트
+    try {
+      if (wasInWish) {
+        await api.delete(`/api/v1/wishlist/${p.id}`);
+      } else {
+        await api.post(`/api/v1/wishlist/${p.id}`);
+      }
+    } catch {
+      toggle(item); // 실패 시 롤백
+    }
   };
 
   const features = p.features ?? ['결제 즉시 다운로드', '상업적 이용 가능', '무료 업데이트 제공'];

@@ -13,6 +13,7 @@ interface WishState {
   addItem: (item: WishItem) => void
   removeItem: (id: string) => void
   toggle: (item: WishItem) => void
+  setItems: (items: WishItem[]) => void
 }
 
 export const useWishStore = create<WishState>()(
@@ -32,6 +33,7 @@ export const useWishStore = create<WishState>()(
             ? { items: state.items.filter((i) => i.id !== item.id) }
             : { items: [...state.items, item] }
         ),
+      setItems: (items) => set({ items }),
     }),
     { name: 'wish' }
   )
