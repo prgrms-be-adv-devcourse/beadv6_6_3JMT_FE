@@ -3,12 +3,15 @@
 import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useCartStore } from '@/store/useCartStore';
+import { useWishStore } from '@/store/useWishStore';
 import LoginModal from '@/components/modals/LoginModal';
 import {
   Sparkles,
   Search,
   Bell,
   ShoppingCart,
+  Heart,
   Tag,
   Download,
   Star,
@@ -240,15 +243,16 @@ export default function Header() {
   const pathname = usePathname();
 
   const { user, login, logout, loginModalOpen, openLoginModal, closeLoginModal } = useAuthStore();
+  const { items: cart, removeItem: removeCartItem } = useCartStore();
+  const { items: wishItems } = useWishStore();
   const [query, setQuery] = React.useState('');
-  const [cart, setCart] = React.useState<CartItem[]>([]);
   const [menu, setMenu] = React.useState<string | null>(null);
 
   const go = (page: string) => router.push(PAGE_ROUTES[page] ?? '/');
   const onSearch = (q: string) => { setQuery(q); router.push('/browse'); };
   const openLogin = () => openLoginModal();
   const onLogout = () => logout();
-  const onRemoveFromCart = (id: string) => setCart((c) => c.filter((x) => x.id !== id));
+  const onRemoveFromCart = (id: string) => removeCartItem(id);
 
   const handleLogin = (role: UserRole, email?: string) => {
     const name = email ? email.split('@')[0] : '카카오사용자';
@@ -410,6 +414,7 @@ export default function Header() {
                 style={{ flexShrink: 0, border: 'none', cursor: 'pointer', fontFamily: 'var(--ph-font-family)', fontWeight: 600, color: '#fff', background: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-md)', height: 36, padding: '0 14px', fontSize: 14 }}
               >판매하기</button>
               <IconBtn icon={Store} label="내 상점" active={current === 'shop'} onClick={() => go('shop')} />
+              <IconBtn icon={Heart} label={null} count={wishItems.length || undefined} onClick={() => router.push('/mypage?tab=wish')} />
               {CartDropdown}
               {BellDropdown}
               {UserMenuDropdown}
@@ -417,6 +422,7 @@ export default function Header() {
           )}
           {role === 'buyer' && (
             <React.Fragment>
+              <IconBtn icon={Heart} label={null} count={wishItems.length || undefined} onClick={() => router.push('/mypage?tab=wish')} />
               {CartDropdown}
               {BellDropdown}
               {UserMenuDropdown}

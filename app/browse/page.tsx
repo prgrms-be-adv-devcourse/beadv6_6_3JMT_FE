@@ -188,13 +188,15 @@ function PromptCard({ p, onOpen }: { p: Prompt; onOpen?: (p: Prompt) => void }) 
           >
             <Heart style={{ width: 16, height: 16, color: isWished ? 'var(--ph-error)' : 'var(--ph-text-muted)', fill: isWished ? 'var(--ph-error)' : 'none' } as React.CSSProperties} />
           </button>
-          <button
-            onClick={onCart}
-            title="장바구니 담기"
-            style={{ width: 32, height: 32, borderRadius: 'var(--ph-radius-md)', background: 'rgba(255,255,255,0.92)', border: '1px solid var(--ph-border)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
-          >
-            <ShoppingCart style={{ width: 16, height: 16, color: 'var(--ph-text-muted)' } as React.CSSProperties} />
-          </button>
+          {p.price !== 0 && (
+            <button
+              onClick={onCart}
+              title="장바구니 담기"
+              style={{ width: 32, height: 32, borderRadius: 'var(--ph-radius-md)', background: 'rgba(255,255,255,0.92)', border: '1px solid var(--ph-border)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
+            >
+              <ShoppingCart style={{ width: 16, height: 16, color: 'var(--ph-text-muted)' } as React.CSSProperties} />
+            </button>
+          )}
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
