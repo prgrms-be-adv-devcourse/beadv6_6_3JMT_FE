@@ -407,6 +407,14 @@ function WhySection() {
 /* ── Seller CTA ──────────────────────────────────────────────────── */
 
 function SellerCTA() {
+  const router = useRouter();
+  const { isLoggedIn, user: authUser, openLoginModal } = useAuthStore();
+
+  const onSell = () => {
+    if (!isLoggedIn) { openLoginModal(); return; }
+    router.push(authUser?.role === 'seller' ? '/shop' : '/apply');
+  };
+
   return (
     <section style={{ maxWidth: 1200, margin: '112px auto 0', padding: '0 32px' }}>
       <div style={{ background: 'linear-gradient(135deg, #eaf2fe, #e0ebfb)', borderRadius: 'var(--ph-radius-xl)', padding: '56px 56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 32, flexWrap: 'wrap' }}>
@@ -414,14 +422,14 @@ function SellerCTA() {
           <h2 style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.25 }}>내 프롬프트로<br />수익을 만들어 보세요</h2>
           <p style={{ fontSize: 17, color: 'var(--ph-text-secondary)', margin: '14px 0 28px', lineHeight: 1.6 }}>잘 만든 프롬프트 하나가 꾸준한 수입이 됩니다. 등록은 무료, 수수료는 단 15%.</p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <a
-              href="/apply"
-              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 52, padding: '0 28px', borderRadius: 'var(--ph-radius-md)', background: 'var(--ph-primary)', color: '#fff', fontFamily: 'var(--ph-font-family)', fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer', textDecoration: 'none' }}
-            >판매 시작하기</a>
-            <a
-              href="/browse"
-              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 52, padding: '0 28px', borderRadius: 'var(--ph-radius-md)', background: 'var(--ph-white)', color: 'var(--ph-text)', fontFamily: 'var(--ph-font-family)', fontSize: 16, fontWeight: 700, border: '1px solid var(--ph-border)', cursor: 'pointer', textDecoration: 'none' }}
-            >둘러보기</a>
+            <button
+              onClick={onSell}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 52, padding: '0 28px', borderRadius: 'var(--ph-radius-md)', background: 'var(--ph-primary)', color: '#fff', fontFamily: 'var(--ph-font-family)', fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer' }}
+            >판매 시작하기</button>
+            <button
+              onClick={() => router.push('/browse')}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 52, padding: '0 28px', borderRadius: 'var(--ph-radius-md)', background: 'var(--ph-white)', color: 'var(--ph-text)', fontFamily: 'var(--ph-font-family)', fontSize: 16, fontWeight: 700, border: '1px solid var(--ph-border)', cursor: 'pointer' }}
+            >둘러보기</button>
           </div>
         </div>
         <div className="float" style={{ flexShrink: 0 }}>

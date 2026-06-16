@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
   ArrowLeft, Store, Send, SearchCheck, Check, Clock,
   Link as LinkIcon, BadgePercent, Lock,
@@ -246,9 +247,10 @@ const STEPS = [
 
 export default function ApplyPage() {
   const router = useRouter();
+  const { isLoggedIn, user: authUser } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
 
-  // 프로토타입: 실제 인증 상태 대신 간단히 null로 처리
-  const [user] = useState<{ name: string; email: string } | null>(null);
+  useEffect(() => setMounted(true), []);
 
   const [picked, setPicked] = useState<string[]>([]);
   const [intro, setIntro] = useState('');
@@ -256,8 +258,8 @@ export default function ApplyPage() {
   const [agree, setAgree] = useState(false);
   const [done, setDone] = useState(false);
 
-  const name = user ? user.name : '';
-  const email = user ? user.email : '';
+  const name = authUser?.name ?? '';
+  const email = authUser?.email ?? '';
 
   const togglePick = (id: string) =>
     setPicked((s) =>
@@ -286,8 +288,10 @@ export default function ApplyPage() {
     color: 'var(--ph-text)',
   };
 
+  if (!mounted) return null;
+
   /* ── 비로그인 게이트 ── */
-  if (!user) {
+  if (!isLoggedIn) {
     return (
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '120px 32px', textAlign: 'center' }}>
         <span
