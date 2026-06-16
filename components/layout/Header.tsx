@@ -249,7 +249,7 @@ export default function Header() {
   const [menu, setMenu] = React.useState<string | null>(null);
 
   const go = (page: string) => router.push(PAGE_ROUTES[page] ?? '/');
-  const onSearch = (q: string) => { setQuery(q); router.push('/browse'); };
+  const onSearch = (q: string) => { setQuery(q); router.push(q ? `/browse?q=${encodeURIComponent(q)}` : '/browse'); };
   const openLogin = () => openLoginModal();
   const onLogout = () => logout();
   const onRemoveFromCart = (id: string) => removeCartItem(id);
