@@ -225,12 +225,23 @@ function BrowseScreen() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams.get('q') ?? '';
-  const [cat, setCat] = useState('all');
+  const category = searchParams.get('category') ?? 'all';
   const [sort, setSort] = useState('인기순');
 
-  const clearQuery = () => router.push('/browse');
+  const setCategory = (id: string) => {
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    if (id !== 'all') params.set('category', id);
+    router.push('/browse' + (params.toString() ? `?${params.toString()}` : ''));
+  };
 
-  let list = cat === 'all' ? PROMPTS : PROMPTS.filter((p) => p.cat === cat);
+  const clearQuery = () => {
+    const params = new URLSearchParams();
+    if (category !== 'all') params.set('category', category);
+    router.push('/browse' + (params.toString() ? `?${params.toString()}` : ''));
+  };
+
+  let list = category === 'all' ? PROMPTS : PROMPTS.filter((p) => p.cat === category);
   if (query) {
     const q = query.toLowerCase();
     list = list.filter((p) => {
@@ -251,7 +262,7 @@ function BrowseScreen() {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
         {CATEGORIES.map((c) => (
-          <Tag key={c.id} selected={cat === c.id} onClick={() => setCat(c.id)}>{c.label}</Tag>
+          <Tag key={c.id} selected={category === c.id} onClick={() => setCategory(c.id)}>{c.label}</Tag>
         ))}
       </div>
 

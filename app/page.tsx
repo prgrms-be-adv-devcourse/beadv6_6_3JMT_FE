@@ -358,7 +358,7 @@ function CategorySection({ onPick }: { onPick: (label: string) => void }) {
         {CATEGORIES.map((c) => (
           <button
             key={c.id}
-            onClick={() => onPick(c.label)}
+            onClick={() => onPick(c.id)}
             style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '22px 22px', background: 'var(--ph-white)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-xl)', cursor: 'pointer', fontFamily: 'var(--ph-font-family)', textAlign: 'left', transition: 'border-color .15s ease' }}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--ph-primary)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--ph-border)'; }}
@@ -441,6 +441,7 @@ function SellerCTA() {
 /* ── HomeScreen ──────────────────────────────────────────────────── */
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [query, setQuery] = useState('');
 
   const onSearch = (q: string) => {
@@ -451,7 +452,7 @@ export default function HomeScreen() {
     <div>
       <HeroToss query={query} onChange={setQuery} onSearch={onSearch} />
       <PopularGrid />
-      <CategorySection onPick={(label) => onSearch(label)} />
+      <CategorySection onPick={(id) => router.push(`/browse?category=${id}`)} />
       <WhySection />
       <SellerCTA />
       <div style={{ height: 120 }} />
