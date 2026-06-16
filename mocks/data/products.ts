@@ -1,0 +1,113 @@
+export type Product = {
+  id: number;
+  title: string;
+  cat: string;
+  icon: string;
+  model: string;
+  price: number;
+  originalPrice?: number;
+  rating: number;
+  sales: number;
+  seller: string;
+  sellerId: string;
+  badge?: string;
+  desc: string;
+  thumbnail_url: string | null;
+  content?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const PRODUCTS: Product[] = [
+  {
+    id: 1, title: '사진 같은 제품 목업 생성기', cat: 'image', icon: 'image',
+    model: 'Midjourney v6', price: 5900, rating: 4.9, sales: 1240,
+    seller: '비주얼랩', sellerId: 'seller-1', badge: '신규',
+    desc: '제품 사진을 스튜디오 품질의 광고 컷으로 바꿔주는 미드저니 프롬프트. 조명·각도·배경을 한 번에 지정합니다.',
+    thumbnail_url: null, createdAt: '2026-05-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z',
+  },
+  {
+    id: 2, title: '전환율 높이는 랜딩 카피 작성', cat: 'writing', icon: 'pen-line',
+    model: 'GPT-4o', price: 4900, originalPrice: 7900, rating: 4.8, sales: 980,
+    seller: '카피킷', sellerId: 'seller-2', badge: '베스트',
+    desc: '후킹 헤드라인부터 CTA까지, 검증된 프레임워크로 랜딩 페이지 카피를 단계별로 만들어 줍니다.',
+    thumbnail_url: null, createdAt: '2026-04-15T00:00:00.000Z', updatedAt: '2026-05-20T00:00:00.000Z',
+  },
+  {
+    id: 3, title: '리액트 컴포넌트 리팩터링 도우미', cat: 'coding', icon: 'code-xml',
+    model: 'Claude 3.5', price: 7900, rating: 5.0, sales: 612,
+    seller: '데브플로우', sellerId: 'seller-3',
+    desc: '지저분한 컴포넌트를 깔끔한 훅 기반 구조로 리팩터링하고, 테스트 코드까지 제안합니다.',
+    thumbnail_url: null, createdAt: '2026-03-10T00:00:00.000Z', updatedAt: '2026-06-05T00:00:00.000Z',
+  },
+  {
+    id: 4, title: '30일 SNS 콘텐츠 캘린더', cat: 'marketing', icon: 'megaphone',
+    model: 'GPT-4o', price: 3900, originalPrice: 5900, rating: 4.7, sales: 2310,
+    seller: '그로스하우스', sellerId: 'seller-4', badge: '베스트',
+    desc: '브랜드 톤만 입력하면 한 달치 인스타·스레드 게시물 아이디어와 카피를 자동 생성합니다.',
+    thumbnail_url: null, createdAt: '2026-02-20T00:00:00.000Z', updatedAt: '2026-06-10T00:00:00.000Z',
+  },
+  {
+    id: 5, title: '친절한 CS 챗봇 페르소나', cat: 'chatbot', icon: 'message-circle',
+    model: 'Claude 3.5', price: 6900, rating: 4.9, sales: 540,
+    seller: '토크봇', sellerId: 'seller-5',
+    desc: '고객 문의를 따뜻하고 정확하게 응대하는 상담 챗봇 시스템 프롬프트.',
+    thumbnail_url: null, createdAt: '2026-04-01T00:00:00.000Z', updatedAt: '2026-05-15T00:00:00.000Z',
+  },
+  {
+    id: 6, title: '엑셀 데이터 인사이트 요약', cat: 'data', icon: 'bar-chart-3',
+    model: 'GPT-4o', price: 0, rating: 4.6, sales: 430,
+    seller: '데이터핀', sellerId: 'seller-6',
+    desc: '표 데이터를 붙여넣으면 핵심 추세·이상치를 보고서 형태로 정리해 줍니다.',
+    thumbnail_url: null, createdAt: '2026-01-05T00:00:00.000Z', updatedAt: '2026-04-20T00:00:00.000Z',
+  },
+  {
+    id: 7, title: '감성 일러스트 캐릭터 시트', cat: 'image', icon: 'image',
+    model: 'Midjourney v6', price: 4500, rating: 4.8, sales: 870,
+    seller: '비주얼랩', sellerId: 'seller-1',
+    desc: '일관된 캐릭터를 여러 포즈·표정으로 생성하는 캐릭터 시트 프롬프트.',
+    thumbnail_url: null, createdAt: '2026-03-22T00:00:00.000Z', updatedAt: '2026-05-30T00:00:00.000Z',
+  },
+  {
+    id: 8, title: '유튜브 스크립트 후킹 오프닝', cat: 'writing', icon: 'pen-line',
+    model: 'GPT-4o', price: 0, rating: 4.7, sales: 1520,
+    seller: '카피킷', sellerId: 'seller-2', badge: '신규',
+    desc: '첫 15초에 이탈을 막는 강력한 오프닝 훅을 주제별로 생성합니다.',
+    thumbnail_url: null, createdAt: '2026-05-10T00:00:00.000Z', updatedAt: '2026-06-08T00:00:00.000Z',
+  },
+  {
+    id: 9, title: 'A/B 테스트 광고 카피 생성기', cat: 'marketing', icon: 'megaphone',
+    model: 'GPT-4o', price: 4200, rating: 4.6, sales: 780,
+    seller: '그로스하우스', sellerId: 'seller-4',
+    desc: '동일 메시지를 다른 톤으로 변형해 A/B 테스트용 카피 세트를 빠르게 만들어 줍니다.',
+    thumbnail_url: null, createdAt: '2026-02-01T00:00:00.000Z', updatedAt: '2026-04-15T00:00:00.000Z',
+  },
+  {
+    id: 10, title: '코드 리뷰 자동화 봇', cat: 'coding', icon: 'code-xml',
+    model: 'Claude 3.5', price: 8900, rating: 4.9, sales: 310,
+    seller: '데브플로우', sellerId: 'seller-3',
+    desc: 'PR 코드를 붙여넣으면 보안·가독성·성능 관점에서 리뷰 코멘트를 생성합니다.',
+    thumbnail_url: null, createdAt: '2026-01-20T00:00:00.000Z', updatedAt: '2026-05-05T00:00:00.000Z',
+  },
+  {
+    id: 11, title: '여행 일정 플래너', cat: 'chatbot', icon: 'message-circle',
+    model: 'GPT-4o', price: 2900, rating: 4.5, sales: 1100,
+    seller: '토크봇', sellerId: 'seller-5',
+    desc: '도시, 일수, 예산을 입력하면 현지인 맞춤 여행 일정을 짜줍니다.',
+    thumbnail_url: null, createdAt: '2026-03-05T00:00:00.000Z', updatedAt: '2026-06-02T00:00:00.000Z',
+  },
+  {
+    id: 12, title: '판매 데이터 주간 리포트', cat: 'data', icon: 'bar-chart-3',
+    model: 'GPT-4o', price: 3500, rating: 4.7, sales: 290,
+    seller: '데이터핀', sellerId: 'seller-6',
+    desc: '주간 판매 데이터를 넣으면 KPI 요약과 다음 주 액션 아이템을 뽑아줍니다.',
+    thumbnail_url: null, createdAt: '2026-04-25T00:00:00.000Z', updatedAt: '2026-06-12T00:00:00.000Z',
+  },
+];
+
+export const PRODUCT_VERSIONS = [
+  { ver: 'v1.3', date: '2026-06-01', note: '조명 프리셋 3종 추가' },
+  { ver: 'v1.2', date: '2026-05-10', note: '배경 제거 옵션 개선' },
+  { ver: 'v1.1', date: '2026-04-20', note: '각도 키워드 최적화' },
+  { ver: 'v1.0', date: '2026-04-01', note: '최초 출시' },
+];

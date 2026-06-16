@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import api from '@/lib/api';
 import Image from 'next/image';
 import {
   Plus, Layers, ShoppingBag, Wallet,
@@ -31,28 +32,6 @@ type Prompt = {
 
 /* ── Mock data ─────────────────────────────────────────────────────── */
 
-const PROMPTS: Prompt[] = [
-  { id: 1,  title: '사진 같은 제품 목업 생성기',    cat: 'image',     icon: 'image',          model: 'Midjourney v6', price: 5900, rating: 4.9, sales: 1240, seller: '비주얼랩',    badge: '신규',   desc: '제품 사진을 스튜디오 품질의 광고 컷으로 바꿔주는 미드저니 프롬프트. 조명·각도·배경을 한 번에 지정합니다.' },
-  { id: 2,  title: '전환율 높이는 랜딩 카피 작성',   cat: 'writing',   icon: 'pen-line',       model: 'GPT-4o',        price: 4900, rating: 4.8, sales: 980,  seller: '카피킷',     badge: '베스트', desc: '후킹 헤드라인부터 CTA까지, 검증된 프레임워크로 랜딩 페이지 카피를 단계별로 만들어 줍니다.' },
-  { id: 3,  title: '리액트 컴포넌트 리팩터링 도우미', cat: 'coding',    icon: 'code-xml',       model: 'Claude 3.5',    price: 7900, rating: 5.0, sales: 612,  seller: '데브플로우',              desc: '지저분한 컴포넌트를 깔끔한 훅 기반 구조로 리팩터링하고, 테스트 코드까지 제안합니다.' },
-  { id: 4,  title: '30일 SNS 콘텐츠 캘린더',       cat: 'marketing', icon: 'megaphone',      model: 'GPT-4o',        price: 3900, rating: 4.7, sales: 2310, seller: '그로스하우스',  badge: '베스트', desc: '브랜드 톤만 입력하면 한 달치 인스타·스레드 게시물 아이디어와 카피를 자동 생성합니다.' },
-  { id: 5,  title: '친절한 CS 챗봇 페르소나',       cat: 'chatbot',   icon: 'message-circle', model: 'Claude 3.5',    price: 6900, rating: 4.9, sales: 540,  seller: '토크봇',                  desc: '고객 문의를 따뜻하고 정확하게 응대하는 상담 챗봇 시스템 프롬프트.' },
-  { id: 6,  title: '엑셀 데이터 인사이트 요약',      cat: 'data',      icon: 'bar-chart-3',    model: 'GPT-4o',        price: 0,    rating: 4.6, sales: 430,  seller: '데이터핀',                desc: '표 데이터를 붙여넣으면 핵심 추세·이상치를 보고서 형태로 정리해 줍니다.' },
-  { id: 7,  title: '감성 일러스트 캐릭터 시트',      cat: 'image',     icon: 'image',          model: 'Midjourney v6', price: 4500, rating: 4.8, sales: 870,  seller: '비주얼랩',                desc: '일관된 캐릭터를 여러 포즈·표정으로 생성하는 캐릭터 시트 프롬프트.' },
-  { id: 8,  title: '유튜브 스크립트 후킹 오프닝',    cat: 'writing',   icon: 'pen-line',       model: 'GPT-4o',        price: 3500, rating: 4.7, sales: 1520, seller: '카피킷',     badge: '신규',   desc: '첫 15초에 이탈을 막는 강력한 오프닝 훅을 주제별로 생성합니다.' },
-];
-
-const MY_LISTINGS: Prompt[] = [...PROMPTS]
-  .sort((a, b) => (b.sales as number) - (a.sales as number))
-  .slice(0, 4);
-
-/* ── Stats ─────────────────────────────────────────────────────────── */
-
-const STATS = [
-  { label: '등록 프롬프트', value: '8개',       icon: Layers      },
-  { label: '누적 판매',     value: '5,360회',   icon: ShoppingBag },
-  { label: '이번 달 수익',  value: '₩2,840,000', icon: Wallet      },
-];
 
 /* ── Icon utility ───────────────────────────────────────────────────── */
 
@@ -224,12 +203,34 @@ export default function ShopPage() {
   const router = useRouter();
   const [stopped, setStopped] = useState<Record<string | number, boolean>>({});
   const [confirmId, setConfirmId] = useState<string | number | null>(null);
+  const [myListings, setMyListings] = useState<Prompt[]>([]);
+  const [stats, setStats] = useState([
+    { label: '등록 프롬프트', value: '-',  icon: Layers      },
+    { label: '누적 판매',     value: '-',  icon: ShoppingBag },
+    { label: '이번 달 수익',  value: '-',  icon: Wallet      },
+  ]);
+
+  useEffect(() => {
+    api.get('/api/v1/sellers/me/products')
+      .then((res) => setMyListings(res.data.data ?? []))
+      .catch(() => {});
+    api.get('/api/v1/sellers/me/stats')
+      .then((res) => {
+        const d = res.data.data;
+        setStats([
+          { label: '등록 프롬프트', value: `${myListings.length}개`,              icon: Layers      },
+          { label: '누적 판매',     value: `${(d.totalSales ?? 0).toLocaleString('ko-KR')}회`, icon: ShoppingBag },
+          { label: '이번 달 수익',  value: `₩${(d.totalRevenue ?? 0).toLocaleString('ko-KR')}`, icon: Wallet  },
+        ]);
+      })
+      .catch(() => {});
+  }, []);
 
   const isStopped = (id: string | number) => !!stopped[id];
   const stopSelling = (id: string | number) => { setStopped((s) => ({ ...s, [id]: true })); setConfirmId(null); };
 
-  const activeCount = MY_LISTINGS.filter((p) => !isStopped(p.id) && p.status !== 'review').length;
-  const reviewCount = MY_LISTINGS.filter((p) => p.status === 'review').length;
+  const activeCount = myListings.filter((p) => !isStopped(p.id) && p.status !== 'review').length;
+  const reviewCount = myListings.filter((p) => p.status === 'review').length;
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '44px 32px 0' }}>
@@ -247,7 +248,7 @@ export default function ShopPage() {
 
       {/* ── 통계 카드 3개 ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, margin: '28px 0 8px' }}>
-        {STATS.map(({ label, value, icon: Icon }) => (
+        {stats.map(({ label, value, icon: Icon }) => (
           <div
             key={label}
             style={{ background: 'var(--ph-surface)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-lg)', padding: '22px', display: 'flex', alignItems: 'center', gap: 14 }}
@@ -283,7 +284,7 @@ export default function ShopPage() {
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
-          {MY_LISTINGS.map((p) => {
+          {myListings.map((p) => {
             const review = p.status === 'review';
             const off = isStopped(p.id);
             const dim = review || off;

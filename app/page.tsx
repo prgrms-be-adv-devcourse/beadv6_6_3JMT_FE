@@ -1,8 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import api from '@/lib/api';
 import {
   Sparkles, Search, Image as LucideImage, PenLine,
   CodeXml, Megaphone, MessageCircle, BarChart3,
@@ -39,16 +40,6 @@ type Prompt = {
   seller: string; badge?: string; desc: string;
 };
 
-const PROMPTS: Prompt[] = [
-  { id: 1,  title: '사진 같은 제품 목업 생성기',    cat: 'image',     icon: 'image',          model: 'Midjourney v6', price: 5900,                rating: 4.9, sales: 1240, seller: '비주얼랩',    badge: '신규',   desc: '제품 사진을 스튜디오 품질의 광고 컷으로 바꿔주는 미드저니 프롬프트.' },
-  { id: 2,  title: '전환율 높이는 랜딩 카피 작성',   cat: 'writing',   icon: 'pen-line',       model: 'GPT-4o',        price: 4900, originalPrice: 7900, rating: 4.8, sales: 980,  seller: '카피킷',     badge: '베스트', desc: '후킹 헤드라인부터 CTA까지, 검증된 프레임워크로 카피를 만들어 줍니다.' },
-  { id: 3,  title: '리액트 컴포넌트 리팩터링 도우미', cat: 'coding',    icon: 'code-xml',       model: 'Claude 3.5',    price: 7900,                rating: 5.0, sales: 612,  seller: '데브플로우',              desc: '지저분한 컴포넌트를 깔끔한 훅 기반 구조로 리팩터링합니다.' },
-  { id: 4,  title: '30일 SNS 콘텐츠 캘린더',       cat: 'marketing', icon: 'megaphone',      model: 'GPT-4o',        price: 3900, originalPrice: 5900, rating: 4.7, sales: 2310, seller: '그로스하우스',  badge: '베스트', desc: '브랜드 톤만 입력하면 한 달치 게시물 아이디어와 카피를 자동 생성합니다.' },
-  { id: 5,  title: '친절한 CS 챗봇 페르소나',       cat: 'chatbot',   icon: 'message-circle', model: 'Claude 3.5',    price: 6900,                rating: 4.9, sales: 540,  seller: '토크봇',                  desc: '고객 문의를 따뜻하고 정확하게 응대하는 상담 챗봇 시스템 프롬프트.' },
-  { id: 6,  title: '엑셀 데이터 인사이트 요약',      cat: 'data',      icon: 'bar-chart-3',    model: 'GPT-4o',        price: 0,                    rating: 4.6, sales: 430,  seller: '데이터핀',                desc: '표 데이터를 붙여넣으면 핵심 추세·이상치를 보고서 형태로 정리해 줍니다.' },
-  { id: 7,  title: '감성 일러스트 캐릭터 시트',      cat: 'image',     icon: 'image',          model: 'Midjourney v6', price: 4500,                rating: 4.8, sales: 870,  seller: '비주얼랩',                desc: '일관된 캐릭터를 여러 포즈·표정으로 생성하는 캐릭터 시트 프롬프트.' },
-  { id: 8,  title: '유튜브 스크립트 후킹 오프닝',    cat: 'writing',   icon: 'pen-line',       model: 'GPT-4o',        price: 0,                    rating: 4.7, sales: 1520, seller: '카피킷',     badge: '신규',   desc: '첫 15초에 이탈을 막는 강력한 오프닝 훅을 주제별로 생성합니다.' },
-];
 
 /* ── Lucide icon map ─────────────────────────────────────────────── */
 
@@ -332,7 +323,14 @@ function SectionHead({ title, sub, actionLabel, onAction }: {
 /* ── Popular Grid ────────────────────────────────────────────────── */
 
 function PopularGrid() {
-  const featured = [...PROMPTS].sort((a, b) => b.sales - a.sales).slice(0, 8);
+  const [featured, setFeatured] = useState<Prompt[]>([]);
+
+  useEffect(() => {
+    api.get('/api/v1/products', { params: { sort: 'popular', size: '8' } })
+      .then((res) => setFeatured(res.data.data ?? []))
+      .catch(() => {});
+  }, []);
+
   return (
     <section style={{ maxWidth: 1200, margin: '0 auto', padding: '84px 32px 0' }}>
       <SectionHead
