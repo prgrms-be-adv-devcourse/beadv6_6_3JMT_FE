@@ -239,22 +239,21 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { user, login, logout } = useAuthStore();
+  const { user, login, logout, loginModalOpen, openLoginModal, closeLoginModal } = useAuthStore();
   const [query, setQuery] = React.useState('');
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [menu, setMenu] = React.useState<string | null>(null);
-  const [loginOpen, setLoginOpen] = React.useState(false);
 
   const go = (page: string) => router.push(PAGE_ROUTES[page] ?? '/');
   const onSearch = (q: string) => { setQuery(q); router.push('/browse'); };
-  const openLogin = () => setLoginOpen(true);
+  const openLogin = () => openLoginModal();
   const onLogout = () => logout();
   const onRemoveFromCart = (id: string) => setCart((c) => c.filter((x) => x.id !== id));
 
   const handleLogin = (role: UserRole, email?: string) => {
     const name = email ? email.split('@')[0] : '카카오사용자';
     login({ id: 'mock-1', name, email: email ?? 'kakao@user.com', role }, 'mock-token');
-    setLoginOpen(false);
+    closeLoginModal();
   };
 
   const current = pathname === '/' ? 'home' : pathname.replace('/', '');
@@ -385,7 +384,7 @@ export default function Header() {
 
   return (
     <React.Fragment>
-    <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onLogin={handleLogin} />
+    <LoginModal open={loginModalOpen} onClose={closeLoginModal} onLogin={handleLogin} />
     <header style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid var(--ph-border)' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', height: 66, padding: '0 32px', display: 'flex', alignItems: 'center', gap: 20 }}>
         <Logo onClick={() => go('home')} />

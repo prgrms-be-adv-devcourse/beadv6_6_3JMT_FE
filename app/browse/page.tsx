@@ -5,7 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Star, X, Check, SearchX,
   Image as LucideImage, PenLine, CodeXml, Megaphone, MessageCircle, BarChart3, Sparkles,
+  Heart, ShoppingCart,
 } from 'lucide-react';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useWishStore } from '@/store/useWishStore';
+import { useCartStore } from '@/store/useCartStore';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -131,7 +135,25 @@ function Thumb({ icon }: { icon: string }) {
 /* ── PromptCard ──────────────────────────────────────────────────── */
 
 function PromptCard({ p, onOpen }: { p: Prompt; onOpen?: (p: Prompt) => void }) {
+  const { isLoggedIn, openLoginModal } = useAuthStore();
+  const { items: wishItems, toggle } = useWishStore();
+  const { addItem } = useCartStore();
   const [hovered, setHovered] = useState(false);
+
+  const isWished = wishItems.some((i) => i.id === String(p.id));
+
+  const onWish = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isLoggedIn) { openLoginModal(); return; }
+    toggle({ id: String(p.id), title: p.title, price: p.price, thumbnailUrl: null });
+  };
+
+  const onCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isLoggedIn) { openLoginModal(); return; }
+    addItem({ id: String(p.id), title: p.title, price: p.price, thumbnailUrl: null });
+  };
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -158,6 +180,22 @@ function PromptCard({ p, onOpen }: { p: Prompt; onOpen?: (p: Prompt) => void }) 
             </span>
           </div>
         )}
+        <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <button
+            onClick={onWish}
+            title="찜하기"
+            style={{ width: 32, height: 32, borderRadius: 'var(--ph-radius-md)', background: 'rgba(255,255,255,0.92)', border: '1px solid var(--ph-border)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
+          >
+            <Heart style={{ width: 16, height: 16, color: isWished ? 'var(--ph-error)' : 'var(--ph-text-muted)', fill: isWished ? 'var(--ph-error)' : 'none' } as React.CSSProperties} />
+          </button>
+          <button
+            onClick={onCart}
+            title="장바구니 담기"
+            style={{ width: 32, height: 32, borderRadius: 'var(--ph-radius-md)', background: 'rgba(255,255,255,0.92)', border: '1px solid var(--ph-border)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
+          >
+            <ShoppingCart style={{ width: 16, height: 16, color: 'var(--ph-text-muted)' } as React.CSSProperties} />
+          </button>
+        </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 8px', borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-gray-50)', border: '1px solid var(--ph-border)', fontSize: 12, fontWeight: 600, color: 'var(--ph-text-secondary)', whiteSpace: 'nowrap' }}>

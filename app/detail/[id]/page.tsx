@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useWishStore } from '@/store/useWishStore';
+import { useCartStore } from '@/store/useCartStore';
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Star,
   CheckCircle2, ShoppingCart, Check, History,
@@ -463,10 +466,24 @@ function PromptCard({ p, onOpen }: { p: Prompt; onOpen?: (p: Prompt) => void }) 
 
 function DetailScreen({ p }: { p: Prompt }) {
   const router = useRouter();
+  const { isLoggedIn, openLoginModal } = useAuthStore();
+  const { items: wishItems, toggle } = useWishStore();
+  const { items: cartItems, addItem } = useCartStore();
   const [showVersions, setShowVersions] = useState(false);
   const [purchased, setPurchased] = useState(false);
-  const [inCart, setInCart] = useState(false);
-  const [inWish, setInWish] = useState(false);
+
+  const inWish = wishItems.some((i) => i.id === String(p.id));
+  const inCart = cartItems.some((i) => i.id === String(p.id));
+
+  const onCart = () => {
+    if (!isLoggedIn) { openLoginModal(); return; }
+    addItem({ id: String(p.id), title: p.title, price: p.price, thumbnailUrl: p.thumbnail_url ?? null });
+  };
+
+  const onWish = () => {
+    if (!isLoggedIn) { openLoginModal(); return; }
+    toggle({ id: String(p.id), title: p.title, price: p.price, thumbnailUrl: p.thumbnail_url ?? null });
+  };
 
   const related = PROMPTS.filter((x) => x.cat === p.cat && x.id !== p.id).slice(0, 4);
   const features = ['결제 즉시 다운로드', '상업적 이용 가능', '무료 업데이트 제공'];
@@ -566,7 +583,7 @@ function DetailScreen({ p }: { p: Prompt }) {
                       variant="secondary"
                       size="lg"
                       fullWidth
-                      onClick={() => setInCart((v) => !v)}
+                      onClick={onCart}
                     >
                       {inCart
                         ? <><Check style={{ width: 17, height: 17 }} /> 담긴</>
@@ -579,7 +596,7 @@ function DetailScreen({ p }: { p: Prompt }) {
                     variant="secondary"
                     size="lg"
                     fullWidth
-                    onClick={() => setInWish((v) => !v)}
+                    onClick={onWish}
                   >
                     <svg viewBox="0 0 24 24" width="17" height="17" fill={inWish ? '#FF3040' : 'none'} stroke={inWish ? '#FF3040' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}>
                       <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.49 4.04 3 5.5l7 7Z" />
