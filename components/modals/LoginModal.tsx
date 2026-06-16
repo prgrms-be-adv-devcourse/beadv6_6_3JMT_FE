@@ -10,7 +10,7 @@ export type UserRole = 'buyer' | 'seller';
 export interface LoginModalProps {
   open: boolean;
   onClose: () => void;
-  onLogin: (role: UserRole) => void;
+  onLogin: (role: UserRole, email?: string) => void;
 }
 
 /* ── 역할 결정 ─────────────────────────────────────────── */
@@ -55,7 +55,7 @@ export default function LoginModal({ open, onClose, onLogin }: LoginModalProps) 
   const signup = mode === 'signup';
 
   const kakaoLogin = () => onLogin('buyer');
-  const emailLogin = () => onLogin(resolveRole(email));
+  const emailLogin = () => onLogin(resolveRole(email), email);
 
   return (
     <div
