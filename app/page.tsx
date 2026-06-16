@@ -254,8 +254,8 @@ function HeroToss({ query, onChange, onSearch }: {
           <Image
             src="/images/hero-mockup.png"
             alt="PromptHub 히어로 목업"
-            width={260}
-            height={260}
+            width={662}
+            height={986}
             style={{ height: 260, width: 'auto', maxWidth: '100%', display: 'block', userSelect: 'none' }}
             priority
           />
@@ -385,8 +385,8 @@ function SellerCTA() {
           <Image
             src="/images/promy-character.png"
             alt="프롬이 마스코트"
-            width={200}
-            height={200}
+            width={405}
+            height={598}
             style={{ width: 'auto', height: 200, display: 'block' }}
           />
         </div>
