@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Sparkles, Search, Image as LucideImage, PenLine,
   CodeXml, Megaphone, MessageCircle, BarChart3,
@@ -183,11 +184,13 @@ function Thumb({ icon }: { icon: string }) {
 }
 
 function PromptCard({ p }: { p: Prompt }) {
+  const router = useRouter();
   const [hovered, setHovered] = useState(false);
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => router.push('/detail/' + p.id)}
       style={{
         background: 'var(--ph-surface)', border: `1px solid ${hovered ? 'var(--ph-primary)' : 'var(--ph-border)'}`,
         borderRadius: 'var(--ph-radius-lg)', padding: 14, cursor: 'pointer',
