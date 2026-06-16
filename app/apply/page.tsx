@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
+import api from '@/lib/api';
 import {
   ArrowLeft, Store, Send, SearchCheck, Check, Clock,
   Link as LinkIcon, BadgePercent, Lock,
@@ -257,9 +258,23 @@ export default function ApplyPage() {
   const [link, setLink] = useState('');
   const [agree, setAgree] = useState(false);
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const name = authUser?.name ?? '';
   const email = authUser?.email ?? '';
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    api.get('/api/v1/sellers/apply-status')
+      .then((res) => {
+        const status: string = res.data.data?.status;
+        if (status && status !== 'not_applied') {
+          setDone(true);
+        }
+      })
+      .catch(() => {});
+  }, [isLoggedIn]);
 
   const togglePick = (id: string) =>
     setPicked((s) =>
@@ -268,10 +283,25 @@ export default function ApplyPage() {
 
   const valid = picked.length > 0 && agree;
 
-  const submit = () => {
+  const submit = async () => {
     if (!valid) return;
-    setDone(true);
-    window.scrollTo({ top: 0 });
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await api.post('/api/v1/sellers/apply', {
+        selectedCategories: picked,
+        introduction: intro,
+        portfolioLink: link,
+        agreedToTerms: agree,
+      });
+      setDone(true);
+      window.scrollTo({ top: 0 });
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setSubmitError(message ?? '신청 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const taStyle: React.CSSProperties = {
@@ -496,11 +526,20 @@ export default function ApplyPage() {
             </button>
           </Card>
 
+          {/* 에러 메시지 */}
+          {submitError && (
+            <div style={{ fontSize: 14, color: 'var(--ph-error)', padding: '10px 14px', background: '#fff1f1', borderRadius: 'var(--ph-radius-md)', border: '1px solid #fecaca' }}>
+              {submitError}
+            </div>
+          )}
+
           {/* 제출 버튼 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 8 }}>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
               <Button variant="secondary" size="lg" onClick={() => router.push('/')}>취소</Button>
-              <Button variant="solid" size="lg" onClick={submit} disabled={!valid}>등록 요청 보내기</Button>
+              <Button variant="solid" size="lg" onClick={submit} disabled={!valid || submitting}>
+                {submitting ? '처리 중...' : '등록 요청 보내기'}
+              </Button>
             </div>
           </div>
         </div>
