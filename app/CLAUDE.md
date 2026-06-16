@@ -20,3 +20,11 @@
 ## 작업 순서
 한 번에 하나의 페이지만 작업한다.
 이전 페이지 확인 완료 후 다음 페이지로 넘어간다.
+
+## middleware.ts 규칙
+- 루트 레벨에 생성 (prompthub/middleware.ts)
+- 권한별 라우팅 보호 기준:
+    - 비로그인 접근 금지: /sell, /shop, /mypage, /reader/[id], /edit/[id], /apply
+    - 판매자만 접근 가능: /sell, /shop, /edit/[id]
+    - 비로그인 접근 시 → /로 리다이렉트
+    - 비판매자가 판매자 페이지 접근 시 → /mypage로 리다이렉트
