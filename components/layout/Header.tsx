@@ -6,15 +6,13 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishStore } from '@/store/useWishStore';
 import LoginModal from '@/components/modals/LoginModal';
+import api from '@/lib/api';
 import {
   Sparkles,
   Search,
   Bell,
   ShoppingCart,
   Heart,
-  Tag,
-  Download,
-  Star,
   Menu,
   X,
   Compass,
@@ -47,6 +45,24 @@ export interface CartItem {
 function won(n: number) {
   return '₩' + n.toLocaleString();
 }
+
+/* ── 헬퍼: 상대 시간 ─────────────────────────────────── */
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return '방금';
+  if (mins < 60) return `${mins}분 전`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return '어제';
+  return `${days}일 전`;
+}
+
+/* ── 타입: 알림 ───────────────────────────────────────── */
+
+type Notif = { id: string; icon: string; text: string; timestamp: string; read: boolean };
 
 /* ── 라우트 맵 ─────────────────────────────────────────── */
 
@@ -242,23 +258,44 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { user, login, logout, loginModalOpen, openLoginModal, closeLoginModal } = useAuthStore();
+  const { user, logout, loginModalOpen, openLoginModal, closeLoginModal } = useAuthStore();
   const { items: cart, removeItem: removeCartItem } = useCartStore();
   const { items: wishItems } = useWishStore();
   const [query, setQuery] = React.useState('');
   const [menu, setMenu] = React.useState<string | null>(null);
+  const [notifList, setNotifList] = React.useState<Notif[]>([]);
+
+  React.useEffect(() => {
+    if (!user) { setNotifList([]); return; }
+    api.get('/api/v1/notifications')
+      .then((res) => setNotifList(res.data.data ?? []))
+      .catch(() => {});
+  }, [user]);
+
+  const unreadCount = notifList.filter((n) => !n.read).length;
+
+  const onNotifRead = async (id: string) => {
+    setNotifList((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+    try {
+      await api.post(`/api/v1/notifications/${id}/read`);
+    } catch {
+      // 로컬 상태는 이미 업데이트됨, 실패해도 무시
+    }
+  };
 
   const go = (page: string) => router.push(PAGE_ROUTES[page] ?? '/');
   const onSearch = (q: string) => { setQuery(q); router.push(q ? `/browse?q=${encodeURIComponent(q)}` : '/browse'); };
   const openLogin = () => openLoginModal();
-  const onLogout = () => logout();
-  const onRemoveFromCart = (id: string) => removeCartItem(id);
-
-  const handleLogin = (role: UserRole, email?: string) => {
-    const name = email ? email.split('@')[0] : '카카오사용자';
-    login({ id: 'mock-1', name, email: email ?? 'kakao@user.com', role }, 'mock-token');
-    closeLoginModal();
+  const onLogout = async () => {
+    try {
+      await api.post('/api/v1/auth/logout');
+    } catch {
+      // 로그아웃 API 실패해도 로컬 로그아웃은 반드시 실행
+    } finally {
+      logout();
+    }
   };
+  const onRemoveFromCart = (id: string) => removeCartItem(id);
 
   const current = pathname === '/' ? 'home' : pathname.replace('/', '');
 
@@ -267,29 +304,44 @@ export default function Header() {
   const role = user && user.role;
   const openMy = (tab: string) => { close(); router.push(`/mypage?tab=${tab}`); };
 
-  const notifs = [
-    { icon: Tag, text: "찜한 '랜딩 카피 작성'의 가격이 인하됐어요.", time: '방금' },
-    { icon: Download, text: '구매한 프롬프트가 업데이트됐어요.', time: '2시간 전' },
-    { icon: Star, text: role === 'seller' ? '내 프롬프트에 새 후기(★5)가 달렸어요.' : '이번 주 인기 프롬프트를 확인해 보세요.', time: '어제' },
-  ];
-
   const BellDropdown = (
     <div style={{ position: 'relative' }}>
-      <IconBtn icon={Bell} label={null} dot active={menu === 'notif'} onClick={() => toggle('notif')} />
+      <IconBtn
+        icon={Bell}
+        label={null}
+        count={unreadCount || undefined}
+        active={menu === 'notif'}
+        onClick={() => toggle('notif')}
+      />
       {menu === 'notif' && (
         <Pop onClose={close} width={300}>
           <div style={{ padding: '8px 12px 10px', fontWeight: 700, fontSize: 14 }}>알림</div>
-          {notifs.map((n, i) => (
-            <div key={i} style={{ display: 'flex', gap: 10, padding: '10px 12px' }}>
-              <span style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                <n.icon style={{ width: 16, height: 16 }} />
-              </span>
-              <div>
-                <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--ph-text)' }}>{n.text}</div>
-                <div style={{ fontSize: 12, color: 'var(--ph-text-muted)', marginTop: 2 }}>{n.time}</div>
-              </div>
+          {notifList.length === 0 ? (
+            <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 13, color: 'var(--ph-text-muted)' }}>
+              새 알림이 없어요
             </div>
-          ))}
+          ) : (
+            notifList.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => onNotifRead(n.id)}
+                style={{
+                  display: 'flex', gap: 10, padding: '10px 12px', width: '100%',
+                  background: n.read ? 'none' : 'var(--ph-secondary)',
+                  border: 'none', cursor: 'pointer', textAlign: 'left',
+                  borderRadius: 'var(--ph-radius-sm)',
+                }}
+              >
+                <span style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>
+                  {n.icon}
+                </span>
+                <div>
+                  <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--ph-text)', fontWeight: n.read ? 400 : 600 }}>{n.text}</div>
+                  <div style={{ fontSize: 12, color: 'var(--ph-text-muted)', marginTop: 2 }}>{relativeTime(n.timestamp)}</div>
+                </div>
+              </button>
+            ))
+          )}
         </Pop>
       )}
     </div>
@@ -388,7 +440,7 @@ export default function Header() {
 
   return (
     <React.Fragment>
-    <LoginModal open={loginModalOpen} onClose={closeLoginModal} onLogin={handleLogin} />
+    <LoginModal open={loginModalOpen} onClose={closeLoginModal} />
     <header style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid var(--ph-border)' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', height: 66, padding: '0 32px', display: 'flex', alignItems: 'center', gap: 20 }}>
         <Logo onClick={() => go('home')} />
