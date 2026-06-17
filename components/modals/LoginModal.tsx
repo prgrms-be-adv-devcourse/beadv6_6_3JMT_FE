@@ -38,6 +38,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [serviceAgree, setServiceAgree] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
 
@@ -49,6 +50,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       setName('');
       setEmail('');
       setPassword('');
+      setServiceAgree(false);
       setError('');
     }
   }, [open]);
@@ -72,10 +74,14 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
 
   const handleEmailSubmit = async () => {
     setError('');
+    if (signup && !serviceAgree) {
+      setError('서비스 이용약관에 동의해주세요.');
+      return;
+    }
     setLoading(true);
     try {
       const endpoint = signup ? '/api/v1/auth/signup' : '/api/v1/auth/login';
-      const body = signup ? { name, email, password } : { email, password };
+      const body = signup ? { name, email, password, serviceAgree } : { email, password };
       const res = await api.post(endpoint, body);
       const { user, token } = res.data.data;
       login(user, token);
@@ -168,6 +174,20 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
               style={{ height: 44, padding: '0 14px', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-md)', fontFamily: 'var(--ph-font-family)', fontSize: 15, color: 'var(--ph-text)', outline: 'none', background: '#fff' }}
             />
           </label>
+          {signup && (
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--ph-text-secondary)', lineHeight: 1.5 }}>
+              <input
+                type="checkbox"
+                checked={serviceAgree}
+                onChange={(e) => setServiceAgree(e.target.checked)}
+                style={{ marginTop: 3, width: 16, height: 16, accentColor: 'var(--ph-primary)', cursor: 'pointer', flexShrink: 0 }}
+              />
+              <span>
+                <b style={{ color: 'var(--ph-text)' }}>서비스 이용약관</b> 및{' '}
+                <b style={{ color: 'var(--ph-text)' }}>개인정보 처리방침</b>에 동의합니다. (필수)
+              </span>
+            </label>
+          )}
           {error && (
             <div style={{ fontSize: 13, color: 'var(--ph-error)', padding: '6px 10px', background: '#fff1f1', borderRadius: 'var(--ph-radius-sm)', border: '1px solid #fecaca' }}>
               {error}
@@ -187,9 +207,11 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, padding: '10px 12px', background: 'var(--ph-gray-50)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-md)', fontSize: 12.5, color: 'var(--ph-text-muted)', lineHeight: 1.5 }}>
             <Info style={{ width: 14, height: 14, flexShrink: 0 }} />
             <span>
-              데모: 로그인 시 계정 권한이 자동 확인돼요. 판매자 화면은{' '}
+              데모: 로그인 시 계정 권한이 자동 확인돼요. 판매자:{' '}
               <b style={{ color: 'var(--ph-text-secondary)' }}>seller@prompthub.kr</b>
-              {' '}로 로그인해 보세요.
+              {' '} / 관리자:{' '}
+              <b style={{ color: 'var(--ph-text-secondary)' }}>admin@prompthub.kr</b>
+              {' '}(비밀번호: password123)
             </span>
           </div>
         )}

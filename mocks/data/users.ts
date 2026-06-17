@@ -2,13 +2,22 @@ export type MockUser = {
   id: string;
   name: string;
   email: string;
-  role: 'buyer' | 'seller';
+  role: 'buyer' | 'seller' | 'admin';
 };
 
 export type OrderItem = {
   orderId: string;
   productId: number;
   purchasedAt: string;
+};
+
+export type PaymentItem = {
+  paymentId: string;
+  orderId: string;
+  productIds: number[];
+  totalAmount: number;
+  status: 'paid';
+  paidAt: string;
 };
 
 export type NotificationItem = {
@@ -23,10 +32,12 @@ export const MOCK_USERS: MockUser[] = [
   { id: 'user-1', name: '김민서', email: 'kms12782@nangman.cloud', role: 'buyer' },
   { id: 'user-2', name: '프롬트랩', email: 'promptlab@prompthub.kr', role: 'seller' },
   { id: 'user-3', name: '판매자', email: 'seller@prompthub.kr', role: 'seller' },
+  { id: 'admin-1', name: '관리자', email: 'admin@prompthub.kr', role: 'admin' },
 ];
 
 // 이메일로 역할 결정 (기존 LoginModal 로직과 동일)
-export function getRoleByEmail(email: string): 'buyer' | 'seller' {
+export function getRoleByEmail(email: string): 'buyer' | 'seller' | 'admin' {
+  if (email === 'admin@prompthub.kr' || email.startsWith('admin@')) return 'admin';
   if (email.includes('seller') || email.endsWith('@prompthub.kr')) return 'seller';
   return 'buyer';
 }
@@ -42,9 +53,23 @@ export const MOCK_ORDERS: Record<string, OrderItem[]> = {
   ],
 };
 
-export const MOCK_WISHLISTS: Record<string, number[]> = {
-  'user-1': [3, 5],
-  'user-2': [1, 7],
+export const MOCK_PAYMENTS: Record<string, PaymentItem[]> = {};
+
+export type WishlistItem = {
+  wishlistId: string;
+  productId: number;
+  createdAt: string;
+};
+
+export const MOCK_WISHLISTS: Record<string, WishlistItem[]> = {
+  'user-1': [
+    { wishlistId: 'wl-1', productId: 3, createdAt: '2026-06-01T00:00:00.000Z' },
+    { wishlistId: 'wl-2', productId: 5, createdAt: '2026-06-05T00:00:00.000Z' },
+  ],
+  'user-2': [
+    { wishlistId: 'wl-3', productId: 1, createdAt: '2026-06-10T00:00:00.000Z' },
+    { wishlistId: 'wl-4', productId: 7, createdAt: '2026-06-12T00:00:00.000Z' },
+  ],
 };
 
 export const MOCK_NOTIFICATIONS: NotificationItem[] = [
@@ -54,3 +79,10 @@ export const MOCK_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export const SELLER_APPLY_STATUS: Record<string, 'pending' | 'approved' | 'rejected'> = {};
+
+export const MOCK_PASSWORDS: Record<string, string> = {
+  'user-1': 'password123',
+  'user-2': 'password123',
+  'user-3': 'password123',
+  'admin-1': 'password123',
+};
