@@ -21,12 +21,12 @@ type PaymentStatus = 'paid' | 'requested' | 'refunded';
 type Prompt = {
   id: number | string;
   title: string;
-  cat: string;
+  category: string;
   icon: string;
   model: string;
-  price: number;
+  amount: number;
   rating: number | string;
-  sales: number;
+  salesCount: number;
   seller: string;
   badge?: string;
   desc: string;
@@ -304,14 +304,14 @@ function PromptCard({ p, onClick }: { p: Prompt; onClick?: () => void }) {
             style={{ objectFit: 'contain', opacity: 0.75 }}
           />
         )}
-        {(p.badge || p.price === 0) && (
+        {(p.badge || p.amount === 0) && (
           <div style={{ position: 'absolute', top: 10, left: 10 }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', padding: '4px 8px',
               borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-primary)',
               color: '#fff', fontSize: 12, fontWeight: 700,
             }}>
-              {p.price === 0 ? '무료' : p.badge}
+              {p.amount === 0 ? '무료' : p.badge}
             </span>
           </div>
         )}
@@ -336,11 +336,11 @@ function PromptCard({ p, onClick }: { p: Prompt; onClick?: () => void }) {
         <span>{p.seller}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        {p.price === 0
+        {p.amount === 0
           ? <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--ph-primary)' }}>무료</span>
-          : <span style={{ fontSize: 17, fontWeight: 700 }}>{won(p.price)}</span>}
+          : <span style={{ fontSize: 17, fontWeight: 700 }}>{won(p.amount)}</span>}
         <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', whiteSpace: 'nowrap' }}>
-          {p.sales.toLocaleString()}회 판매
+          {p.salesCount.toLocaleString()}회 판매
         </span>
       </div>
     </div>
@@ -579,6 +579,152 @@ function EmailChangeModal({
   );
 }
 
+/* ── PasswordChangeModal ────────────────────────────────────────────── */
+
+function PasswordChangeModal({ onClose }: { onClose: () => void }) {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const validate = () => {
+    if (!current) return '현재 비밀번호를 입력해주세요.';
+    if (next.length < 8) return '새 비밀번호는 8자 이상이어야 해요.';
+    if (next === current) return '현재 비밀번호와 동일한 비밀번호로 변경할 수 없어요.';
+    if (next !== confirm) return '새 비밀번호가 서로 일치하지 않아요.';
+    return '';
+  };
+
+  const submit = async () => {
+    const e = validate();
+    if (e) { setErr(e); return; }
+    setLoading(true);
+    setErr('');
+    try {
+      await api.put('/api/v1/auth/password', { currentPassword: current, newPassword: next });
+      setDone(true);
+    } catch (ex: unknown) {
+      const msg = (ex as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setErr(msg ?? '비밀번호 변경에 실패했어요.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const errStyle: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 6, marginTop: 10,
+    fontSize: 13, fontWeight: 600, color: 'var(--ph-error)',
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        style={{
+          background: '#fff', borderRadius: 'var(--ph-radius-xl)',
+          maxWidth: 440, width: '100%', padding: 28,
+        }}
+      >
+        {/* 헤더 */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 'var(--ph-radius-full)',
+            background: 'var(--ph-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Lock style={{ width: 22, height: 22, color: 'var(--ph-primary)' } as React.CSSProperties} />
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="닫기"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--ph-text-muted)', padding: 4, lineHeight: 0,
+            }}
+          >
+            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {done ? (
+          <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%', background: 'var(--ph-secondary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+            }}>
+              <Check style={{ width: 28, height: 28, color: 'var(--ph-primary)' } as React.CSSProperties} />
+            </div>
+            <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 8 }}>비밀번호가 변경됐어요</div>
+            <p style={{ fontSize: 14, color: 'var(--ph-text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
+              다음 로그인부터 새 비밀번호를 사용하세요.
+            </p>
+            <Button variant="solid" size="lg" fullWidth onClick={onClose}>확인</Button>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontSize: 19, fontWeight: 700, margin: '14px 0 6px' }}>비밀번호 변경</div>
+            <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ph-text-secondary)', margin: '0 0 20px' }}>
+              현재 비밀번호를 확인한 후 새 비밀번호로 변경해요. (데모 기본값: password123)
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <PHInput
+                label="현재 비밀번호"
+                type="password"
+                value={current}
+                placeholder="현재 비밀번호 입력"
+                autoFocus
+                onChange={(e) => { setCurrent(e.target.value); setErr(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+              />
+              <PHInput
+                label="새 비밀번호"
+                type="password"
+                value={next}
+                placeholder="8자 이상"
+                onChange={(e) => { setNext(e.target.value); setErr(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+              />
+              <PHInput
+                label="새 비밀번호 확인"
+                type="password"
+                value={confirm}
+                placeholder="새 비밀번호 다시 입력"
+                onChange={(e) => { setConfirm(e.target.value); setErr(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+              />
+            </div>
+            {err && (
+              <div style={errStyle}>
+                <AlertCircle style={{ width: 15, height: 15 }} />{err}
+              </div>
+            )}
+            <div style={{ marginTop: 24 }}>
+              <Button
+                variant="solid" size="lg" fullWidth
+                onClick={submit}
+                disabled={!current || !next || !confirm || loading}
+              >
+                {loading ? '변경 중...' : '비밀번호 변경'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── MyPage ─────────────────────────────────────────────────────────── */
 
 const STATUS_MAP: Record<PaymentStatus, { label: string; color: string; bg: string }> = {
@@ -595,13 +741,14 @@ const NOTIF_ROWS: { k: keyof NotifState; t: string; d: string }[] = [
 
 export default function MyPagePage() {
   const router = useRouter();
-  const { isLoggedIn, openLoginModal } = useAuthStore();
+  const { isLoggedIn, openLoginModal, login: authLogin, token: authToken } = useAuthStore();
   const { items: cartItems } = useCartStore();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [tab, setTab] = useState<TabId>('profile');
   const [nick, setNick] = useState('');
   const [savedNick, setSavedNick] = useState(false);
   const [emailModal, setEmailModal] = useState(false);
+  const [pwModal, setPwModal] = useState(false);
   const [notif, setNotif] = useState<NotifState>({ email: true, marketing: false, newPrompt: true });
   const [refunds, setRefunds] = useState<Record<string | number, 'requested' | 'refunded'>>({});
   const [refundTarget, setRefundTarget] = useState<Prompt | null>(null);
@@ -617,7 +764,7 @@ export default function MyPagePage() {
         setNick(u.name);
       })
       .catch(() => {});
-    api.get('/api/v1/users/me/orders')
+    api.get('/api/v1/orders')
       .then((res) => {
         const orders: { orderId: string; purchasedAt: string; product: Prompt | null }[] = res.data.data ?? [];
         setPurchased(
@@ -627,8 +774,11 @@ export default function MyPagePage() {
         );
       })
       .catch(() => {});
-    api.get('/api/v1/users/me/wishlist')
-      .then((res) => setWishlist(res.data.data ?? []))
+    api.get('/api/v1/wishlists')
+      .then((res) => {
+        const { content } = res.data.data ?? { content: [] };
+        setWishlist(content.map((item: { product: Prompt | null }) => item.product).filter(Boolean));
+      })
       .catch(() => {});
   }, [isLoggedIn, openLoginModal]);
 
@@ -650,8 +800,27 @@ export default function MyPagePage() {
     );
   }
 
-  const updateNickname = (n: string) => { setUser((u) => u ? { ...u, name: n } : u); setSavedNick(true); };
-  const updateEmail = (e: string) => { setUser((u) => u ? { ...u, email: e } : u); };
+  const updateNickname = async (n: string) => {
+    try {
+      const res = await api.put('/api/v1/users/me', { name: n });
+      const updated = res.data.data;
+      setUser((u) => u ? { ...u, name: updated.name } : u);
+      if (authToken) authLogin(updated, authToken);
+      setSavedNick(true);
+    } catch {
+      setSavedNick(false);
+    }
+  };
+  const updateEmail = async (e: string) => {
+    try {
+      const res = await api.put('/api/v1/users/me', { email: e });
+      const updated = res.data.data;
+      setUser((u) => u ? { ...u, email: updated.email } : u);
+      if (authToken) authLogin(updated, authToken);
+    } catch {
+      setUser((u) => u ? { ...u, email: e } : u);
+    }
+  };
   const requestRefund = (id: string | number) => {
     setRefunds((r) => ({ ...r, [id]: 'requested' as const }));
   };
@@ -874,7 +1043,7 @@ export default function MyPagePage() {
                     const refundState = refunds[p.id];
                     const st: PaymentStatus = refundState ?? 'paid';
                     const meta = STATUS_MAP[st];
-                    const isFree = p.price === 0;
+                    const isFree = p.amount === 0;
                     const canRefund = !refundState && !isFree;
                     const dateStr = new Date(p.purchasedAt || Date.now()).toLocaleDateString('ko-KR');
                     return (
@@ -892,7 +1061,7 @@ export default function MyPagePage() {
                         </div>
                         <div style={{ fontSize: 13, color: 'var(--ph-text-secondary)' }}>{dateStr}</div>
                         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ph-text)' }}>
-                          {p.price === 0 ? '무료' : won(p.price)}
+                          {p.amount === 0 ? '무료' : won(p.amount)}
                         </div>
                         <div>
                           <span style={{
@@ -980,9 +1149,10 @@ export default function MyPagePage() {
                 <Row last>
                   <div style={{ minWidth: 120 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>비밀번호</div>
+                    <div style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 2 }}>로그인 시 사용하는 비밀번호</div>
                   </div>
                   <div style={{ flex: 1 }} />
-                  <Button variant="secondary" onClick={() => {}} style={{ whiteSpace: 'nowrap' }}>
+                  <Button variant="secondary" onClick={() => setPwModal(true)} style={{ whiteSpace: 'nowrap' }}>
                     비밀번호 변경
                   </Button>
                 </Row>
@@ -1017,6 +1187,9 @@ export default function MyPagePage() {
           )}
         </div>
       </div>
+
+      {/* ── 비밀번호 변경 모달 ── */}
+      {pwModal && <PasswordChangeModal onClose={() => setPwModal(false)} />}
 
       {/* ── 이메일 변경 모달 ── */}
       {emailModal && (
