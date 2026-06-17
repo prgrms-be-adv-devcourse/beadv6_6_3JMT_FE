@@ -220,6 +220,7 @@ function BrowseScreen() {
   const [list, setList] = useState<Prompt[]>([]);
 
   useEffect(() => {
+    setList([]);
     const sortParam = sort === '평점순' ? 'rating' : sort === '가격순' ? 'price-asc' : 'popular';
     api.get('/api/v1/products', {
       params: { q: query || undefined, category: category !== 'all' ? category : undefined, sort: sortParam },
@@ -284,7 +285,7 @@ function BrowseScreen() {
       ) : (
         <div
           className="ph-grid"
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, width: '100%', minWidth: 0 }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}
         >
           {list.map((p) => (
             <PromptCard key={p.id} p={p} onOpen={(p) => router.push(`/detail/${p.id}`)} />

@@ -112,6 +112,9 @@ function PromptCard({ p }: { p: Prompt }) {
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
+        width: '100%',
+        minWidth: 0,
+        boxSizing: 'border-box',
       }}
     >
       <div className="ph-card-media">
@@ -211,19 +214,19 @@ export default function ShopPage() {
   ]);
 
   useEffect(() => {
-    api.get('/api/v1/sellers/me/products')
-      .then((res) => setMyListings(res.data.data ?? []))
-      .catch(() => {});
-    api.get('/api/v1/sellers/me/stats')
-      .then((res) => {
-        const d = res.data.data;
-        setStats([
-          { label: '등록 프롬프트', value: `${myListings.length}개`,              icon: Layers      },
-          { label: '누적 판매',     value: `${(d.totalSales ?? 0).toLocaleString('ko-KR')}회`, icon: ShoppingBag },
-          { label: '이번 달 수익',  value: `₩${(d.totalRevenue ?? 0).toLocaleString('ko-KR')}`, icon: Wallet  },
-        ]);
-      })
-      .catch(() => {});
+    Promise.all([
+      api.get('/api/v1/sellers/me/products').catch(() => ({ data: { data: [] } })),
+      api.get('/api/v1/sellers/me/stats').catch(() => ({ data: { data: {} } })),
+    ]).then(([productsRes, statsRes]) => {
+      const products = productsRes.data.data ?? [];
+      const d = statsRes.data.data ?? {};
+      setMyListings(products);
+      setStats([
+        { label: '등록 프롬프트', value: `${products.length}개`,                             icon: Layers      },
+        { label: '누적 판매',     value: `${(d.totalSales ?? 0).toLocaleString('ko-KR')}회`, icon: ShoppingBag },
+        { label: '이번 달 수익',  value: `₩${(d.totalRevenue ?? 0).toLocaleString('ko-KR')}`, icon: Wallet    },
+      ]);
+    });
   }, []);
 
   const isStopped = (id: string | number) => !!stopped[id];
@@ -283,7 +286,7 @@ export default function ShopPage() {
           새로 등록한 프롬프트는 관리자 검수를 거쳐 승인되면 판매가 시작돼요. 판매를 중단하면 다시 등록할 수 없어요.
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+        <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
           {myListings.map((p) => {
             const review = p.status === 'review';
             const off = isStopped(p.id);
