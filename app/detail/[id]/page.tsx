@@ -20,13 +20,13 @@ import {
 type Prompt = {
   id: number;
   title: string;
-  cat: string;
+  category: string;
   icon: string;
   model: string;
-  price: number;
-  originalPrice?: number;
+  amount: number;
+  originalAmount?: number;
   rating: number;
-  sales: number;
+  salesCount: number;
   seller: string;
   badge?: string;
   desc: string;
@@ -97,17 +97,19 @@ function Button({
   size = 'lg',
   fullWidth,
   onClick,
+  disabled,
   children,
 }: {
   variant?: 'solid' | 'secondary';
   size?: 'lg';
   fullWidth?: boolean;
   onClick?: () => void;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   const [hovered, setHovered] = useState(false);
   const solidStyle: React.CSSProperties = {
-    background: hovered ? 'var(--ph-blue-hover)' : 'var(--ph-primary)',
+    background: disabled ? 'var(--ph-text-muted)' : hovered ? 'var(--ph-blue-hover)' : 'var(--ph-primary)',
     color: '#fff',
     border: '1px solid transparent',
   };
@@ -119,6 +121,7 @@ function Button({
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -128,7 +131,7 @@ function Button({
         lineHeight: 1,
         padding: size === 'lg' ? '14px 20px' : '10px 16px',
         borderRadius: 'var(--ph-radius-md)',
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
         width: fullWidth ? '100%' : undefined,
         display: 'inline-flex',
         alignItems: 'center',
@@ -209,18 +212,18 @@ function PriceTag({ p, size = 17, purchased = false }: { p: Prompt; size?: numbe
       </span>
     );
   }
-  if (p.price === 0) return <span style={{ fontSize: size, fontWeight: 700, color: 'var(--ph-primary)' }}>무료</span>;
-  if (p.originalPrice && p.originalPrice > p.price) {
-    const pct = Math.round((1 - p.price / p.originalPrice) * 100);
+  if (p.amount === 0) return <span style={{ fontSize: size, fontWeight: 700, color: 'var(--ph-primary)' }}>무료</span>;
+  if (p.originalAmount && p.originalAmount > p.amount) {
+    const pct = Math.round((1 - p.amount / p.originalAmount) * 100);
     return (
       <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
         <span style={{ fontSize: size - 2, fontWeight: 700, color: 'var(--ph-error)' }}>{pct}%</span>
-        <span style={{ fontSize: size, fontWeight: 700 }}>{won(p.price)}</span>
-        <span style={{ fontSize: size - 4, color: 'var(--ph-text-muted)', textDecoration: 'line-through' }}>{won(p.originalPrice)}</span>
+        <span style={{ fontSize: size, fontWeight: 700 }}>{won(p.amount)}</span>
+        <span style={{ fontSize: size - 4, color: 'var(--ph-text-muted)', textDecoration: 'line-through' }}>{won(p.originalAmount)}</span>
       </span>
     );
   }
-  return <span style={{ fontSize: size, fontWeight: 700 }}>{won(p.price)}</span>;
+  return <span style={{ fontSize: size, fontWeight: 700 }}>{won(p.amount)}</span>;
 }
 
 /* ── ImageCarousel ──────────────────────────────────────────────────── */
@@ -420,9 +423,9 @@ function PromptCard({ p, onOpen }: { p: Prompt; onOpen?: (p: Prompt) => void }) 
     >
       <div className="ph-card-media" style={{ position: 'relative' }}>
         <Thumb icon={p.icon} thumbnailUrl={p.thumbnail_url} />
-        {(p.price === 0 || p.badge) && (
+        {(p.amount === 0 || p.badge) && (
           <div style={{ position: 'absolute', top: 10, left: 10 }}>
-            <Badge tone="blue" soft={false}>{p.price === 0 ? '무료' : p.badge}</Badge>
+            <Badge tone="blue" soft={false}>{p.amount === 0 ? '무료' : p.badge}</Badge>
           </div>
         )}
       </div>
@@ -438,7 +441,7 @@ function PromptCard({ p, onOpen }: { p: Prompt; onOpen?: (p: Prompt) => void }) 
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 2 }}>
         <PriceTag p={p} />
-        <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', whiteSpace: 'nowrap' }}>{p.sales.toLocaleString()}회 판매</span>
+        <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', whiteSpace: 'nowrap' }}>{p.salesCount.toLocaleString()}회 판매</span>
       </div>
     </div>
   );
@@ -453,25 +456,68 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
   const { items: cartItems, addItem } = useCartStore();
   const [showVersions, setShowVersions] = useState(false);
   const [purchased, setPurchased] = useState(false);
+  const [buying, setBuying] = useState(false);
+  const [wishlistId, setWishlistId] = useState<string | null>(null);
 
   const inWish = wishItems.some((i) => i.id === String(p.id));
   const inCart = cartItems.some((i) => i.id === String(p.id));
 
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    api.get('/api/v1/orders')
+      .then((res) => {
+        const orders = res.data.data as { product: { id: number } }[];
+        if (orders.some((o) => o.product.id === p.id)) setPurchased(true);
+      })
+      .catch(() => {});
+    // 이미 찜한 경우 wishlistId를 가져옴
+    api.get('/api/v1/wishlists/exists', { params: { productId: p.id } })
+      .then((res) => {
+        if (res.data.data?.wished) {
+          api.get('/api/v1/wishlists')
+            .then((r) => {
+              const item = (r.data.data?.content ?? []).find(
+                (w: { productId: number; wishlistId: string }) => w.productId === p.id
+              );
+              if (item) setWishlistId(item.wishlistId);
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }, [isLoggedIn, p.id]);
+
+  const onBuy = async () => {
+    if (!isLoggedIn) { openLoginModal(); return; }
+    if (purchased || buying) return;
+    setBuying(true);
+    try {
+      await api.post('/api/v1/payments/confirm', { productIds: [p.id] });
+      setPurchased(true);
+    } catch {
+      alert('결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setBuying(false);
+    }
+  };
+
   const onCart = () => {
     if (!isLoggedIn) { openLoginModal(); return; }
-    addItem({ id: String(p.id), title: p.title, price: p.price, thumbnailUrl: p.thumbnail_url ?? null });
+    addItem({ id: String(p.id), title: p.title, amount: p.amount, thumbnailUrl: p.thumbnail_url ?? null });
   };
 
   const onWish = async () => {
     if (!isLoggedIn) { openLoginModal(); return; }
-    const item = { id: String(p.id), title: p.title, price: p.price, thumbnailUrl: p.thumbnail_url ?? null };
+    const item = { id: String(p.id), title: p.title, amount: p.amount, thumbnailUrl: p.thumbnail_url ?? null };
     const wasInWish = inWish;
     toggle(item); // 낙관적 업데이트
     try {
-      if (wasInWish) {
-        await api.delete(`/api/v1/wishlist/${p.id}`);
-      } else {
-        await api.post(`/api/v1/wishlist/${p.id}`);
+      if (wasInWish && wishlistId) {
+        await api.delete(`/api/v1/wishlists/${wishlistId}`);
+        setWishlistId(null);
+      } else if (!wasInWish) {
+        const res = await api.post('/api/v1/wishlists', { productId: p.id });
+        setWishlistId(res.data.data?.wishlistId ?? null);
       }
     } catch {
       toggle(item); // 실패 시 롤백
@@ -518,7 +564,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
               <b style={{ color: 'var(--ph-text)' }}>{p.rating}</b>
             </span>
             <span>·</span>
-            <span>{p.sales.toLocaleString()}회 판매</span>
+            <span>{p.salesCount.toLocaleString()}회 판매</span>
           </div>
 
           <h3 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 12px' }}>프롬프트 소개</h3>
@@ -551,7 +597,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
             <div style={{ color: 'var(--ph-text-muted)', fontSize: 14, marginTop: 4 }}>
               {purchased
                 ? '이미 보유한 프롬프트예요'
-                : p.price === 0
+                : p.amount === 0
                 ? '무료 제공 · 구매 없이 바로 사용'
                 : '1회 결제 · 영구 이용'}
             </div>
@@ -561,15 +607,18 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
                 variant="solid"
                 size="lg"
                 fullWidth
-                onClick={() => setPurchased(true)}
+                onClick={onBuy}
+                disabled={buying}
               >
-                {purchased
-                  ? p.price === 0 ? '받기 완료 ✓' : '구매 완료 ✓'
-                  : p.price === 0 ? '무료로 받기' : '프롬프트 구매하기'}
+                {buying
+                  ? '처리 중...'
+                  : purchased
+                  ? p.amount === 0 ? '받기 완료 ✓' : '구매 완료 ✓'
+                  : p.amount === 0 ? '무료로 받기' : '프롬프트 구매하기'}
               </Button>
 
               <div style={{ display: 'flex', gap: 10 }}>
-                {p.price !== 0 && (
+                {p.amount !== 0 && (
                   <div style={{ flex: 1 }}>
                     <Button
                       variant="secondary"
@@ -687,8 +736,8 @@ export default function DetailPage() {
   useEffect(() => {
     if (!id) return;
     Promise.all([
-      api.get(`/api/v1/products/${id}`),
-      api.get(`/api/v1/products/${id}/related`),
+      api.get(`/api/v1/product/${id}`),
+      api.get(`/api/v1/product/${id}/related`),
     ])
       .then(([pRes, rRes]) => {
         setProduct(pRes.data.data);

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
+import api from '@/lib/api';
 import {
   ArrowLeft, CalendarCheck, FileText, Lock, Download,
   AlertTriangle, CheckCircle2, MessageCircle,
@@ -15,12 +16,12 @@ import {
 type Prompt = {
   id: number | string;
   title: string;
-  cat: string;
+  category: string;
   icon: string;
   model: string;
-  price: number;
+  amount: number;
   rating: number | string;
-  sales: number;
+  salesCount: number;
   seller: string;
   badge?: string;
   desc: string;
@@ -30,7 +31,7 @@ type Prompt = {
 
 type FormatKey = 'txt' | 'md' | 'pdf';
 
-/* ── Mock data ─────────────────────────────────────────────────────── */
+/* ── Categories ─────────────────────────────────────────────────────── */
 
 const CATEGORIES = [
   { id: 'image',     label: '이미지 생성' },
@@ -39,12 +40,6 @@ const CATEGORIES = [
   { id: 'marketing', label: '마케팅·광고' },
   { id: 'chatbot',   label: '챗봇·대화' },
   { id: 'data',      label: '데이터 분석' },
-];
-
-const MOCK_PURCHASED: Prompt[] = [
-  { id: 1, title: '사진 같은 제품 목업 생성기', cat: 'image', icon: 'image', model: 'Midjourney v6', price: 5900, rating: 4.9, sales: 1240, seller: '비주얼랩', badge: '신규', desc: '제품 사진을 스튜디오 품질의 광고 컷으로 바꿔주는 미드저니 프롬프트.', thumbnail_url: null, purchasedAt: '2026-06-01T00:00:00.000Z' },
-  { id: 2, title: '전환율 높이는 랜딩 카피 작성', cat: 'writing', icon: 'pen-line', model: 'GPT-4o', price: 4900, rating: 4.8, sales: 980, seller: '카피킷', badge: '베스트', desc: '후킹 헤드라인부터 CTA까지 검증된 프레임워크로 랜딩 페이지 카피를 만들어 줍니다.', thumbnail_url: null, purchasedAt: '2026-05-20T00:00:00.000Z' },
-  { id: 3, title: '30일 SNS 콘텐츠 캘린더', cat: 'marketing', icon: 'megaphone', model: 'GPT-4o', price: 3900, rating: 4.7, sales: 2310, seller: '그로스하우스', badge: '베스트', desc: '브랜드 톤만 입력하면 한 달치 인스타·스레드 게시물 아이디어를 자동 생성합니다.', thumbnail_url: null, purchasedAt: '2026-04-10T00:00:00.000Z' },
 ];
 
 /* ── Icon map ────────────────────────────────────────────────────────── */
@@ -71,8 +66,8 @@ const ROLE_BY_CAT: Record<string, string> = {
 };
 
 function buildPromptText(p: Prompt): string {
-  const catLabel = (CATEGORIES.find((c) => c.id === p.cat) || { label: '일반' }).label;
-  const role = ROLE_BY_CAT[p.cat] || '전문가';
+  const catLabel = (CATEGORIES.find((c) => c.id === p.category) || { label: '일반' }).label;
+  const role = ROLE_BY_CAT[p.category] || '전문가';
   return [
     `당신은 ${role}입니다. 아래 지침에 따라 "${p.title}" 작업을 수행하세요.`,
     ``,
@@ -340,24 +335,48 @@ export default function ReaderPage() {
   const params = useParams();
   const id = params?.id;
 
-  const p = MOCK_PURCHASED.find((x) => String(x.id) === String(id)) ?? MOCK_PURCHASED[0];
-
+  const [p, setP] = useState<Prompt | null>(null);
+  const [loading, setLoading] = useState(true);
   const [downloaded, setDownloaded] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [fmt, setFmt] = useState<FormatKey>('txt');
   const [myRating, setMyRating] = useState(0);
   const [toast, setToast] = useState('');
 
+  useEffect(() => {
+    if (!id) { router.push('/mypage'); return; }
+    api.get('/api/v1/orders')
+      .then((res) => {
+        const orders: { orderId: string; purchasedAt: string; product: Prompt | null }[] = res.data.data ?? [];
+        const found = orders.find((o) => o.product && String(o.product.id) === String(id));
+        if (!found?.product) {
+          router.push('/mypage');
+          return;
+        }
+        setP({ ...found.product, purchasedAt: found.purchasedAt });
+      })
+      .catch(() => router.push('/mypage'))
+      .finally(() => setLoading(false));
+  }, [id, router]);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--ph-font-family)', color: 'var(--ph-text-muted)', fontSize: 16 }}>
+        불러오는 중...
+      </div>
+    );
+  }
+
+  if (!p) return null;
+
   const text = buildPromptText(p);
   const safeName = (p.title || 'prompt').replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'prompt';
   const dateStr = new Date(p.purchasedAt || Date.now()).toLocaleDateString('ko-KR', {
     year: 'numeric', month: 'long', day: 'numeric',
   });
-  const catLabel = (CATEGORIES.find((c) => c.id === p.cat) || { label: '일반' }).label;
+  const catLabel = (CATEGORIES.find((c) => c.id === p.category) || { label: '일반' }).label;
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-  };
+  const showToast = (msg: string) => { setToast(msg); };
 
   const escapeHtml = (s: string) =>
     String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -415,6 +434,8 @@ export default function ReaderPage() {
       다른 구매 프롬프트 보기
     </button>
   );
+
+  const Icon = ICON_MAP[p.icon] ?? Sparkles;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ph-background)', fontFamily: 'var(--ph-font-family)' }}>
@@ -590,6 +611,22 @@ export default function ReaderPage() {
             </Button>
           </div>
         </Card>
+
+        {/* Prompt thumbnail */}
+        {p.thumbnail_url && (
+          <Card padding="0" style={{ marginTop: 20, overflow: 'hidden' }}>
+            <div style={{ position: 'relative', height: 240 }}>
+              <Image src={p.thumbnail_url} alt="썸네일" fill style={{ objectFit: 'cover' }} />
+            </div>
+          </Card>
+        )}
+        {!p.thumbnail_url && (
+          <Card padding="22px 24px" style={{ marginTop: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 100, color: 'var(--ph-primary)', opacity: 0.5 }}>
+              <Icon style={{ width: 48, height: 48 } as React.CSSProperties} />
+            </div>
+          </Card>
+        )}
 
         {/* Bottom back link */}
         <div style={{ display: 'flex', justifyContent: 'center', margin: '36px 0 8px' }}>

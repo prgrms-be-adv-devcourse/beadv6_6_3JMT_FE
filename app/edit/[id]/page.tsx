@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import api from '@/lib/api';
 import {
   ArrowLeft, Pencil, ArrowRight, History,
   AlertCircle, CheckCircle2,
@@ -9,56 +10,29 @@ import {
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
-type Category = { id: string; label: string; icon: string };
+type Category = { id: string; label: string };
 
 type Version = { ver: string; date: string; note: string };
 
 type Prompt = {
   id: number;
   title: string;
-  cat: string;
-  icon: string;
+  category: string;
   model: string;
-  price: number;
-  rating: number;
-  sales: number;
-  seller: string;
-  badge?: string;
+  amount: number;
   desc: string;
-  thumbnail_url?: string | null;
+  versions?: Version[];
 };
 
 /* ── Data ───────────────────────────────────────────────────────────── */
 
 const CATEGORIES: Category[] = [
-  { id: 'image',     label: '이미지 생성', icon: 'image'          },
-  { id: 'writing',   label: '글쓰기',      icon: 'pen-line'       },
-  { id: 'coding',    label: '코딩',        icon: 'code-xml'       },
-  { id: 'marketing', label: '마케팅',      icon: 'megaphone'      },
-  { id: 'chatbot',   label: '챗봇',        icon: 'message-circle' },
-  { id: 'data',      label: '데이터 분석', icon: 'bar-chart-3'    },
-];
-
-const PROMPTS: Prompt[] = [
-  { id: 1,  title: '사진 같은 제품 목업 생성기',     cat: 'image',     icon: 'image',          model: 'Midjourney v6', price: 5900, rating: 4.9, sales: 1240, seller: '비주얼랩',   badge: '신규',   desc: '제품 사진을 스튜디오 품질의 광고 컷으로 바꿔주는 미드저니 프롬프트. 조명·각도·배경을 한 번에 지정합니다.', thumbnail_url: null },
-  { id: 2,  title: '전환율 높이는 랜딩 카피 작성',    cat: 'writing',   icon: 'pen-line',       model: 'GPT-4o',        price: 4900, rating: 4.8, sales: 980,  seller: '카피킷',    badge: '베스트', desc: '후킹 헤드라인부터 CTA까지, 검증된 프레임워크로 랜딩 페이지 카피를 단계별로 만들어 줍니다.', thumbnail_url: null },
-  { id: 3,  title: '리액트 컴포넌트 리팩터링 도우미',  cat: 'coding',    icon: 'code-xml',       model: 'Claude 3.5',    price: 7900, rating: 5.0, sales: 612,  seller: '데브플로우',             desc: '지저분한 컴포넌트를 깔끔한 훅 기반 구조로 리팩터링하고, 테스트 코드까지 제안합니다.', thumbnail_url: null },
-  { id: 4,  title: '30일 SNS 콘텐츠 캘린더',        cat: 'marketing', icon: 'megaphone',      model: 'GPT-4o',        price: 3900, rating: 4.7, sales: 2310, seller: '그로스하우스', badge: '베스트', desc: '브랜드 톤만 입력하면 한 달치 인스타·스레드 게시물 아이디어와 카피를 자동 생성합니다.', thumbnail_url: null },
-  { id: 5,  title: '친절한 CS 챗봇 페르소나',        cat: 'chatbot',   icon: 'message-circle', model: 'Claude 3.5',    price: 6900, rating: 4.9, sales: 540,  seller: '토크봇',                 desc: '고객 문의를 따뜻하고 정확하게 응대하는 상담 챗봇 시스템 프롬프트.', thumbnail_url: null },
-  { id: 6,  title: '엑셀 데이터 인사이트 요약',       cat: 'data',      icon: 'bar-chart-3',    model: 'GPT-4o',        price: 0,    rating: 4.6, sales: 430,  seller: '데이터핀',               desc: '표 데이터를 붙여넣으면 핵심 추세·이상치를 보고서 형태로 정리해 줍니다.', thumbnail_url: null },
-  { id: 7,  title: '감성 일러스트 캐릭터 시트',       cat: 'image',     icon: 'image',          model: 'Midjourney v6', price: 4500, rating: 4.8, sales: 870,  seller: '비주얼랩',               desc: '일관된 캐릭터를 여러 포즈·표정으로 생성하는 캐릭터 시트 프롬프트.', thumbnail_url: null },
-  { id: 8,  title: '유튜브 스크립트 후킹 오프닝',     cat: 'writing',   icon: 'pen-line',       model: 'GPT-4o',        price: 0,    rating: 4.7, sales: 1520, seller: '카피킷',    badge: '신규',   desc: '첫 15초에 이탈을 막는 강력한 오프닝 훅을 주제별로 생성합니다.', thumbnail_url: null },
-  { id: 9,  title: 'A/B 테스트 광고 카피 생성기',    cat: 'marketing', icon: 'megaphone',      model: 'GPT-4o',        price: 4200, rating: 4.6, sales: 780,  seller: '그로스하우스',           desc: '동일 메시지를 다른 톤으로 변형해 A/B 테스트용 카피 세트를 빠르게 만들어 줍니다.', thumbnail_url: null },
-  { id: 10, title: '코드 리뷰 자동화 봇',            cat: 'coding',    icon: 'code-xml',       model: 'Claude 3.5',    price: 8900, rating: 4.9, sales: 310,  seller: '데브플로우',             desc: 'PR 코드를 붙여넣으면 보안·가독성·성능 관점에서 리뷰 코멘트를 생성합니다.', thumbnail_url: null },
-  { id: 11, title: '여행 일정 플래너',               cat: 'chatbot',   icon: 'message-circle', model: 'GPT-4o',        price: 2900, rating: 4.5, sales: 1100, seller: '토크봇',                 desc: '도시, 일수, 예산을 입력하면 현지인 맞춤 여행 일정을 짜줍니다.', thumbnail_url: null },
-  { id: 12, title: '판매 데이터 주간 리포트',         cat: 'data',      icon: 'bar-chart-3',    model: 'GPT-4o',        price: 3500, rating: 4.7, sales: 290,  seller: '데이터핀',               desc: '주간 판매 데이터를 넣으면 KPI 요약과 다음 주 액션 아이템을 뽑아줍니다.', thumbnail_url: null },
-];
-
-/* seed version history shared across all prompts */
-const SEED_VERSIONS: Version[] = [
-  { ver: '1.2', date: '2026.06.15', note: '프롬프트 지시문 개선, 예시 3개 추가' },
-  { ver: '1.1', date: '2026.03.28', note: '출력 형식 정리, 불필요한 문장 제거' },
-  { ver: '1.0', date: '2026.01.12', note: '최초 등록' },
+  { id: 'image',     label: '이미지 생성' },
+  { id: 'writing',   label: '글쓰기'      },
+  { id: 'coding',    label: '코딩'        },
+  { id: 'marketing', label: '마케팅'      },
+  { id: 'chatbot',   label: '챗봇'        },
+  { id: 'data',      label: '데이터 분석' },
 ];
 
 function nextVer(latest: string): string {
@@ -309,20 +283,20 @@ function Toast({ message }: { message: string }) {
 
 /* ── EditScreen ──────────────────────────────────────────────────────── */
 
-function EditScreen({ prompt }: { prompt: Prompt }) {
+function EditScreen({ id, prompt, versions }: { id: number; prompt: Prompt; versions: Version[] }) {
   const router = useRouter();
 
   const [title, setTitle] = useState(prompt.title);
-  const [cat, setCat] = useState(prompt.cat);
+  const [category, setCategory] = useState(prompt.category);
   const [model, setModel] = useState(prompt.model);
-  const [price, setPrice] = useState(prompt.price === 0 ? '0' : String(prompt.price));
+  const [price, setPrice] = useState(prompt.amount === 0 ? '0' : String(prompt.amount));
   const [body, setBody] = useState(prompt.desc);
   const [note, setNote] = useState('');
   const [noteErr, setNoteErr] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const versions = SEED_VERSIONS;
-  const curVer = versions[0].ver;
+  const curVer = versions[0]?.ver ?? '1.0';
   const nxtVer = nextVer(curVer);
 
   const showToast = (msg: string) => {
@@ -344,14 +318,31 @@ function EditScreen({ prompt }: { prompt: Prompt }) {
     color: 'var(--ph-text)',
   };
 
-  const save = () => {
+  const save = async () => {
     if (!note.trim()) {
       setNoteErr(true);
       showToast('업데이트 내용을 입력해 주세요');
       return;
     }
-    showToast(`v${nxtVer} 새 버전으로 저장됐어요`);
-    setTimeout(() => router.push('/shop'), 1200);
+    if (saving) return;
+    setSaving(true);
+    try {
+      await api.put(`/api/v1/product/${id}`, {
+        title,
+        category,
+        model,
+        amount: Number(price),
+        desc: body,
+        content: body,
+      });
+      showToast(`v${nxtVer} 새 버전으로 저장됐어요`);
+      setTimeout(() => router.push('/shop'), 1200);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showToast(msg ?? '저장에 실패했어요. 다시 시도해 주세요');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -395,7 +386,7 @@ function EditScreen({ prompt }: { prompt: Prompt }) {
               <Label>카테고리</Label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {CATEGORIES.map((c) => (
-                  <Tag key={c.id} selected={cat === c.id} onClick={() => setCat(c.id)}>{c.label}</Tag>
+                  <Tag key={c.id} selected={category === c.id} onClick={() => setCategory(c.id)}>{c.label}</Tag>
                 ))}
               </div>
             </div>
@@ -458,7 +449,9 @@ function EditScreen({ prompt }: { prompt: Prompt }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 8 }}>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
             <Button variant="secondary" size="lg" onClick={() => router.push('/shop')}>취소</Button>
-            <Button variant="solid" size="lg" disabled={!title.trim()} onClick={save}>새 버전으로 저장</Button>
+            <Button variant="solid" size="lg" disabled={saving || !title.trim()} onClick={save}>
+              {saving ? '저장 중...' : '새 버전으로 저장'}
+            </Button>
           </div>
         </div>
       </div>
@@ -476,9 +469,33 @@ export default function EditPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = Number(params?.id);
-  const prompt = PROMPTS.find((x) => x.id === id);
 
-  if (!prompt) {
+  const [prompt, setPrompt] = useState<Prompt | null>(null);
+  const [versions, setVersions] = useState<Version[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    api.get(`/api/v1/product/${id}`)
+      .then((res) => {
+        const d = res.data.data;
+        setPrompt(d);
+        setVersions(d.versions ?? []);
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: 920, margin: '0 auto', padding: '80px 32px', textAlign: 'center' }}>
+        <p style={{ fontSize: 16, color: 'var(--ph-text-muted)' }}>불러오는 중...</p>
+      </div>
+    );
+  }
+
+  if (error || !prompt) {
     return (
       <div style={{ maxWidth: 920, margin: '0 auto', padding: '80px 32px', textAlign: 'center' }}>
         <p style={{ fontSize: 17, color: 'var(--ph-text-secondary)', marginBottom: 24 }}>프롬프트를 찾을 수 없어요.</p>
@@ -492,5 +509,5 @@ export default function EditPage() {
     );
   }
 
-  return <EditScreen prompt={prompt} />;
+  return <EditScreen id={id} prompt={prompt} versions={versions} />;
 }
