@@ -3,7 +3,7 @@ import { PRODUCTS, PRODUCT_VERSIONS } from '../data/products';
 import { ok, okList, ERR, extractToken, getUserIdFromToken } from '../utils';
 import { MOCK_USERS } from '../data/users';
 
-const BASE = '/api/v1/products';
+const BASE = '/api/v1/product';
 
 export const productHandlers = [
   // GET /api/v1/products
@@ -16,7 +16,7 @@ export const productHandlers = [
     const sort     = url.searchParams.get('sort') ?? 'popular';
 
     let filtered = PRODUCTS.filter((p) => {
-      const matchCat  = category === 'all' || p.cat === category;
+      const matchCat  = category === 'all' || p.category === category;
       const matchQ    = !q || p.title.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q);
       return matchCat && matchQ;
     });
@@ -24,11 +24,11 @@ export const productHandlers = [
     if (sort === 'rating') {
       filtered = [...filtered].sort((a, b) => b.rating - a.rating);
     } else if (sort === 'price-asc') {
-      filtered = [...filtered].sort((a, b) => a.price - b.price);
+      filtered = [...filtered].sort((a, b) => a.amount - b.amount);
     } else if (sort === 'price-desc') {
-      filtered = [...filtered].sort((a, b) => b.price - a.price);
+      filtered = [...filtered].sort((a, b) => b.amount - a.amount);
     } else {
-      filtered = [...filtered].sort((a, b) => b.sales - a.sales);
+      filtered = [...filtered].sort((a, b) => b.salesCount - a.salesCount);
     }
 
     return okList(filtered, page, size);
@@ -58,7 +58,7 @@ export const productHandlers = [
 
     const url    = new URL(request.url);
     const limit  = Number(url.searchParams.get('limit') ?? 4);
-    const related = PRODUCTS.filter((p) => p.cat === product.cat && p.id !== product.id).slice(0, limit);
+    const related = PRODUCTS.filter((p) => p.category === product.category && p.id !== product.id).slice(0, limit);
 
     return ok(related);
   }),
@@ -73,10 +73,10 @@ export const productHandlers = [
     if (!user || user.role !== 'seller') return ERR.forbidden();
 
     const body = await request.json() as {
-      title?: string; cat?: string; model?: string; desc?: string; price?: number;
+      title?: string; category?: string; model?: string; desc?: string; amount?: number;
     };
-    if (!body?.title || !body?.cat || !body?.price === undefined) {
-      return ERR.validation('필수 항목(title, cat, price)을 입력해주세요.');
+    if (!body?.title || !body?.category || !body?.amount === undefined) {
+      return ERR.validation('필수 항목(title, category, amount)을 입력해주세요.');
     }
 
     const newProduct = {
@@ -84,7 +84,7 @@ export const productHandlers = [
       ...body,
       icon: 'sparkles',
       rating: 0,
-      sales: 0,
+      salesCount: 0,
       seller: user.name,
       sellerId: user.id,
       thumbnail_url: null,
@@ -102,13 +102,18 @@ export const productHandlers = [
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const product = PRODUCTS.find((p) => p.id === Number(params.id));
-    if (!product) return ERR.notFound('프로덕트');
-    if (product.sellerId !== userId) return ERR.forbidden();
+    const idx = PRODUCTS.findIndex((p) => p.id === Number(params.id));
+    if (idx === -1) return ERR.notFound('프로덕트');
+    if (PRODUCTS[idx].sellerId !== userId) return ERR.forbidden();
 
-    const body  = await request.json() as Partial<typeof product>;
-    const updated = { ...product, ...body, updatedAt: new Date().toISOString() };
-    return ok(updated);
+    const body = await request.json() as Partial<typeof PRODUCTS[number]>;
+    PRODUCTS[idx] = {
+      ...PRODUCTS[idx],
+      ...body,
+      status: 'review',
+      updatedAt: new Date().toISOString(),
+    };
+    return ok(PRODUCTS[idx]);
   }),
 
   // DELETE /api/v1/products/:id

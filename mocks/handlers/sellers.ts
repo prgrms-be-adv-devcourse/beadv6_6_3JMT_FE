@@ -6,8 +6,8 @@ import { ok, ERR, extractToken, getUserIdFromToken } from '../utils';
 const BASE = '/api/v1/sellers';
 
 export const sellerHandlers = [
-  // POST /api/v1/sellers/apply
-  http.post(`${BASE}/apply`, async ({ request }) => {
+  // POST /api/v1/seller
+  http.post('/api/v1/seller', async ({ request }) => {
     const token  = extractToken(request);
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
@@ -58,13 +58,13 @@ export const sellerHandlers = [
     if (!user || user.role !== 'seller') return ERR.forbidden();
 
     const myProducts   = PRODUCTS.filter((p) => p.sellerId === userId);
-    const totalSales   = myProducts.reduce((sum, p) => sum + p.sales, 0);
-    const totalRevenue = myProducts.reduce((sum, p) => sum + p.price * p.sales, 0);
+    const totalSalesCount   = myProducts.reduce((sum, p) => sum + p.salesCount, 0);
+    const totalRevenue = myProducts.reduce((sum, p) => sum + p.amount * p.salesCount, 0);
     const avgRating    = myProducts.length
       ? myProducts.reduce((sum, p) => sum + p.rating, 0) / myProducts.length
       : 0;
 
-    return ok({ totalSales, totalRevenue, rating: Math.round(avgRating * 10) / 10 });
+    return ok({ totalSalesCount, totalRevenue, rating: Math.round(avgRating * 10) / 10 });
   }),
 
   // GET /api/v1/sellers/me/payments
