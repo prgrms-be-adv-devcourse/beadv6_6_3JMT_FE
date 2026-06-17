@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware'
 interface CartItem {
   id: string
   title: string
-  price: number
+  amount: number
   thumbnailUrl: string | null
 }
 
