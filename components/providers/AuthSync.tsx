@@ -16,13 +16,13 @@ export default function AuthSync() {
     }
     api.get('/api/v1/users/me/wishlist')
       .then((res) => {
-        const products: { id: number; title: string; price: number; thumbnail_url?: string | null }[] =
+        const products: { id: number; title: string; amount: number; thumbnail_url?: string | null }[] =
           res.data.data ?? [];
         setItems(
           products.map((p) => ({
             id: String(p.id),
             title: p.title,
-            price: p.price,
+            amount: p.amount,
             thumbnailUrl: p.thumbnail_url ?? null,
           }))
         );
