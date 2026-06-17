@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import ShaderBackground from '@/components/ui/shader-background';
 import api from '@/lib/api';
 import {
   Sparkles, Search, Image as LucideImage, PenLine,
@@ -66,9 +67,15 @@ function Icon({ name, style }: { name: string; style?: React.CSSProperties }) {
 
 /* ── Shared UI pieces ────────────────────────────────────────────── */
 
-function Badge({ children }: { children: React.ReactNode }) {
+function Badge({ children, dark }: { children: React.ReactNode; dark?: boolean }) {
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 14px', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-full)', fontSize: 14, fontWeight: 600 }}>
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 14px',
+      background: dark ? 'rgba(255,255,255,0.12)' : 'var(--ph-secondary)',
+      color: dark ? 'rgba(255,255,255,0.9)' : 'var(--ph-primary)',
+      borderRadius: 'var(--ph-radius-full)', fontSize: 14, fontWeight: 600,
+      border: dark ? '1px solid rgba(255,255,255,0.18)' : 'none',
+    }}>
       <Icon name="sparkles" style={{ width: 15, height: 15 }} />
       {children}
     </div>
@@ -117,10 +124,10 @@ function SearchBar({ value, onChange, onSubmit }: {
   );
 }
 
-function PopularTags({ onPick }: { onPick: (q: string) => void }) {
+function PopularTags({ onPick, dark }: { onPick: (q: string) => void; dark?: boolean }) {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
-      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text-muted)', marginRight: 2 }}>인기 검색</span>
+      <span style={{ fontSize: 14, fontWeight: 600, color: dark ? 'rgba(255,255,255,0.55)' : 'var(--ph-text-muted)', marginRight: 2 }}>인기 검색</span>
       {TAGS.map((t) => (
         <button
           key={t.label}
@@ -128,11 +135,21 @@ function PopularTags({ onPick }: { onPick: (q: string) => void }) {
           style={{
             fontFamily: 'var(--ph-font-family)', fontSize: 14, fontWeight: 600, lineHeight: 1,
             padding: '8px 14px', borderRadius: 'var(--ph-radius-full)', cursor: 'pointer',
-            background: 'var(--ph-white)', color: 'var(--ph-text-secondary)',
-            border: '1px solid var(--ph-border)', transition: 'border-color .15s ease, color .15s ease',
+            background: dark ? 'rgba(255,255,255,0.08)' : 'var(--ph-white)',
+            color: dark ? 'rgba(255,255,255,0.8)' : 'var(--ph-text-secondary)',
+            border: dark ? '1px solid rgba(255,255,255,0.2)' : '1px solid var(--ph-border)',
+            transition: 'border-color .15s ease, color .15s ease, background .15s ease',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--ph-primary)'; e.currentTarget.style.color = 'var(--ph-primary)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--ph-border)'; e.currentTarget.style.color = 'var(--ph-text-secondary)'; }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = dark ? 'rgba(255,255,255,0.6)' : 'var(--ph-primary)';
+            e.currentTarget.style.color = dark ? '#ffffff' : 'var(--ph-primary)';
+            if (dark) e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = dark ? 'rgba(255,255,255,0.2)' : 'var(--ph-border)';
+            e.currentTarget.style.color = dark ? 'rgba(255,255,255,0.8)' : 'var(--ph-text-secondary)';
+            if (dark) e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+          }}
         >{t.label}</button>
       ))}
     </div>
@@ -267,8 +284,9 @@ function HeroToss({ query, onChange, onSearch }: {
   onSearch: (q: string) => void;
 }) {
   return (
-    <section style={{ background: 'linear-gradient(180deg, #ffffff 0%, #f3f7fd 42%, #e6effb 100%)' }}>
-      <div style={{ maxWidth: 940, margin: '0 auto', padding: '96px 32px 88px', textAlign: 'center' }}>
+    <section style={{ position: 'relative', overflow: 'hidden' }}>
+      <ShaderBackground />
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 940, margin: '0 auto', padding: '96px 32px 88px', textAlign: 'center' }}>
         <div className="rise">
           <Badge>12,000개 이상의 검증된 프롬프트</Badge>
         </div>
@@ -339,7 +357,7 @@ function PopularGrid() {
         actionLabel="전체 보기 →"
         onAction={() => { window.location.href = '/browse'; }}
       />
-      <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+      <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
         {featured.map((p) => <PromptCard key={p.id} p={p} />)}
       </div>
     </section>
