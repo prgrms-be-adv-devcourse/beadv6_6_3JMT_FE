@@ -158,6 +158,9 @@ export default function ShaderBackground() {
       console.warn('WebGL not supported.');
       return;
     }
+    if (gl.isContextLost()) {
+      return;
+    }
 
     const program = initShaderProgram(gl);
     if (!program) return;
@@ -209,7 +212,6 @@ export default function ShaderBackground() {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', resizeCanvas);
       resizeObserver.disconnect();
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
     };
   }, []);
 

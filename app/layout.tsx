@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
+import ConditionalLayout from '@/components/layout/ConditionalLayout';
 import MockProvider from '@/components/providers/MockProvider';
 import AuthSync from '@/components/providers/AuthSync';
 
@@ -26,9 +25,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <MockProvider>
           <AuthSync />
-          <Header />
-          {children}
-          <Footer />
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
         </MockProvider>
       </body>
     </html>

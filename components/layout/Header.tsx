@@ -37,7 +37,7 @@ export interface PHUser {
 export interface CartItem {
   id: string;
   title: string;
-  price: number;
+  amount: number;
 }
 
 /* ── 헬퍼: 금액 포맷 ───────────────────────────────────── */
@@ -365,7 +365,7 @@ export default function Header() {
               {cart.map((it) => (
                 <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', fontSize: 13 }}>
                   <span style={{ flex: 1, color: 'var(--ph-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.title}</span>
-                  <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{it.price === 0 ? '무료' : won(it.price)}</span>
+                  <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{it.amount === 0 ? '무료' : won(it.amount)}</span>
                   <button
                     onClick={() => onRemoveFromCart(it.id)}
                     aria-label="삭제"
@@ -377,11 +377,11 @@ export default function Header() {
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', borderTop: '1px solid var(--ph-border)', marginTop: 4 }}>
                 <span style={{ fontSize: 13, color: 'var(--ph-text-secondary)' }}>합계</span>
-                <span style={{ fontWeight: 700 }}>{won(cart.reduce((s, x) => s + x.price, 0))}</span>
+                <span style={{ fontWeight: 700 }}>{won(cart.reduce((s, x) => s + x.amount, 0))}</span>
               </div>
               <div style={{ padding: 8 }}>
                 <button
-                  onClick={close}
+                  onClick={() => { close(); router.push('/checkout'); }}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: 36, border: 'none', borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-primary)', color: '#fff', fontFamily: 'var(--ph-font-family)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
                 >결제하기</button>
               </div>

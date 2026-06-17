@@ -16,8 +16,8 @@ import { useCartStore } from '@/store/useCartStore';
 
 type Category = { id: string; label: string; icon?: string; desc?: string };
 type Prompt = {
-  id: number; title: string; cat: string; icon: string; model: string;
-  price: number; originalPrice?: number; rating: number; sales: number;
+  id: number; title: string; category: string; icon: string; model: string;
+  amount: number; originalAmount?: number; rating: number; salesCount: number;
   seller: string; badge?: string; desc: string;
 };
 
@@ -95,18 +95,18 @@ function Tag({
 /* ── PriceTag ────────────────────────────────────────────────────── */
 
 function PriceTag({ p, size = 17 }: { p: Prompt; size?: number }) {
-  if (p.price === 0) return <span style={{ fontSize: size, fontWeight: 700, color: 'var(--ph-primary)' }}>무료</span>;
-  if (p.originalPrice && p.originalPrice > p.price) {
-    const pct = Math.round((1 - p.price / p.originalPrice) * 100);
+  if (p.amount === 0) return <span style={{ fontSize: size, fontWeight: 700, color: 'var(--ph-primary)' }}>무료</span>;
+  if (p.originalAmount && p.originalAmount > p.amount) {
+    const pct = Math.round((1 - p.amount / p.originalAmount) * 100);
     return (
       <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
         <span style={{ fontSize: size - 2, fontWeight: 700, color: 'var(--ph-error)' }}>{pct}%</span>
-        <span style={{ fontSize: size, fontWeight: 700 }}>{won(p.price)}</span>
-        <span style={{ fontSize: size - 4, color: 'var(--ph-text-muted)', textDecoration: 'line-through' }}>{won(p.originalPrice)}</span>
+        <span style={{ fontSize: size, fontWeight: 700 }}>{won(p.amount)}</span>
+        <span style={{ fontSize: size - 4, color: 'var(--ph-text-muted)', textDecoration: 'line-through' }}>{won(p.originalAmount)}</span>
       </span>
     );
   }
-  return <span style={{ fontSize: size, fontWeight: 700 }}>{won(p.price)}</span>;
+  return <span style={{ fontSize: size, fontWeight: 700 }}>{won(p.amount)}</span>;
 }
 
 /* ── Thumb (이미지 없을 때 아이콘 플레이스홀더) ───────────────────── */
@@ -132,13 +132,13 @@ function PromptCard({ p, onOpen }: { p: Prompt; onOpen?: (p: Prompt) => void }) 
   const onWish = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isLoggedIn) { openLoginModal(); return; }
-    toggle({ id: String(p.id), title: p.title, price: p.price, thumbnailUrl: null });
+    toggle({ id: String(p.id), title: p.title, amount: p.amount, thumbnailUrl: null });
   };
 
   const onCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isLoggedIn) { openLoginModal(); return; }
-    addItem({ id: String(p.id), title: p.title, price: p.price, thumbnailUrl: null });
+    addItem({ id: String(p.id), title: p.title, amount: p.amount, thumbnailUrl: null });
   };
 
   return (
@@ -163,10 +163,10 @@ function PromptCard({ p, onOpen }: { p: Prompt; onOpen?: (p: Prompt) => void }) 
     >
       <div className="ph-card-media" style={{ position: 'relative' }}>
         <Thumb icon={p.icon} />
-        {(p.price === 0 || p.badge) && (
+        {(p.amount === 0 || p.badge) && (
           <div style={{ position: 'absolute', top: 10, left: 10 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 8px', borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-primary)', color: '#fff', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
-              {p.price === 0 ? '무료' : p.badge}
+              {p.amount === 0 ? '무료' : p.badge}
             </span>
           </div>
         )}
@@ -178,7 +178,7 @@ function PromptCard({ p, onOpen }: { p: Prompt; onOpen?: (p: Prompt) => void }) 
           >
             <Heart style={{ width: 16, height: 16, color: isWished ? 'var(--ph-error)' : 'var(--ph-text-muted)', fill: isWished ? 'var(--ph-error)' : 'none' } as React.CSSProperties} />
           </button>
-          {p.price !== 0 && (
+          {p.amount !== 0 && (
             <button
               onClick={onCart}
               title="장바구니 담기"
@@ -203,7 +203,7 @@ function PromptCard({ p, onOpen }: { p: Prompt; onOpen?: (p: Prompt) => void }) 
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 2 }}>
         <PriceTag p={p} />
-        <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', whiteSpace: 'nowrap' }}>{p.sales.toLocaleString()}회 판매</span>
+        <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', whiteSpace: 'nowrap' }}>{p.salesCount.toLocaleString()}회 판매</span>
       </div>
     </div>
   );
@@ -222,7 +222,7 @@ function BrowseScreen() {
   useEffect(() => {
     setList([]);
     const sortParam = sort === '평점순' ? 'rating' : sort === '가격순' ? 'price-asc' : 'popular';
-    api.get('/api/v1/products', {
+    api.get('/api/v1/product', {
       params: { q: query || undefined, category: category !== 'all' ? category : undefined, sort: sortParam },
     })
       .then((res) => setList(res.data.data ?? []))

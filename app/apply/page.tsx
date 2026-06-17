@@ -288,7 +288,7 @@ export default function ApplyPage() {
     setSubmitting(true);
     setSubmitError('');
     try {
-      await api.post('/api/v1/sellers/apply', {
+      await api.post('/api/v1/seller', {
         selectedCategories: picked,
         introduction: intro,
         portfolioLink: link,

@@ -355,7 +355,7 @@ export default function SellPage() {
   const router = useRouter();
 
   const [title, setTitle] = useState('');
-  const [cat, setCat] = useState('writing');
+  const [category, setCategory] = useState('writing');
   const [model, setModel] = useState('');
   const [price, setPrice] = useState('');
   const [body, setBody] = useState('');
@@ -370,7 +370,7 @@ export default function SellPage() {
     setTimeout(() => setToast(null), 1800);
   };
 
-  const catObj = CATEGORIES.find((c) => c.id === cat) || CATEGORIES[0];
+  const catObj = CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
 
   const addTag = (e: React.FormEvent) => {
     e.preventDefault();
@@ -385,11 +385,11 @@ export default function SellPage() {
     if (loading) return;
     setLoading(true);
     try {
-      await api.post('/api/v1/products', {
+      await api.post('/api/v1/product', {
         title,
-        cat,
+        category,
         model,
-        price: Number(price),
+        amount: Number(price),
         desc: body,
         content: body,
       });
@@ -455,7 +455,7 @@ export default function SellPage() {
                 <Label>카테고리</Label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {CATEGORIES.map((c) => (
-                    <Tag key={c.id} selected={cat === c.id} onClick={() => setCat(c.id)}>{c.label}</Tag>
+                    <Tag key={c.id} selected={category === c.id} onClick={() => setCategory(c.id)}>{c.label}</Tag>
                   ))}
                 </div>
               </div>
