@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import api from '@/lib/api';
 import {
   ArrowLeft, Store, Eye, Images, Check, CheckCircle2, X, Star,
   LucideImage, PenLine, CodeXml, Megaphone, MessageCircle, BarChart3,
@@ -362,6 +363,7 @@ export default function SellPage() {
   const [tagInput, setTagInput] = useState('');
   const [status, setStatus] = useState<null | 'saved' | 'submitted'>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -378,11 +380,28 @@ export default function SellPage() {
   };
   const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
 
-  const submit = () => {
+  const submit = async () => {
     if (!title.trim()) { showToast('프롬프트 제목을 입력해 주세요'); return; }
-    setStatus('submitted');
-    showToast('검수 요청이 접수됐어요 · 관리자 승인 후 판매가 시작돼요');
-    router.push('/shop');
+    if (loading) return;
+    setLoading(true);
+    try {
+      await api.post('/api/v1/products', {
+        title,
+        cat,
+        model,
+        price: Number(price),
+        desc: body,
+        content: body,
+      });
+      setStatus('submitted');
+      showToast('검수 요청이 접수됐어요 · 관리자 승인 후 판매가 시작돼요');
+      router.push('/shop');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showToast(msg ?? '등록에 실패했어요. 다시 시도해 주세요');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const taStyle: React.CSSProperties = {
@@ -546,7 +565,7 @@ export default function SellPage() {
             )}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
               <Button variant="secondary" size="lg" onClick={() => setStatus('saved')}>임시저장</Button>
-              <Button variant="solid" size="lg" onClick={submit}>등록하기</Button>
+              <Button variant="solid" size="lg" disabled={loading} onClick={submit}>{loading ? '등록 중...' : '등록하기'}</Button>
             </div>
           </div>
         </div>
