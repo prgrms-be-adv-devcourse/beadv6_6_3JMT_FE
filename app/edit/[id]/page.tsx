@@ -5,8 +5,15 @@ import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/api';
 import {
   ArrowLeft, Pencil, ArrowRight, History,
-  AlertCircle, CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
+import FormField from '@/components/ui/FormField';
+import ImageUpload from '@/components/ui/ImageUpload';
+import { useToast } from '@/store/useToastStore';
+import Label from '@/components/ui/Label';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Tag from '@/components/ui/Tag';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -35,186 +42,12 @@ const CATEGORIES: Category[] = [
   { id: 'data',      label: '데이터 분석' },
 ];
 
-function nextVer(latest: string): string {
-  const parts = String(latest || '1.0').split('.').map((n) => parseInt(n, 10) || 0);
-  parts[parts.length - 1] += 1;
-  return parts.join('.');
-}
-
-/* ── Button ─────────────────────────────────────────────────────────── */
-
-function Button({
-  variant = 'solid',
-  size = 'md',
-  disabled = false,
-  type = 'button',
-  onClick,
-  children,
-}: {
-  variant?: 'solid' | 'secondary';
-  size?: 'lg' | 'md' | 'sm';
-  disabled?: boolean;
-  type?: 'button' | 'submit';
-  onClick?: () => void;
-  children: React.ReactNode;
-}) {
-  const [hovered, setHovered] = useState(false);
-
-  const sizes: Record<string, React.CSSProperties> = {
-    sm: { fontSize: 14, padding: '7px 12px', minHeight: 34, minWidth: 64 },
-    md: { fontSize: 15, padding: '11px 16px', minHeight: 40, minWidth: 84 },
-    lg: { fontSize: 17, padding: '15px 24px', minHeight: 52, minWidth: 120 },
-  };
-
-  const variantStyle: React.CSSProperties =
-    variant === 'solid'
-      ? { background: disabled ? 'var(--ph-primary)' : hovered ? 'var(--ph-blue-hover)' : 'var(--ph-primary)', color: '#fff', border: '1px solid transparent', borderRadius: 'var(--ph-radius-md)' }
-      : { background: hovered ? 'var(--ph-gray-100)' : 'transparent', color: 'var(--ph-text)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-sm)' };
-
-  return (
-    <button
-      type={type}
-      disabled={disabled}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        fontFamily: 'var(--ph-font-family)',
-        fontWeight: 600,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        boxShadow: 'none',
-        transition: 'background-color .15s ease',
-        opacity: disabled ? 0.4 : 1,
-        boxSizing: 'border-box',
-        ...sizes[size],
-        ...variantStyle,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ── Input ───────────────────────────────────────────────────────────── */
-
-function Input({
-  value,
-  onChange,
-  placeholder,
-  maxLength,
-  inputMode,
-  leading,
-}: {
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder?: string;
-  maxLength?: number;
-  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
-  leading?: React.ReactNode;
-}) {
-  const [focus, setFocus] = useState(false);
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        border: `1px solid ${focus ? 'var(--ph-primary)' : 'var(--ph-border)'}`,
-        borderRadius: 'var(--ph-radius-md)',
-        padding: '0 14px',
-        background: 'var(--ph-surface)',
-        transition: 'border-color .15s ease',
-      }}
-    >
-      {leading && <span style={{ display: 'flex', color: 'var(--ph-text-muted)' }}>{leading}</span>}
-      <input
-        value={value}
-        onChange={onChange}
-        onFocus={() => setFocus(true)}
-        onBlur={() => setFocus(false)}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        inputMode={inputMode}
-        style={{
-          flex: 1,
-          border: 'none',
-          outline: 'none',
-          background: 'transparent',
-          fontFamily: 'var(--ph-font-family)',
-          fontSize: 15,
-          color: 'var(--ph-text)',
-          padding: '11px 0',
-          minWidth: 0,
-        }}
-      />
-    </div>
-  );
-}
-
-/* ── Card ────────────────────────────────────────────────────────────── */
-
-function Card({
-  padding = '16px',
-  children,
-  style,
-}: {
-  padding?: string;
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <div
-      style={{
-        background: 'var(--ph-surface)',
-        border: '1px solid var(--ph-border)',
-        borderRadius: 'var(--ph-radius-lg)',
-        padding,
-        boxSizing: 'border-box',
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-/* ── Tag ─────────────────────────────────────────────────────────────── */
-
-function Tag({
-  selected = false,
-  onClick,
-  children,
-}: {
-  selected?: boolean;
-  onClick?: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        fontFamily: 'var(--ph-font-family)',
-        fontSize: 14,
-        fontWeight: 600,
-        lineHeight: 1,
-        padding: '9px 14px',
-        borderRadius: 'var(--ph-radius-full)',
-        cursor: 'pointer',
-        transition: 'background-color .15s ease, border-color .15s ease, color .15s ease',
-        background: selected ? 'var(--ph-secondary)' : 'var(--ph-white)',
-        color: selected ? 'var(--ph-primary)' : 'var(--ph-text-secondary)',
-        border: `1px solid ${selected ? 'transparent' : 'var(--ph-border)'}`,
-        boxShadow: 'none',
-      }}
-    >
-      {children}
-    </button>
-  );
+function nextVer(latest: string, type: 'MAJOR' | 'PATCH'): string {
+  const clean = String(latest || '1.0').replace(/^v/, '');
+  const [majStr, patStr = '0'] = clean.split('.');
+  const maj = parseInt(majStr, 10) || 1;
+  const pat = parseInt(patStr, 10) || 0;
+  return type === 'MAJOR' ? `${maj + 1}.0` : `${maj}.${pat + 1}`;
 }
 
 /* ── Badge ───────────────────────────────────────────────────────────── */
@@ -260,27 +93,6 @@ function Badge({
   );
 }
 
-/* ── Label ───────────────────────────────────────────────────────────── */
-
-function Label({ children, hint }: { children: React.ReactNode; hint?: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
-      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text)' }}>{children}</span>
-      {hint && <span style={{ fontSize: 12, color: 'var(--ph-text-muted)' }}>{hint}</span>}
-    </div>
-  );
-}
-
-/* ── Toast ───────────────────────────────────────────────────────────── */
-
-function Toast({ message }: { message: string }) {
-  return (
-    <div style={{ position: 'fixed', left: '50%', bottom: 32, transform: 'translateX(-50%)', zIndex: 90, background: 'var(--ph-text)', color: '#fff', padding: '13px 22px', borderRadius: 'var(--ph-radius-full)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-      <CheckCircle2 style={{ width: 17, height: 17 }} />{message}
-    </div>
-  );
-}
-
 /* ── EditScreen ──────────────────────────────────────────────────────── */
 
 function EditScreen({ id, prompt, versions }: { id: number; prompt: Prompt; versions: Version[] }) {
@@ -291,18 +103,15 @@ function EditScreen({ id, prompt, versions }: { id: number; prompt: Prompt; vers
   const [model, setModel] = useState(prompt.model);
   const [price, setPrice] = useState(prompt.amount === 0 ? '0' : String(prompt.amount));
   const [body, setBody] = useState(prompt.desc);
-  const [note, setNote] = useState('');
+  const [versionType, setVersionType] = useState<'PATCH' | 'MAJOR'>('PATCH');
+  const [changeReason, setChangeReason] = useState('');
   const [noteErr, setNoteErr] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  const showToast = useToast();
 
-  const curVer = versions[0]?.ver ?? '1.0';
-  const nxtVer = nextVer(curVer);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 1800);
-  };
+  const curVer = (versions[0]?.ver ?? 'v1.0').replace(/^v/, '');
+  const nxtVer = nextVer(curVer, versionType);
 
   const taStyle: React.CSSProperties = {
     width: '100%',
@@ -319,27 +128,36 @@ function EditScreen({ id, prompt, versions }: { id: number; prompt: Prompt; vers
   };
 
   const save = async () => {
-    if (!note.trim()) {
+    if (!changeReason.trim()) {
       setNoteErr(true);
-      showToast('업데이트 내용을 입력해 주세요');
+      showToast('변경 내용을 입력해 주세요');
       return;
     }
     if (saving) return;
     setSaving(true);
     try {
       await api.put(`/api/v1/product/${id}`, {
-        title,
-        category,
-        model,
+        title, category, model,
         amount: Number(price),
-        desc: body,
-        content: body,
+        desc: body, content: body,
+        versionType,
+        changeReason,
       });
-      showToast(`v${nxtVer} 새 버전으로 저장됐어요`);
+      const successMsg = versionType === 'MAJOR'
+        ? '검수 대기 상태로 전환됐어요'
+        : '수정사항이 바로 적용됐어요';
+      showToast(successMsg);
       setTimeout(() => router.push('/shop'), 1200);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      showToast(msg ?? '저장에 실패했어요. 다시 시도해 주세요');
+    } catch (e: unknown) {
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      if (status === 403) {
+        showToast('본인의 상품만 수정할 수 있어요');
+      } else if (status === 409) {
+        showToast('검수 중인 상품은 현재 수정할 수 없어요');
+      } else {
+        showToast(msg ?? '저장에 실패했어요. 다시 시도해 주세요');
+      }
     } finally {
       setSaving(false);
     }
@@ -367,7 +185,10 @@ function EditScreen({ id, prompt, versions }: { id: number; prompt: Prompt; vers
             <Badge tone="neutral">현재 v{curVer}</Badge>
             <ArrowRight style={{ width: 15, height: 15, color: 'var(--ph-text-muted)' }} />
             <Badge tone="blue" soft={false}>v{nxtVer}</Badge>
-            {' '}새 버전으로 기록돼요.
+            {' '}로 업데이트돼요.{' '}
+            <span style={{ color: versionType === 'PATCH' ? 'var(--ph-primary)' : '#f59e0b', fontWeight: 600 }}>
+              {versionType === 'PATCH' ? '✓ 바로 적용됩니다.' : '⏱ 검수 후 적용됩니다.'}
+            </span>
           </p>
         </div>
       </div>
@@ -378,10 +199,7 @@ function EditScreen({ id, prompt, versions }: { id: number; prompt: Prompt; vers
         {/* 기본 정보 카드 */}
         <Card padding="28px">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-            <div>
-              <Label hint={`${title.length}/60`}>프롬프트 제목</Label>
-              <Input value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} placeholder="예: 전환율 높이는 랜딩 카피 작성" />
-            </div>
+            <FormField label="프롬프트 제목" hint={`${title.length}/60`} value={title} maxLength={60} onChange={(v) => setTitle(v)} placeholder="예: 전환율 높이는 랜딩 카피 작성" />
             <div>
               <Label>카테고리</Label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -391,56 +209,93 @@ function EditScreen({ id, prompt, versions }: { id: number; prompt: Prompt; vers
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div>
-                <Label>대상 모델</Label>
-                <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder="예: GPT-4o" />
-              </div>
-              <div>
-                <Label>가격</Label>
-                <Input
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value.replace(/[^0-9]/g, ''))}
-                  inputMode="numeric"
-                  placeholder="4900"
-                  leading={<span style={{ fontWeight: 700 }}>₩</span>}
-                />
-              </div>
+              <FormField label="대상 모델" value={model} onChange={(v) => setModel(v)} placeholder="예: GPT-4o" />
+              <FormField label="가격" value={price} onChange={(v) => setPrice(v.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="4900" leading={<span style={{ fontWeight: 700 }}>₩</span>} />
             </div>
           </div>
         </Card>
 
         {/* 프롬프트 내용 카드 */}
         <Card padding="28px">
-          <Label hint={`${body.length}자`}>프롬프트 내용</Label>
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={8}
-            placeholder="판매할 프롬프트 본문을 입력하세요."
-            style={taStyle}
+          <FormField label="프롬프트 내용" hint={`${body.length}자`} type="textarea" value={body} onChange={(v) => setBody(v)} rows={8} placeholder="판매할 프롬프트 본문을 입력하세요." />
+        </Card>
+
+        {/* 대표 썸네일 */}
+        <Card padding="28px">
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text)', marginBottom: 4 }}>대표 썸네일</div>
+          <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '0 0 12px' }}>권장 비율 4:3 · JPG/PNG · 최대 5MB</p>
+          <ImageUpload
+            value={thumbUrl}
+            onChange={setThumbUrl}
+            height={220}
+            placeholder="썸네일을 클릭하거나 드래그해 업로드"
           />
         </Card>
 
-        {/* 업데이트 내용 — 필수 */}
+        {/* 버전 유형 + 변경 내용 — 필수 */}
         <Card padding="28px" style={{ border: `1px solid ${noteErr ? 'var(--ph-error)' : 'var(--ph-border)'}` }}>
-          <Label hint="필수">
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-              <History style={{ width: 16, height: 16, color: 'var(--ph-primary)' }} /> 업데이트 내용
-            </span>
-          </Label>
+          {/* 버전 유형 선택 */}
+          <div style={{ marginBottom: 20 }}>
+            <Label>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                <History style={{ width: 16, height: 16, color: 'var(--ph-primary)' }} /> 버전 유형
+              </span>
+            </Label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {(['PATCH', 'MAJOR'] as const).map((type) => {
+                const sel = versionType === type;
+                const isPatch = type === 'PATCH';
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setVersionType(type)}
+                    style={{
+                      textAlign: 'left',
+                      padding: '14px 16px',
+                      border: `1.5px solid ${sel ? 'var(--ph-primary)' : 'var(--ph-border)'}`,
+                      borderRadius: 'var(--ph-radius-md)',
+                      background: sel ? 'var(--ph-secondary)' : 'var(--ph-surface)',
+                      cursor: 'pointer',
+                      transition: 'border-color .15s, background .15s',
+                      fontFamily: 'var(--ph-font-family)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${sel ? 'var(--ph-primary)' : 'var(--ph-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {sel && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ph-primary)' }} />}
+                      </div>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ph-text)' }}>{type}</span>
+                      <span style={{ fontSize: 12, color: 'var(--ph-text-muted)' }}>v{curVer} → v{nextVer(curVer, type)}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--ph-text-secondary)', lineHeight: 1.4, paddingLeft: 24 }}>
+                      {isPatch ? '교정·오타·내용 보강 등 작은 변경' : '프롬프트 구조·목적이 크게 바뀔 때'}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, paddingLeft: 24, marginTop: 5, color: isPatch ? 'var(--ph-primary)' : '#f59e0b' }}>
+                      {isPatch ? '✓ 바로 적용돼요' : '⏱ 검수 후 적용돼요'}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 변경 내용 */}
+          <Label hint={`${changeReason.length}/500 · 필수`}>변경 내용</Label>
           <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '0 0 12px' }}>
             이번 수정에서 무엇이 바뀌었는지 적어 주세요. 구매자에게 버전 기록으로 표시돼요.
           </p>
           <textarea
-            value={note}
-            onChange={(e) => { setNote(e.target.value); setNoteErr(false); }}
+            value={changeReason}
+            onChange={(e) => { setChangeReason(e.target.value); setNoteErr(false); }}
+            maxLength={500}
             rows={3}
             placeholder="예: 프롬프트 지시문 개선, 예시 3개 추가"
             style={{ ...taStyle, borderColor: noteErr ? 'var(--ph-error)' : 'var(--ph-border)' }}
           />
           {noteErr && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 13, fontWeight: 600, color: 'var(--ph-error)' }}>
-              <AlertCircle style={{ width: 15, height: 15 }} /> 업데이트 내용은 필수예요
+              <AlertCircle style={{ width: 15, height: 15 }} /> 변경 내용은 필수예요
             </div>
           )}
         </Card>
@@ -458,7 +313,6 @@ function EditScreen({ id, prompt, versions }: { id: number; prompt: Prompt; vers
 
       <div style={{ height: 80 }} />
 
-      {toast && <Toast message={toast} />}
     </div>
   );
 }

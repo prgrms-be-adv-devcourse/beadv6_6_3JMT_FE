@@ -23,11 +23,26 @@ export const userHandlers = [
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const user = MOCK_USERS.find((u) => u.id === userId);
-    if (!user) return ERR.notFound('유저');
+    const idx = MOCK_USERS.findIndex((u) => u.id === userId);
+    if (idx === -1) return ERR.notFound('유저');
 
-    const body    = await request.json() as { name?: string; email?: string };
-    const updated = { ...user, ...body };
-    return ok(updated);
+    const body = await request.json() as { name?: string; email?: string };
+    if (body.name  !== undefined) MOCK_USERS[idx].name  = body.name;
+    if (body.email !== undefined) MOCK_USERS[idx].email = body.email;
+
+    return ok(MOCK_USERS[idx]);
+  }),
+
+  // DELETE /api/v1/users/me
+  http.delete(BASE, ({ request }) => {
+    const token  = extractToken(request);
+    const userId = getUserIdFromToken(token);
+    if (!userId) return ERR.unauthorized();
+
+    const idx = MOCK_USERS.findIndex((u) => u.id === userId);
+    if (idx === -1) return ERR.notFound('유저');
+
+    MOCK_USERS.splice(idx, 1);
+    return ok({ message: '회원 탈퇴가 완료됐어요.' });
   }),
 ];

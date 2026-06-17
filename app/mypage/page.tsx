@@ -1,17 +1,24 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
+import { useToast } from '@/store/useToastStore';
 import api from '@/lib/api';
+import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';
 import {
   User, ShoppingBag, Heart, Receipt, Settings, LogOut, Store,
   AlertCircle, ArrowLeft, Lock, AlertTriangle, Star, Check, Mail,
-  ShieldCheck, Info, Sparkles, Image as LucideImage, PenLine, CodeXml,
-  Megaphone, MessageCircle, BarChart3,
+  ShieldCheck, Info,
 } from 'lucide-react';
+import PromptCard from '@/components/ui/PromptCard';
+import PaymentTable from '@/components/ui/PaymentTable';
+import { won } from '@/lib/utils';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -43,21 +50,6 @@ type UserInfo = {
 type NotifState = { email: boolean; marketing: boolean; newPrompt: boolean };
 
 
-/* ── Icon map ────────────────────────────────────────────────────────── */
-
-const ICON_MAP: Record<string, React.ComponentType<{ style?: React.CSSProperties }>> = {
-  sparkles:         Sparkles,
-  image:            LucideImage,
-  'pen-line':       PenLine,
-  'code-xml':       CodeXml,
-  megaphone:        Megaphone,
-  'message-circle': MessageCircle,
-  'bar-chart-3':    BarChart3,
-};
-
-/* ── Helpers ─────────────────────────────────────────────────────────── */
-
-function won(n: number) { return '₩' + n.toLocaleString('ko-KR'); }
 
 /* ── Switch ─────────────────────────────────────────────────────────── */
 
@@ -90,96 +82,6 @@ function Row({ children, last }: { children: React.ReactNode; last?: boolean }) 
     }}>
       {children}
     </div>
-  );
-}
-
-/* ── Card ────────────────────────────────────────────────────────────── */
-
-function Card({
-  children,
-  padding = '24px',
-  style,
-  onClick,
-}: {
-  children: React.ReactNode;
-  padding?: string;
-  style?: React.CSSProperties;
-  onClick?: () => void;
-}) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        background: 'var(--ph-surface)',
-        border: '1px solid var(--ph-border)',
-        borderRadius: 'var(--ph-radius-lg)',
-        padding,
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-/* ── Button ─────────────────────────────────────────────────────────── */
-
-function Button({
-  variant = 'solid',
-  size = 'md',
-  fullWidth = false,
-  disabled = false,
-  onClick,
-  children,
-  style,
-}: {
-  variant?: 'solid' | 'secondary';
-  size?: 'sm' | 'md' | 'lg';
-  fullWidth?: boolean;
-  disabled?: boolean;
-  onClick?: () => void;
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-}) {
-  const [hovered, setHovered] = useState(false);
-
-  const sizes: Record<string, React.CSSProperties> = {
-    sm: { fontSize: 14, padding: '7px 12px', minHeight: 34, minWidth: 64 },
-    md: { fontSize: 15, padding: '11px 16px', minHeight: 40, minWidth: 84 },
-    lg: { fontSize: 17, padding: '15px 24px', minHeight: 52, minWidth: 120 },
-  };
-
-  const variantStyle: React.CSSProperties =
-    variant === 'solid'
-      ? { background: hovered && !disabled ? 'var(--ph-blue-hover)' : 'var(--ph-primary)', color: '#fff', border: '1px solid transparent', borderRadius: 'var(--ph-radius-md)' }
-      : { background: hovered && !disabled ? 'var(--ph-gray-100)' : 'transparent', color: 'var(--ph-text)', border: '1px solid var(--ph-text)', borderRadius: 'var(--ph-radius-sm)' };
-
-  return (
-    <button
-      disabled={disabled}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        fontFamily: 'var(--ph-font-family)',
-        fontWeight: 600,
-        letterSpacing: 0,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        width: fullWidth ? '100%' : undefined,
-        opacity: disabled ? 0.4 : 1,
-        boxSizing: 'border-box',
-        transition: 'background-color .15s ease, opacity .15s ease',
-        ...sizes[size],
-        ...variantStyle,
-        ...style,
-      }}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -266,318 +168,6 @@ function SectionTitle({ children, sub }: { children: React.ReactNode; sub?: stri
   );
 }
 
-/* ── PromptCard (mypage variant) ────────────────────────────────────── */
-
-function PromptCard({ p, onClick }: { p: Prompt; onClick?: () => void }) {
-  const Icon = ICON_MAP[p.icon] ?? Sparkles;
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        background: 'var(--ph-surface)',
-        border: '1px solid var(--ph-border)',
-        borderRadius: 'var(--ph-radius-lg)',
-        padding: 14,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12,
-        cursor: onClick ? 'pointer' : 'default',
-      }}
-    >
-      <div
-        className="ph-card-media"
-        style={{
-          height: 150, borderRadius: 'var(--ph-radius-lg)',
-          background: 'var(--ph-secondary)', display: 'flex',
-          alignItems: 'center', justifyContent: 'center',
-          border: '1px solid var(--ph-border)', overflow: 'hidden', position: 'relative',
-        }}
-      >
-        {p.thumbnail_url ? (
-          <Image src={p.thumbnail_url} alt="썸네일" fill style={{ objectFit: 'cover' }} />
-        ) : (
-          <Image
-            src="/images/promy-character.png"
-            alt="기본 이미지"
-            width={70}
-            height={70}
-            style={{ objectFit: 'contain', opacity: 0.75 }}
-          />
-        )}
-        {(p.badge || p.amount === 0) && (
-          <div style={{ position: 'absolute', top: 10, left: 10 }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', padding: '4px 8px',
-              borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-primary)',
-              color: '#fff', fontSize: 12, fontWeight: 700,
-            }}>
-              {p.amount === 0 ? '무료' : p.badge}
-            </span>
-          </div>
-        )}
-      </div>
-      <div>
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', padding: '3px 8px',
-          borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-gray-50)',
-          border: '1px solid var(--ph-border)', fontSize: 12, fontWeight: 600,
-          color: 'var(--ph-text-secondary)',
-        }}>
-          {p.model}
-        </span>
-      </div>
-      <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.35, color: 'var(--ph-text)' }}>
-        {p.title}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ph-text-muted)', fontSize: 13 }}>
-        <Star style={{ width: 14, height: 14, color: 'var(--ph-primary)', fill: 'var(--ph-primary)' } as React.CSSProperties} />
-        <span style={{ color: 'var(--ph-text)', fontWeight: 600 }}>{p.rating}</span>
-        <span>·</span>
-        <span>{p.seller}</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        {p.amount === 0
-          ? <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--ph-primary)' }}>무료</span>
-          : <span style={{ fontSize: 17, fontWeight: 700 }}>{won(p.amount)}</span>}
-        <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', whiteSpace: 'nowrap' }}>
-          {p.salesCount.toLocaleString()}회 판매
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/* ── EmailChangeModal ───────────────────────────────────────────────── */
-
-function EmailChangeModal({
-  currentEmail,
-  onClose,
-  onVerified,
-}: {
-  currentEmail: string;
-  onClose: () => void;
-  onVerified: (email: string) => void;
-}) {
-  const [step, setStep] = useState<'input' | 'verify'>('input');
-  const [email, setEmail] = useState('');
-  const [err, setErr] = useState('');
-  const [code, setCode] = useState('');
-  const [sentCode, setSentCode] = useState('');
-  const [codeErr, setCodeErr] = useState('');
-  const [secsLeft, setSecsLeft] = useState(0);
-  const codeRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (secsLeft <= 0) return;
-    const t = setTimeout(() => setSecsLeft((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [secsLeft]);
-
-  useEffect(() => {
-    if (step === 'verify') codeRef.current?.focus();
-  }, [step]);
-
-  const validEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
-  const genCode = () => String(Math.floor(100000 + Math.random() * 900000));
-
-  const sendCode = () => {
-    const v = email.trim();
-    if (!validEmail(v)) { setErr('올바른 이메일 형식이 아니에요'); return; }
-    if (v.toLowerCase() === currentEmail.toLowerCase()) { setErr('현재 사용 중인 이메일과 같아요'); return; }
-    const c = genCode();
-    setSentCode(c); setErr(''); setCode(''); setCodeErr(''); setSecsLeft(180); setStep('verify');
-  };
-
-  const resend = () => {
-    if (secsLeft > 0) return;
-    setSentCode(genCode()); setCode(''); setCodeErr(''); setSecsLeft(180);
-  };
-
-  const verify = () => {
-    if (code.length !== 6) return;
-    if (code !== sentCode) { setCodeErr('인증번호가 일치하지 않아요'); return; }
-    onVerified(email.trim());
-  };
-
-  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-
-  const errStyle: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 6, marginTop: 8,
-    fontSize: 13, fontWeight: 600, color: 'var(--ph-error)',
-  };
-
-  const StepIcon = step === 'input' ? Mail : ShieldCheck;
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        style={{
-          background: '#fff', borderRadius: 'var(--ph-radius-xl)',
-          maxWidth: 440, width: '100%', padding: 28,
-        }}
-      >
-        {/* 헤더 */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 'var(--ph-radius-full)',
-            background: 'var(--ph-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <StepIcon style={{ width: 22, height: 22, color: 'var(--ph-primary)' } as React.CSSProperties} />
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="닫기"
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--ph-text-muted)', padding: 4, lineHeight: 0,
-            }}
-          >
-            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* 이메일 입력 단계 */}
-        {step === 'input' && (
-          <div>
-            <div style={{ fontSize: 19, fontWeight: 700, margin: '14px 0 6px' }}>이메일 변경</div>
-            <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ph-text-secondary)', margin: '0 0 20px' }}>
-              새 이메일 주소를 입력하면 인증번호를 보내드려요. 인증을 완료해야 변경돼요.
-            </p>
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ph-text-muted)', marginBottom: 6 }}>현재 이메일</div>
-              <div style={{
-                fontSize: 14, fontWeight: 600, color: 'var(--ph-text-secondary)',
-                padding: '11px 14px', background: 'var(--ph-gray-50)',
-                border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-md)',
-              }}>
-                {currentEmail}
-              </div>
-            </div>
-            <div style={{ marginTop: 16 }}>
-              <PHInput
-                label="새 이메일"
-                type="email"
-                value={email}
-                placeholder="you@example.com"
-                autoFocus
-                onChange={(e) => { setEmail(e.target.value); setErr(''); }}
-                onKeyDown={(e) => { if (e.key === 'Enter') sendCode(); }}
-              />
-              {err && (
-                <div style={errStyle}>
-                  <AlertCircle style={{ width: 15, height: 15 }} />{err}
-                </div>
-              )}
-            </div>
-            <div style={{ marginTop: 24 }}>
-              <Button variant="solid" size="lg" fullWidth onClick={sendCode} disabled={!email.trim()}>
-                인증번호 받기
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* 인증번호 입력 단계 */}
-        {step === 'verify' && (
-          <div>
-            <div style={{ fontSize: 19, fontWeight: 700, margin: '14px 0 6px' }}>인증번호 입력</div>
-            <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ph-text-secondary)', margin: '0 0 16px' }}>
-              <strong style={{ color: 'var(--ph-text)', fontWeight: 700 }}>{email.trim()}</strong>
-              {' '}으로 보낸 6자리 인증번호를 입력하세요.
-            </p>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
-              background: 'var(--ph-secondary)', borderRadius: 'var(--ph-radius-md)',
-              marginBottom: 18, fontSize: 13, color: 'var(--ph-primary)', fontWeight: 600,
-            }}>
-              <Info style={{ width: 15, height: 15, flexShrink: 0 }} />
-              <span>
-                데모용 인증번호: <span style={{ fontFamily: 'ui-monospace, monospace', letterSpacing: '0.08em' }}>{sentCode}</span>
-              </span>
-            </div>
-            <div style={{ position: 'relative' }}>
-              <input
-                ref={codeRef}
-                inputMode="numeric"
-                maxLength={6}
-                value={code}
-                onChange={(e) => { setCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setCodeErr(''); }}
-                onKeyDown={(e) => { if (e.key === 'Enter') verify(); }}
-                placeholder="000000"
-                style={{
-                  width: '100%', boxSizing: 'border-box',
-                  fontFamily: 'ui-monospace, SFMono-Regular, monospace',
-                  fontSize: 24, fontWeight: 700, letterSpacing: '0.34em', textAlign: 'center',
-                  padding: '14px 16px',
-                  border: `1px solid ${codeErr ? 'var(--ph-error)' : 'var(--ph-border)'}`,
-                  borderRadius: 'var(--ph-radius-md)', color: 'var(--ph-text)', outline: 'none',
-                }}
-              />
-              <span style={{
-                position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
-                fontSize: 13, fontWeight: 600,
-                color: secsLeft > 0 ? 'var(--ph-text-muted)' : 'var(--ph-error)',
-                fontFamily: 'ui-monospace, monospace',
-              }}>
-                {secsLeft > 0 ? mmss(secsLeft) : '만료'}
-              </span>
-            </div>
-            {codeErr && (
-              <div style={errStyle}>
-                <AlertCircle style={{ width: 15, height: 15 }} />{codeErr}
-              </div>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
-              <button
-                onClick={() => { setStep('input'); setCodeErr(''); }}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--ph-text-secondary)', fontFamily: 'var(--ph-font-family)',
-                  fontSize: 13, fontWeight: 600,
-                  display: 'inline-flex', alignItems: 'center', gap: 5, padding: 0,
-                }}
-              >
-                <ArrowLeft style={{ width: 14, height: 14 }} />이메일 다시 입력
-              </button>
-              <button
-                onClick={resend}
-                disabled={secsLeft > 0}
-                style={{
-                  background: 'none', border: 'none',
-                  cursor: secsLeft > 0 ? 'default' : 'pointer',
-                  color: secsLeft > 0 ? 'var(--ph-text-muted)' : 'var(--ph-primary)',
-                  fontFamily: 'var(--ph-font-family)', fontSize: 13, fontWeight: 600, padding: 0,
-                }}
-              >
-                인증번호 재발송
-              </button>
-            </div>
-            <div style={{ marginTop: 22 }}>
-              <Button
-                variant="solid" size="lg" fullWidth
-                onClick={verify}
-                disabled={code.length !== 6 || secsLeft <= 0}
-              >
-                인증하고 변경하기
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 /* ── PasswordChangeModal ────────────────────────────────────────────── */
 
@@ -725,13 +315,43 @@ function PasswordChangeModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+/* ── Skeleton helpers ───────────────────────────────────────────────── */
+
+function ContentSkeleton() {
+  const bar = (h: number, w: string, r = 8) => (
+    <div style={{ height: h, width: w, borderRadius: r, background: 'var(--ph-gray-100)' }} />
+  );
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {bar(30, '40%')}
+      {bar(18, '60%', 6)}
+      <div style={{ marginTop: 8, height: 140, borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-gray-100)' }} />
+    </div>
+  );
+}
+
+function GridSkeleton() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+      {[0, 1, 2].map((i) => (
+        <div key={i} style={{ height: 240, borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-gray-100)' }} />
+      ))}
+    </div>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {[0, 1, 2].map((i) => (
+        <div key={i} style={{ height: 56, borderRadius: 'var(--ph-radius-md)', background: 'var(--ph-gray-100)' }} />
+      ))}
+    </div>
+  );
+}
+
 /* ── MyPage ─────────────────────────────────────────────────────────── */
 
-const STATUS_MAP: Record<PaymentStatus, { label: string; color: string; bg: string }> = {
-  paid:      { label: '결제완료',      color: 'var(--ph-primary)',    bg: 'var(--ph-secondary)' },
-  requested: { label: '환불 신청 중', color: 'var(--ph-red)',        bg: 'rgba(217,45,32,0.10)' },
-  refunded:  { label: '환불 완료',    color: 'var(--ph-gray-600)',   bg: 'var(--ph-gray-100)' },
-};
 
 const NOTIF_ROWS: { k: keyof NotifState; t: string; d: string }[] = [
   { k: 'email',     t: '이메일 알림',      d: '주문·다운로드 관련 안내를 이메일로 받아요' },
@@ -739,12 +359,19 @@ const NOTIF_ROWS: { k: keyof NotifState; t: string; d: string }[] = [
   { k: 'marketing', t: '마케팅 정보 수신', d: '할인·이벤트 소식을 받아요' },
 ];
 
-export default function MyPagePage() {
+function MyPageContent() {
   const router = useRouter();
-  const { isLoggedIn, openLoginModal, login: authLogin, token: authToken } = useAuthStore();
+  const searchParams = useSearchParams();
+  const { isLoggedIn, openLoginModal, login: authLogin, token: authToken, logout } = useAuthStore();
   const { items: cartItems } = useCartStore();
+  const showToast = useToast();
   const [user, setUser] = useState<UserInfo | null>(null);
-  const [tab, setTab] = useState<TabId>('profile');
+
+  const VALID_TABS: TabId[] = ['profile', 'purchased', 'wishlist', 'payments', 'settings'];
+  const paramTab = searchParams.get('tab') as TabId | null;
+  const [tab, setTab] = useState<TabId>(
+    paramTab && VALID_TABS.includes(paramTab) ? paramTab : 'profile'
+  );
   const [nick, setNick] = useState('');
   const [savedNick, setSavedNick] = useState(false);
   const [emailModal, setEmailModal] = useState(false);
@@ -754,16 +381,54 @@ export default function MyPagePage() {
   const [refundTarget, setRefundTarget] = useState<Prompt | null>(null);
   const [purchased, setPurchased] = useState<Prompt[]>([]);
   const [wishlist, setWishlist] = useState<Prompt[]>([]);
+  const [withdrawModal, setWithdrawModal] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [loadingPurchased, setLoadingPurchased] = useState(true);
+  const [loadingWishlist, setLoadingWishlist] = useState(true);
+  const [loadingPayments, setLoadingPayments] = useState(true);
+  const [userLoadError, setUserLoadError] = useState(false);
+
+  const fetchUser = useCallback(async () => {
+    setUserLoadError(false);
+    try {
+      const res = await api.get('/api/v1/users/me');
+      const u: UserInfo = res.data.data;
+      setUser(u);
+      setNick(u.name);
+    } catch {
+      setUserLoadError(true);
+    }
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await api.post('/api/v1/auth/logout');
+    } catch {
+      // API 실패해도 로컬 로그아웃은 반드시 실행
+    } finally {
+      logout();
+      router.push('/');
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (withdrawing) return;
+    setWithdrawing(true);
+    try {
+      await api.delete('/api/v1/users/me');
+      logout();
+      showToast('회원 탈퇴가 완료됐어요.');
+      router.push('/');
+    } catch {
+      showToast('탈퇴 처리 중 오류가 발생했어요. 다시 시도해 주세요.');
+      setWithdrawing(false);
+      setWithdrawModal(false);
+    }
+  };
 
   useEffect(() => {
     if (!isLoggedIn) { openLoginModal(); return; }
-    api.get('/api/v1/users/me')
-      .then((res) => {
-        const u: UserInfo = res.data.data;
-        setUser(u);
-        setNick(u.name);
-      })
-      .catch(() => {});
+    fetchUser();
     api.get('/api/v1/orders')
       .then((res) => {
         const orders: { orderId: string; purchasedAt: string; product: Prompt | null }[] = res.data.data ?? [];
@@ -773,14 +438,16 @@ export default function MyPagePage() {
             .map((o) => ({ ...o.product!, purchasedAt: o.purchasedAt }))
         );
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => { setLoadingPurchased(false); setLoadingPayments(false); });
     api.get('/api/v1/wishlists')
       .then((res) => {
-        const { content } = res.data.data ?? { content: [] };
-        setWishlist(content.map((item: { product: Prompt | null }) => item.product).filter(Boolean));
+        const items: { product: Prompt | null }[] = res.data.data ?? [];
+        setWishlist(items.map((item) => item.product).filter(Boolean) as Prompt[]);
       })
-      .catch(() => {});
-  }, [isLoggedIn, openLoginModal]);
+      .catch(() => {})
+      .finally(() => setLoadingWishlist(false));
+  }, [isLoggedIn, openLoginModal, fetchUser]);
 
   const cart = cartItems;
 
@@ -788,14 +455,6 @@ export default function MyPagePage() {
     return (
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '80px 32px', textAlign: 'center' }}>
         <p style={{ fontSize: 17, color: 'var(--ph-text-secondary)' }}>로그인이 필요한 페이지예요.</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '80px 32px', textAlign: 'center', color: 'var(--ph-text-muted)' }}>
-        불러오는 중...
       </div>
     );
   }
@@ -817,6 +476,7 @@ export default function MyPagePage() {
       const updated = res.data.data;
       setUser((u) => u ? { ...u, email: updated.email } : u);
       if (authToken) authLogin(updated, authToken);
+      showToast('이메일이 변경됐어요');
     } catch {
       setUser((u) => u ? { ...u, email: e } : u);
     }
@@ -844,7 +504,10 @@ export default function MyPagePage() {
           {NAV.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setTab(id)}
+              onClick={() => {
+                setTab(id);
+                router.replace(`/mypage?tab=${id}`, { scroll: false });
+              }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
                 borderRadius: 'var(--ph-radius-md)', border: 'none', cursor: 'pointer',
@@ -859,7 +522,7 @@ export default function MyPagePage() {
           ))}
           <div style={{ borderTop: '1px solid var(--ph-border)', margin: '8px 0' }} />
           <button
-            onClick={() => {}}
+            onClick={handleLogout}
             style={{
               display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
               borderRadius: 'var(--ph-radius-md)', border: 'none', cursor: 'pointer',
@@ -873,7 +536,17 @@ export default function MyPagePage() {
 
         {/* ── 컨텐츠 영역 ── */}
         <div>
-
+          {userLoadError ? (
+            <div style={{ padding: '60px 0', textAlign: 'center' }}>
+              <p style={{ fontSize: 15, color: 'var(--ph-text-secondary)', marginBottom: 20 }}>
+                정보를 불러오지 못했어요. 다시 시도해 주세요.
+              </p>
+              <Button variant="secondary" size="md" onClick={fetchUser}>다시 시도</Button>
+            </div>
+          ) : !user ? (
+            <ContentSkeleton />
+          ) : (
+            <>
           {/* ── 프로필 탭 ── */}
           {tab === 'profile' && (
             <div>
@@ -937,7 +610,9 @@ export default function MyPagePage() {
           {tab === 'purchased' && (
             <div>
               <SectionTitle sub="결제한 프롬프트를 다시 받아볼 수 있어요.">구매한 프롬프트</SectionTitle>
-              {purchased.length === 0 ? (
+              {loadingPurchased ? (
+                <GridSkeleton />
+              ) : purchased.length === 0 ? (
                 <EmptyState
                   icon={ShoppingBag}
                   text="아직 구매한 프롬프트가 없어요."
@@ -994,7 +669,9 @@ export default function MyPagePage() {
           {tab === 'wishlist' && (
             <div>
               <SectionTitle sub="관심 있는 프롬프트를 모아뒀어요.">찜한 프롬프트</SectionTitle>
-              {wishlist.length === 0 ? (
+              {loadingWishlist ? (
+                <GridSkeleton />
+              ) : wishlist.length === 0 ? (
                 <EmptyState
                   icon={Heart}
                   text="아직 찜한 프롬프트가 없어요."
@@ -1015,7 +692,9 @@ export default function MyPagePage() {
           {tab === 'payments' && (
             <div>
               <SectionTitle sub="결제한 내역과 환불 상태를 확인하세요.">결제 내역</SectionTitle>
-              {purchased.length === 0 ? (
+              {loadingPayments ? (
+                <TableSkeleton />
+              ) : purchased.length === 0 ? (
                 <EmptyState
                   icon={Receipt}
                   text="아직 결제 내역이 없어요."
@@ -1023,75 +702,20 @@ export default function MyPagePage() {
                   onCta={() => router.push('/browse')}
                 />
               ) : (
-                <Card padding="0" style={{ overflow: 'hidden' }}>
-                  {/* 테이블 헤더 */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'minmax(0,1fr) 116px 110px 116px 108px',
-                    alignItems: 'center', gap: 12, padding: '14px 22px',
-                    borderBottom: '1px solid var(--ph-border)',
-                    fontSize: 13, fontWeight: 600, color: 'var(--ph-text-muted)',
-                    background: 'var(--ph-gray-50)',
-                  }}>
-                    <div>상품명</div>
-                    <div>결제일</div>
-                    <div>금액</div>
-                    <div>상태</div>
-                    <div style={{ textAlign: 'right' }}>환불</div>
-                  </div>
-                  {purchased.map((p, i) => {
-                    const refundState = refunds[p.id];
-                    const st: PaymentStatus = refundState ?? 'paid';
-                    const meta = STATUS_MAP[st];
-                    const isFree = p.amount === 0;
-                    const canRefund = !refundState && !isFree;
-                    const dateStr = new Date(p.purchasedAt || Date.now()).toLocaleDateString('ko-KR');
-                    return (
-                      <div
-                        key={p.id}
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'minmax(0,1fr) 116px 110px 116px 108px',
-                          alignItems: 'center', gap: 12, padding: '16px 22px',
-                          borderTop: i ? '1px solid var(--ph-border)' : 'none',
-                        }}
-                      >
-                        <div style={{ minWidth: 0, fontSize: 14, fontWeight: 600, color: 'var(--ph-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {p.title}
-                        </div>
-                        <div style={{ fontSize: 13, color: 'var(--ph-text-secondary)' }}>{dateStr}</div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ph-text)' }}>
-                          {p.amount === 0 ? '무료' : won(p.amount)}
-                        </div>
-                        <div>
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', padding: '4px 10px',
-                            borderRadius: 'var(--ph-radius-full)', fontSize: 12, fontWeight: 600,
-                            color: meta.color, background: meta.bg, whiteSpace: 'nowrap',
-                          }}>
-                            {meta.label}
-                          </span>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          {isFree ? (
-                            <span style={{ fontSize: 13, color: 'var(--ph-text-muted)' }}>—</span>
-                          ) : canRefund ? (
-                            <Button variant="secondary" size="sm" onClick={() => setRefundTarget(p)}>환불 신청</Button>
-                          ) : (
-                            <button disabled style={{
-                              fontFamily: 'var(--ph-font-family)', fontSize: 14, fontWeight: 600,
-                              padding: '7px 12px', minHeight: 34, borderRadius: 'var(--ph-radius-sm)',
-                              border: '1px solid var(--ph-border)', background: 'var(--ph-gray-100)',
-                              color: 'var(--ph-text-muted)', cursor: 'not-allowed',
-                            }}>
-                              환불 신청
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </Card>
+                <PaymentTable
+                  payments={purchased.map((p) => ({
+                    id: String(p.id),
+                    title: p.title,
+                    amount: p.amount,
+                    status: (refunds[p.id] ?? 'paid') as 'paid' | 'requested' | 'refunded',
+                    paidAt: p.purchasedAt || new Date().toISOString(),
+                  }))}
+                  showRefundColumn
+                  onRefund={(pay) => {
+                    const item = purchased.find((p) => String(p.id) === pay.id);
+                    if (item) setRefundTarget(item);
+                  }}
+                />
               )}
             </div>
           )}
@@ -1173,7 +797,7 @@ export default function MyPagePage() {
 
               <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
                 <button
-                  onClick={() => {}}
+                  onClick={() => setWithdrawModal(true)}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     color: 'var(--ph-error)', fontFamily: 'var(--ph-font-family)',
@@ -1185,14 +809,33 @@ export default function MyPagePage() {
               </div>
             </div>
           )}
+            </>
+          )}
         </div>
       </div>
 
       {/* ── 비밀번호 변경 모달 ── */}
       {pwModal && <PasswordChangeModal onClose={() => setPwModal(false)} />}
 
+      {/* ── 회원 탈퇴 확인 모달 ── */}
+      <ConfirmDialog
+        open={withdrawModal}
+        title="정말 탈퇴하시겠어요?"
+        description={<>탈퇴하면 구매 내역, 찜 목록 등 모든 데이터가 삭제되며<br /><strong>되돌릴 수 없습니다.</strong></>}
+        icon={AlertTriangle}
+        iconBg="#fef2f2"
+        iconColor="var(--ph-error)"
+        confirmLabel="탈퇴하기"
+        confirmVariant="danger"
+        titleAlign="center"
+        maxWidth={400}
+        loading={withdrawing}
+        onConfirm={handleWithdraw}
+        onCancel={() => setWithdrawModal(false)}
+      />
+
       {/* ── 이메일 변경 모달 ── */}
-      {emailModal && (
+      {emailModal && user && (
         <EmailChangeModal
           currentEmail={user.email}
           onClose={() => setEmailModal(false)}
@@ -1201,50 +844,25 @@ export default function MyPagePage() {
       )}
 
       {/* ── 환불 신청 확인 모달 ── */}
-      {refundTarget && (
-        <div
-          onClick={() => setRefundTarget(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            style={{
-              background: '#fff', borderRadius: 'var(--ph-radius-xl)',
-              maxWidth: 420, width: '100%', padding: 28,
-            }}
-          >
-            <div style={{
-              width: 44, height: 44, borderRadius: 'var(--ph-radius-full)',
-              background: 'rgba(217,45,32,0.10)', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', marginBottom: 16,
-            }}>
-              <AlertTriangle style={{ width: 22, height: 22, color: 'var(--ph-red)' }} />
-            </div>
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>환불 신청</div>
-            <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ph-text-secondary)', margin: '0 0 24px' }}>
-              환불 신청 시 구매한 상품 열람이 불가합니다. 환불을 신청하시겠습니까?
-            </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <div style={{ flex: 1 }}>
-                <Button variant="secondary" size="lg" fullWidth onClick={() => setRefundTarget(null)}>취소</Button>
-              </div>
-              <div style={{ flex: 1 }}>
-                <Button
-                  variant="solid" size="lg" fullWidth
-                  onClick={() => { requestRefund(refundTarget.id); setRefundTarget(null); }}
-                >
-                  환불 신청
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!refundTarget}
+        title="환불 신청"
+        description="환불 신청 시 구매한 상품 열람이 불가합니다. 환불을 신청하시겠습니까?"
+        icon={AlertTriangle}
+        iconBg="rgba(217,45,32,0.10)"
+        iconColor="var(--ph-red)"
+        confirmLabel="환불 신청"
+        onConfirm={() => { if (refundTarget) { requestRefund(refundTarget.id); setRefundTarget(null); } }}
+        onCancel={() => setRefundTarget(null)}
+      />
     </div>
+  );
+}
+
+export default function MyPage() {
+  return (
+    <Suspense>
+      <MyPageContent />
+    </Suspense>
   );
 }

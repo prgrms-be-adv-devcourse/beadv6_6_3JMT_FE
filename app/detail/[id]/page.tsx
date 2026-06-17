@@ -8,12 +8,16 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
 import { useCartStore } from '@/store/useCartStore';
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, Star,
+  ArrowLeft, Star,
   CheckCircle2, ShoppingCart, Check, History,
-  ChevronDown, BellRing, ArrowRight, Info,
-  Sparkles, Image as LucideImage, PenLine, CodeXml,
-  Megaphone, MessageCircle, BarChart3, BookOpen,
+  ChevronDown, Info, Sparkles,
 } from 'lucide-react';
+import { ICON_MAP } from '@/lib/iconMap';
+import ImageCarousel, { type CarouselSlide } from '@/components/ui/ImageCarousel';
+import PromptCard from '@/components/ui/PromptCard';
+import { won } from '@/lib/utils';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -36,23 +40,11 @@ type Prompt = {
 };
 
 type Version = { ver: string; date: string; note: string };
-type Slide = { caption: string; icon: string; tint: string };
 
 /* ── Mock data ──────────────────────────────────────────────────────── */
 
 
 /* ── Icon utility ───────────────────────────────────────────────────── */
-
-const ICON_MAP: Record<string, React.ComponentType<{ style?: React.CSSProperties }>> = {
-  sparkles:         Sparkles,
-  image:            LucideImage,
-  'pen-line':       PenLine,
-  'code-xml':       CodeXml,
-  megaphone:        Megaphone,
-  'message-circle': MessageCircle,
-  'bar-chart-3':    BarChart3,
-  'book-open':      BookOpen,
-};
 
 function Icon({ name, style }: { name: string; style?: React.CSSProperties }) {
   const C = ICON_MAP[name];
@@ -90,88 +82,6 @@ function Badge({
   return <span style={{ ...base, ...toneStyle, ...style }}>{children}</span>;
 }
 
-/* ── Button ─────────────────────────────────────────────────────────── */
-
-function Button({
-  variant = 'solid',
-  size = 'lg',
-  fullWidth,
-  onClick,
-  disabled,
-  children,
-}: {
-  variant?: 'solid' | 'secondary';
-  size?: 'lg';
-  fullWidth?: boolean;
-  onClick?: () => void;
-  disabled?: boolean;
-  children: React.ReactNode;
-}) {
-  const [hovered, setHovered] = useState(false);
-  const solidStyle: React.CSSProperties = {
-    background: disabled ? 'var(--ph-text-muted)' : hovered ? 'var(--ph-blue-hover)' : 'var(--ph-primary)',
-    color: '#fff',
-    border: '1px solid transparent',
-  };
-  const secondaryStyle: React.CSSProperties = {
-    background: hovered ? 'var(--ph-gray-100)' : 'var(--ph-white)',
-    color: 'var(--ph-text)',
-    border: '1px solid var(--ph-border)',
-  };
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        fontFamily: 'var(--ph-font-family)',
-        fontSize: 15,
-        fontWeight: 700,
-        lineHeight: 1,
-        padding: size === 'lg' ? '14px 20px' : '10px 16px',
-        borderRadius: 'var(--ph-radius-md)',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        width: fullWidth ? '100%' : undefined,
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        transition: 'background-color .15s ease',
-        ...(variant === 'solid' ? solidStyle : secondaryStyle),
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ── Card ───────────────────────────────────────────────────────────── */
-
-function Card({
-  padding = '16px',
-  children,
-  style,
-}: {
-  padding?: string;
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <div
-      style={{
-        background: 'var(--ph-surface)',
-        border: '1px solid var(--ph-border)',
-        borderRadius: 'var(--ph-radius-lg)',
-        padding,
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
 /* ── Avatar ─────────────────────────────────────────────────────────── */
 
 function Avatar({ name, size = 40 }: { name: string; size?: number }) {
@@ -199,10 +109,6 @@ function Avatar({ name, size = 40 }: { name: string; size?: number }) {
 
 /* ── PriceTag ────────────────────────────────────────────────────────── */
 
-function won(n: number) {
-  return '₩' + n.toLocaleString('ko-KR');
-}
-
 function PriceTag({ p, size = 17, purchased = false }: { p: Prompt; size?: number; purchased?: boolean }) {
   const ic = Math.round(size * 0.72);
   if (purchased) {
@@ -226,127 +132,6 @@ function PriceTag({ p, size = 17, purchased = false }: { p: Prompt; size?: numbe
   return <span style={{ fontSize: size, fontWeight: 700 }}>{won(p.amount)}</span>;
 }
 
-/* ── ImageCarousel ──────────────────────────────────────────────────── */
-
-function ImageCarousel({ slides, thumbnailUrl }: { slides: Slide[]; thumbnailUrl?: string | null }) {
-  const [i, setI] = useState(0);
-  const n = slides.length;
-  const s = slides[i];
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') setI((x) => (x - 1 + n) % n);
-      if (e.key === 'ArrowRight') setI((x) => (x + 1) % n);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [n]);
-
-  const arrowStyle = (dir: 'left' | 'right'): React.CSSProperties => ({
-    position: 'absolute',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    left: dir === 'left' ? 14 : 'auto',
-    right: dir === 'right' ? 14 : 'auto',
-    width: 42,
-    height: 42,
-    borderRadius: 'var(--ph-radius-full)',
-    border: '1px solid var(--ph-border)',
-    background: 'rgba(255,255,255,0.9)',
-    backdropFilter: 'blur(6px)',
-    WebkitBackdropFilter: 'blur(6px)',
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'var(--ph-text)',
-  });
-
-  /* 첫 번째 슬라이드에 thumbnail_url이 있으면 <Image>, 없으면 아이콘 플레이스홀더 */
-  const isFirstAndHasImage = i === 0 && thumbnailUrl;
-  const imgSrc = isFirstAndHasImage ? thumbnailUrl : null;
-
-  return (
-    <div>
-      <div style={{ position: 'relative', height: 360, borderRadius: 'var(--ph-radius-xl)', overflow: 'hidden', border: '1px solid var(--ph-border)' }}>
-        {imgSrc ? (
-          <Image
-            src={imgSrc}
-            alt={s.caption}
-            fill
-            style={{ objectFit: 'cover' }}
-          />
-        ) : thumbnailUrl === null && i === 0 ? (
-          <div style={{ height: '100%', background: s.tint, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, transition: 'background .2s ease' }}>
-            <Image
-              src="/images/promy-character.png"
-              alt="대표 이미지"
-              width={140}
-              height={140}
-              style={{ objectFit: 'contain', opacity: 0.85 }}
-            />
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text-secondary)' }}>{s.caption}</span>
-          </div>
-        ) : (
-          <div style={{ height: '100%', background: s.tint, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, transition: 'background .2s ease' }}>
-            <Icon name={s.icon} style={{ width: 84, height: 84, color: 'var(--ph-primary)', opacity: 0.85 } as React.CSSProperties} />
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text-secondary)' }}>{s.caption}</span>
-          </div>
-        )}
-
-        {n > 1 && (
-          <button
-            onClick={() => setI((x) => (x - 1 + n) % n)}
-            aria-label="이전 이미지"
-            style={arrowStyle('left')}
-          >
-            <ChevronLeft style={{ width: 20, height: 20 }} />
-          </button>
-        )}
-        {n > 1 && (
-          <button
-            onClick={() => setI((x) => (x + 1) % n)}
-            aria-label="다음 이미지"
-            style={arrowStyle('right')}
-          >
-            <ChevronRight style={{ width: 20, height: 20 }} />
-          </button>
-        )}
-
-        <div style={{ position: 'absolute', top: 14, right: 16, fontSize: 12, fontWeight: 600, color: 'var(--ph-text-secondary)', background: 'rgba(255,255,255,0.85)', borderRadius: 'var(--ph-radius-full)', padding: '4px 10px' }}>
-          {i + 1} / {n}
-        </div>
-
-        {n > 1 && (
-          <div style={{ position: 'absolute', bottom: 14, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
-            {slides.map((_, k) => (
-              <span
-                key={k}
-                onClick={() => setI(k)}
-                style={{ width: k === i ? 22 : 7, height: 7, borderRadius: 9999, background: k === i ? 'var(--ph-primary)' : 'rgba(0,0,0,0.22)', cursor: 'pointer', transition: 'all .15s' }}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {n > 1 && (
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          {slides.map((sl, k) => (
-            <button
-              key={k}
-              onClick={() => setI(k)}
-              aria-label={`${k + 1}번 이미지`}
-              style={{ flex: 1, height: 66, borderRadius: 'var(--ph-radius-md)', border: `1px solid ${k === i ? 'var(--ph-primary)' : 'var(--ph-border)'}`, background: sl.tint, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
-            >
-              <Icon name={sl.icon} style={{ width: 22, height: 22, color: 'var(--ph-primary)', opacity: 0.8 } as React.CSSProperties} />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ── Thumb (카드 썸네일 플레이스홀더) ───────────────────────────────── */
 
@@ -410,42 +195,6 @@ function CircleBtn({
   );
 }
 
-/* ── Related PromptCard ─────────────────────────────────────────────── */
-
-function PromptCard({ p, onOpen }: { p: Prompt; onOpen?: (p: Prompt) => void }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={() => onOpen && onOpen(p)}
-      style={{ background: 'var(--ph-surface)', border: `1px solid ${hovered ? 'var(--ph-primary)' : 'var(--ph-border)'}`, borderRadius: 'var(--ph-radius-lg)', padding: '14px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 12, transition: 'border-color .15s ease' }}
-    >
-      <div className="ph-card-media" style={{ position: 'relative' }}>
-        <Thumb icon={p.icon} thumbnailUrl={p.thumbnail_url} />
-        {(p.amount === 0 || p.badge) && (
-          <div style={{ position: 'absolute', top: 10, left: 10 }}>
-            <Badge tone="blue" soft={false}>{p.amount === 0 ? '무료' : p.badge}</Badge>
-          </div>
-        )}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <Badge tone="neutral" style={{ whiteSpace: 'nowrap' }}>{p.model}</Badge>
-      </div>
-      <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.35, color: 'var(--ph-text)' }}>{p.title}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ph-text-muted)', fontSize: 13 }}>
-        <Star style={{ width: 14, height: 14, fill: 'var(--ph-primary)', color: 'var(--ph-primary)' } as React.CSSProperties} />
-        <span style={{ color: 'var(--ph-text)', fontWeight: 600 }}>{p.rating}</span>
-        <span>·</span>
-        <span>{p.seller}</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 2 }}>
-        <PriceTag p={p} />
-        <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', whiteSpace: 'nowrap' }}>{p.salesCount.toLocaleString()}회 판매</span>
-      </div>
-    </div>
-  );
-}
 
 /* ── DetailScreen ───────────────────────────────────────────────────── */
 
@@ -456,7 +205,6 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
   const { items: cartItems, addItem } = useCartStore();
   const [showVersions, setShowVersions] = useState(false);
   const [purchased, setPurchased] = useState(false);
-  const [buying, setBuying] = useState(false);
   const [wishlistId, setWishlistId] = useState<string | null>(null);
 
   const inWish = wishItems.some((i) => i.id === String(p.id));
@@ -476,7 +224,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
         if (res.data.data?.wished) {
           api.get('/api/v1/wishlists')
             .then((r) => {
-              const item = (r.data.data?.content ?? []).find(
+              const item = (r.data.data ?? []).find(
                 (w: { productId: number; wishlistId: string }) => w.productId === p.id
               );
               if (item) setWishlistId(item.wishlistId);
@@ -487,18 +235,10 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
       .catch(() => {});
   }, [isLoggedIn, p.id]);
 
-  const onBuy = async () => {
+  const onBuy = () => {
     if (!isLoggedIn) { openLoginModal(); return; }
-    if (purchased || buying) return;
-    setBuying(true);
-    try {
-      await api.post('/api/v1/payments/confirm', { productIds: [p.id] });
-      setPurchased(true);
-    } catch {
-      alert('결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
-    } finally {
-      setBuying(false);
-    }
+    if (purchased) return;
+    router.push(`/checkout?id=${p.id}`);
   };
 
   const onCart = () => {
@@ -528,7 +268,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
   const versions = p.versions ?? [];
   const latest = versions[0];
 
-  const gallery: Slide[] = [
+  const gallery: CarouselSlide[] = [
     { caption: '대표 이미지', icon: p.icon, tint: 'var(--ph-secondary)' },
     { caption: '예시 결과 1', icon: 'image',     tint: 'var(--ph-gray-50)' },
     { caption: '예시 결과 2', icon: p.icon,      tint: 'var(--ph-secondary)' },
@@ -585,7 +325,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
           {/* 버전 상태 배너 (구매한 경우에만 표시) */}
           {purchased && latest && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: 'var(--ph-gray-50)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-md)', fontSize: 13, fontWeight: 600, color: 'var(--ph-text-secondary)' }}>
-              <CheckCircle2 style={{ width: 16, height: 16, color: 'var(--ph-primary)' }} /> 최신 버전(v{latest.ver})을 보유하고 있어요
+              <CheckCircle2 style={{ width: 16, height: 16, color: 'var(--ph-primary)' }} /> 최신 버전({latest.ver})을 보유하고 있어요
             </div>
           )}
 
@@ -608,11 +348,9 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
                 size="lg"
                 fullWidth
                 onClick={onBuy}
-                disabled={buying}
+                disabled={purchased}
               >
-                {buying
-                  ? '처리 중...'
-                  : purchased
+                {purchased
                   ? p.amount === 0 ? '받기 완료 ✓' : '구매 완료 ✓'
                   : p.amount === 0 ? '무료로 받기' : '프롬프트 구매하기'}
               </Button>
@@ -666,7 +404,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
             >
               <History style={{ width: 18, height: 18, color: 'var(--ph-primary)', flexShrink: 0 }} />
               <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ph-text)' }}>버전 기록</span>
-              {latest && <Badge tone="neutral" style={{ whiteSpace: 'nowrap' }}>v{latest.ver}</Badge>}
+              {latest && <Badge tone="neutral" style={{ whiteSpace: 'nowrap' }}>{latest.ver}</Badge>}
               <ChevronDown style={{ width: 18, height: 18, color: 'var(--ph-text-muted)', marginLeft: 'auto', transform: showVersions ? 'rotate(180deg)' : 'none', transition: 'transform .15s ease' } as React.CSSProperties} />
             </button>
 
@@ -685,7 +423,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ph-text)' }}>v{v.ver}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ph-text)' }}>{v.ver}</span>
                           <span style={{ fontSize: 13, color: 'var(--ph-text-muted)' }}>{v.date}</span>
                           {isCurrent
                             ? <Badge tone="blue" soft={false} style={{ whiteSpace: 'nowrap' }}>현재</Badge>
@@ -711,7 +449,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
           <h2 style={{ fontSize: 27, fontWeight: 700, margin: '0 0 24px' }}>비슷한 프롬프트</h2>
           <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
             {related.map((r) => (
-              <PromptCard key={r.id} p={r} onOpen={(rp) => router.push(`/detail/${rp.id}`)} />
+              <PromptCard key={r.id} p={r} detailBadge onOpen={(rp) => router.push(`/detail/${rp.id}`)} />
             ))}
           </div>
         </section>

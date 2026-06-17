@@ -30,15 +30,18 @@ export type NotificationItem = {
 
 export const MOCK_USERS: MockUser[] = [
   { id: 'user-1', name: '김민서', email: 'kms12782@nangman.cloud', role: 'buyer' },
+  { id: 'user-4', name: '구매자', email: 'buyer@prompthub.kr', role: 'buyer' },
   { id: 'user-2', name: '프롬트랩', email: 'promptlab@prompthub.kr', role: 'seller' },
   { id: 'user-3', name: '판매자', email: 'seller@prompthub.kr', role: 'seller' },
   { id: 'admin-1', name: '관리자', email: 'admin@prompthub.kr', role: 'admin' },
 ];
 
-// 이메일로 역할 결정 (기존 LoginModal 로직과 동일)
+// 이메일로 역할 결정 — MOCK_USERS 우선, 없으면 이름 기반 추측
 export function getRoleByEmail(email: string): 'buyer' | 'seller' | 'admin' {
-  if (email === 'admin@prompthub.kr' || email.startsWith('admin@')) return 'admin';
-  if (email.includes('seller') || email.endsWith('@prompthub.kr')) return 'seller';
+  const known = MOCK_USERS.find((u) => u.email === email);
+  if (known) return known.role;
+  if (email.startsWith('admin@') || email.includes('admin')) return 'admin';
+  if (email.includes('seller') || email.includes('promptlab')) return 'seller';
   return 'buyer';
 }
 
@@ -47,6 +50,10 @@ export const MOCK_ORDERS: Record<string, OrderItem[]> = {
     { orderId: 'order-101', productId: 1, purchasedAt: '2026-06-01T00:00:00.000Z' },
     { orderId: 'order-102', productId: 2, purchasedAt: '2026-05-20T00:00:00.000Z' },
     { orderId: 'order-103', productId: 4, purchasedAt: '2026-04-10T00:00:00.000Z' },
+  ],
+  'user-4': [
+    { orderId: 'order-401', productId: 1, purchasedAt: '2026-06-10T00:00:00.000Z' },
+    { orderId: 'order-402', productId: 3, purchasedAt: '2026-06-05T00:00:00.000Z' },
   ],
   'user-2': [
     { orderId: 'order-201', productId: 6, purchasedAt: '2026-06-10T00:00:00.000Z' },
@@ -66,6 +73,9 @@ export const MOCK_WISHLISTS: Record<string, WishlistItem[]> = {
     { wishlistId: 'wl-1', productId: 3, createdAt: '2026-06-01T00:00:00.000Z' },
     { wishlistId: 'wl-2', productId: 5, createdAt: '2026-06-05T00:00:00.000Z' },
   ],
+  'user-4': [
+    { wishlistId: 'wl-5', productId: 2, createdAt: '2026-06-10T00:00:00.000Z' },
+  ],
   'user-2': [
     { wishlistId: 'wl-3', productId: 1, createdAt: '2026-06-10T00:00:00.000Z' },
     { wishlistId: 'wl-4', productId: 7, createdAt: '2026-06-12T00:00:00.000Z' },
@@ -82,6 +92,7 @@ export const SELLER_APPLY_STATUS: Record<string, 'pending' | 'approved' | 'rejec
 
 export const MOCK_PASSWORDS: Record<string, string> = {
   'user-1': 'password123',
+  'user-4': 'password123',
   'user-2': 'password123',
   'user-3': 'password123',
   'admin-1': 'password123',

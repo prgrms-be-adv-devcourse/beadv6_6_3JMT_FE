@@ -1,28 +1,7 @@
 'use client';
 
-import { Sparkles } from 'lucide-react';
-
-export interface FooterProps {
-  go?: (page: string) => void;
-}
-
-/* ── Logo ─────────────────────────────────────────────── */
-
-function Logo({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-    >
-      <span style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--ph-primary)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <Sparkles style={{ width: 17, height: 17 }} />
-      </span>
-      <span style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--ph-text)' }}>
-        Prompt<span style={{ color: 'var(--ph-primary)' }}>Hub</span>
-      </span>
-    </button>
-  );
-}
+import { useRouter } from 'next/navigation';
+import Logo from '@/components/ui/Logo';
 
 /* ── 소셜 아이콘 인라인 SVG (lucide 원본 패스) ─────────── */
 
@@ -67,16 +46,17 @@ const cols = [
   { h: '판매자', links: ['판매 시작하기', '수익 정산', '가이드라인', 'FAQ'] },
 ];
 
-export default function Footer({ go }: FooterProps) {
+export default function Footer() {
+  const router = useRouter();
   return (
     <footer style={{ borderTop: '1px solid var(--ph-border)', background: 'var(--ph-gray-50)', marginTop: 100 }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '56px 32px', display: 'flex', gap: 64, flexWrap: 'wrap' }}>
         <div style={{ minWidth: 240 }}>
-          <Logo onClick={() => go && go('home')} />
+          <Logo onClick={() => router.push('/')} />
           <p style={{ color: 'var(--ph-text-muted)', fontSize: 14, lineHeight: 1.6, marginTop: 16, maxWidth: 250 }}>검증된 AI 프롬프트를 사고파는 가장 쉬운 방법.</p>
           <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
             {SOCIAL_ICONS.map(({ key, Icon }) => (
-              <span key={key} style={{ width: 36, height: 36, borderRadius: 'var(--ph-radius-full)', border: '1px solid var(--ph-border)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ph-text-muted)' }}>
+              <span key={key} style={{ width: 36, height: 36, borderRadius: 'var(--ph-radius-full)', border: '1px solid var(--ph-border)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ph-text-muted)', cursor: 'pointer' }}>
                 <Icon />
               </span>
             ))}

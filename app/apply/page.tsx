@@ -8,6 +8,10 @@ import {
   ArrowLeft, Store, Send, SearchCheck, Check, Clock,
   Link as LinkIcon, BadgePercent, Lock,
 } from 'lucide-react';
+import Label from '@/components/ui/Label';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Tag from '@/components/ui/Tag';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -57,64 +61,6 @@ function Avatar({ name = '', size = 40 }: { name?: string; size?: number }) {
   );
 }
 
-/* ── Button ─────────────────────────────────────────────────────────── */
-
-function Button({
-  variant = 'solid',
-  size = 'md',
-  disabled = false,
-  type = 'button',
-  onClick,
-  children,
-}: {
-  variant?: 'solid' | 'secondary';
-  size?: 'lg' | 'md' | 'sm';
-  disabled?: boolean;
-  type?: 'button' | 'submit';
-  onClick?: () => void;
-  children: React.ReactNode;
-}) {
-  const [hovered, setHovered] = useState(false);
-
-  const sizes: Record<string, React.CSSProperties> = {
-    sm: { fontSize: 14, padding: '7px 12px', minHeight: 34, minWidth: 64 },
-    md: { fontSize: 15, padding: '11px 16px', minHeight: 40, minWidth: 84 },
-    lg: { fontSize: 17, padding: '15px 24px', minHeight: 52, minWidth: 120 },
-  };
-
-  const variantStyle: React.CSSProperties =
-    variant === 'solid'
-      ? { background: hovered ? 'var(--ph-blue-hover)' : 'var(--ph-primary)', color: '#fff', border: '1px solid transparent', borderRadius: 'var(--ph-radius-md)' }
-      : { background: hovered ? 'var(--ph-gray-100)' : 'transparent', color: 'var(--ph-text)', border: '1px solid var(--ph-text)', borderRadius: 'var(--ph-radius-sm)' };
-
-  return (
-    <button
-      type={type}
-      disabled={disabled}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        fontFamily: 'var(--ph-font-family)',
-        fontWeight: 600,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        boxShadow: 'none',
-        transition: 'background-color .15s ease, opacity .15s ease',
-        opacity: disabled ? 0.4 : 1,
-        boxSizing: 'border-box',
-        ...sizes[size],
-        ...variantStyle,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
 /* ── Input ───────────────────────────────────────────────────────────── */
 
 function Input({
@@ -161,79 +107,6 @@ function Input({
           minWidth: 0,
         }}
       />
-    </div>
-  );
-}
-
-/* ── Card ────────────────────────────────────────────────────────────── */
-
-function Card({
-  padding = '16px',
-  children,
-  style,
-}: {
-  padding?: string;
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <div
-      style={{
-        background: 'var(--ph-surface)',
-        border: '1px solid var(--ph-border)',
-        borderRadius: 'var(--ph-radius-lg)',
-        padding,
-        boxSizing: 'border-box',
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-/* ── Tag ─────────────────────────────────────────────────────────────── */
-
-function Tag({
-  selected = false,
-  onClick,
-  children,
-}: {
-  selected?: boolean;
-  onClick?: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        fontFamily: 'var(--ph-font-family)',
-        fontSize: 14,
-        fontWeight: 600,
-        lineHeight: 1,
-        padding: '9px 14px',
-        borderRadius: 'var(--ph-radius-full)',
-        cursor: 'pointer',
-        transition: 'background-color .15s ease, border-color .15s ease, color .15s ease',
-        background: selected ? 'var(--ph-secondary)' : 'var(--ph-white)',
-        color: selected ? 'var(--ph-primary)' : 'var(--ph-text-secondary)',
-        border: `1px solid ${selected ? 'transparent' : 'var(--ph-border)'}`,
-        boxShadow: 'none',
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ── Label ───────────────────────────────────────────────────────────── */
-
-function Label({ children, hint }: { children: React.ReactNode; hint?: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
-      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text)' }}>{children}</span>
-      {hint && <span style={{ fontSize: 12, color: 'var(--ph-text-muted)' }}>{hint}</span>}
     </div>
   );
 }

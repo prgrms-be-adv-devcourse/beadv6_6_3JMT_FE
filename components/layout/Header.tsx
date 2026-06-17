@@ -5,10 +5,10 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishStore } from '@/store/useWishStore';
-import LoginModal from '@/components/modals/LoginModal';
+import Logo from '@/components/ui/Logo';
 import api from '@/lib/api';
+import { won } from '@/lib/utils';
 import {
-  Sparkles,
   Search,
   Bell,
   ShoppingCart,
@@ -40,12 +40,6 @@ export interface CartItem {
   amount: number;
 }
 
-/* ── 헬퍼: 금액 포맷 ───────────────────────────────────── */
-
-function won(n: number) {
-  return '₩' + n.toLocaleString();
-}
-
 /* ── 헬퍼: 상대 시간 ─────────────────────────────────── */
 
 function relativeTime(iso: string): string {
@@ -72,24 +66,6 @@ const PAGE_ROUTES: Record<string, string> = {
   sell: '/sell',
   shop: '/shop',
 };
-
-/* ── Logo ──────────────────────────────────────────────── */
-
-function Logo({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-    >
-      <span style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--ph-primary)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <Sparkles style={{ width: 17, height: 17 }} />
-      </span>
-      <span style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--ph-text)' }}>
-        Prompt<span style={{ color: 'var(--ph-primary)' }}>Hub</span>
-      </span>
-    </button>
-  );
-}
 
 /* ── SearchBar ─────────────────────────────────────────── */
 
@@ -258,7 +234,7 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { user, logout, loginModalOpen, openLoginModal, closeLoginModal } = useAuthStore();
+  const { user, logout, openLoginModal } = useAuthStore();
   const { items: cart, removeItem: removeCartItem } = useCartStore();
   const { items: wishItems } = useWishStore();
   const [query, setQuery] = React.useState('');
@@ -297,7 +273,7 @@ export default function Header() {
   };
   const onRemoveFromCart = (id: string) => removeCartItem(id);
 
-  const current = pathname === '/' ? 'home' : pathname.replace('/', '');
+  const current = pathname === '/' ? 'home' : pathname.split('/')[1];
 
   const toggle = (m: string) => setMenu((x) => (x === m ? null : m));
   const close = () => setMenu(null);
@@ -439,8 +415,6 @@ export default function Header() {
   );
 
   return (
-    <React.Fragment>
-    <LoginModal open={loginModalOpen} onClose={closeLoginModal} />
     <header style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid var(--ph-border)' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', height: 66, padding: '0 32px', display: 'flex', alignItems: 'center', gap: 20 }}>
         <Logo onClick={() => go('home')} />
@@ -483,6 +457,5 @@ export default function Header() {
         </div>
       </div>
     </header>
-    </React.Fragment>
   );
 }

@@ -276,6 +276,35 @@ https://kauth.kakao.com/oauth/authorize
 
 ---
 
+### GET /api/v1/product/:id/rating (인증 필요)
+
+내 별점 조회
+
+**Response 200**
+```json
+{ "success": true, "data": { "rating": 4 }, "message": "success" }
+```
+- `rating` 0이면 미평가 상태
+
+---
+
+### POST /api/v1/product/:id/rating (인증 필요)
+
+별점 등록 / 수정 (재평가 가능)
+
+**Request**
+```json
+{ "rating": 4 }
+```
+- `rating` 1~5 정수
+
+**Response 200**
+```json
+{ "success": true, "data": { "rating": 4 }, "message": "success" }
+```
+
+---
+
 ### POST /api/v1/product (인증 필요, seller 전용)
 
 **Request**
@@ -298,8 +327,35 @@ https://kauth.kakao.com/oauth/authorize
 
 **Request** — 수정할 필드만 포함 (partial update)
 
-**Response 200** — 업데이트된 product 객체
-수정 요청 후 상품은 `status: 'review'`(검수 대기) 상태로 전환되며, 관리자 승인 후 다시 판매중 상태가 됩니다.
+```json
+{
+  "title": "string (선택)",
+  "category": "string (선택)",
+  "model": "string (선택)",
+  "amount": 4900,
+  "desc": "string (선택)",
+  "content": "string (선택)",
+  "versionType": "PATCH | MAJOR",
+  "changeReason": "string (최대 500자, 필수)"
+}
+```
+
+**버전 계산 규칙**
+
+| versionType | 버전 변경 | status 변경 |
+|-------------|---------|------------|
+| `PATCH` | patch +1 (예: v1.3 → v1.4) | 변경 없음 — 즉시 적용 |
+| `MAJOR` | major +1, patch = 0 (예: v1.3 → v2.0) | `review`로 전환 — 관리자 검수 후 적용 |
+
+**Response 200** — 업데이트된 product 객체 (versions 배열 포함)
+
+**에러 케이스**
+
+| 상황 | code | status |
+|------|------|--------|
+| 비로그인 | `UNAUTHORIZED` | 401 |
+| 타인의 상품 수정 시도 | `FORBIDDEN` | 403 |
+| 검수 중(`status: 'review'`) 상품 수정 시도 | `CONFLICT` | 409 |
 
 ---
 
@@ -342,6 +398,23 @@ https://kauth.kakao.com/oauth/authorize
 ```
 
 **Response 200** — 업데이트된 user 객체 (공통 단건 형식)
+
+---
+
+### DELETE /api/v1/users/me (인증 필요)
+
+회원 탈퇴. 탈퇴 후 계정 및 모든 데이터에 접근 불가.
+
+**Response 200**
+```json
+{ "success": true, "data": { "message": "회원 탈퇴가 완료됐어요." }, "message": "success" }
+```
+
+**에러 케이스**
+
+| 상황 | code | status |
+|------|------|--------|
+| 토큰 없음 | `UNAUTHORIZED` | 401 |
 
 ---
 

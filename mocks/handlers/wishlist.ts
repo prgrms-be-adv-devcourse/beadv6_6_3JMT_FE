@@ -1,7 +1,7 @@
 import { http } from 'msw';
 import { MOCK_WISHLISTS, WishlistItem } from '../data/users';
 import { PRODUCTS } from '../data/products';
-import { ok, ERR, extractToken, getUserIdFromToken } from '../utils';
+import { ok, okList, ERR, extractToken, getUserIdFromToken } from '../utils';
 
 const BASE = '/api/v1/wishlists';
 
@@ -49,7 +49,7 @@ export const wishlistHandlers = [
     if (!item) return ERR.notFound('찜 항목');
 
     MOCK_WISHLISTS[userId] = items.filter((w) => w.wishlistId !== wishlistId);
-    return new Response(null, { status: 204 });
+    return ok(null);
   }),
 
   // GET /api/v1/wishlists?page=0&size=20
@@ -58,17 +58,17 @@ export const wishlistHandlers = [
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const url           = new URL(request.url);
-    const page          = Number(url.searchParams.get('page') ?? 0);
-    const size          = Number(url.searchParams.get('size') ?? 20);
-    const allItems      = MOCK_WISHLISTS[userId] ?? [];
-    const totalElements = allItems.length;
-    const content       = allItems.slice(page * size, page * size + size).map((item) => ({
+    const url      = new URL(request.url);
+    const page     = Number(url.searchParams.get('page') ?? 0);
+    const size     = Number(url.searchParams.get('size') ?? 20);
+    const allItems = MOCK_WISHLISTS[userId] ?? [];
+    const mapped   = allItems.map((item) => ({
       ...item,
       product: PRODUCTS.find((p) => p.id === item.productId) ?? null,
     }));
 
-    return ok({ content, page, size, totalElements });
+    // okList는 1-based page 사용, URL params는 0-based이므로 +1 변환
+    return okList(mapped, page + 1, size);
   }),
 
   // GET /api/v1/wishlists/exists?productId=

@@ -13,11 +13,14 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // 이미 로그인된 admin이 /admin/login 재방문 시 자동 이동
+  // deps 빈 배열: mount 시 1회만 실행 → handleSubmit의 router.push와 충돌 없음
   useEffect(() => {
     if (isLoggedIn && user?.role === 'admin') {
       router.replace('/admin')
     }
-  }, [isLoggedIn, user, router])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

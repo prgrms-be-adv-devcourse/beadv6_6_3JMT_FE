@@ -12,7 +12,22 @@ export default function MockProvider({ children }: { children: React.ReactNode }
       worker.start({
         onUnhandledRequest: 'bypass',
         serviceWorker: { url: '/mockServiceWorker.js' },
-      }).then(() => setReady(true));
+      }).then(async () => {
+        // worker.start() resolves after SW activation, but clients.claim()
+        // may not have propagated yet — wait until this tab is controlled.
+        if (!navigator.serviceWorker.controller) {
+          await new Promise<void>((resolve) => {
+            const handler = () => {
+              navigator.serviceWorker.removeEventListener('controllerchange', handler);
+              resolve();
+            };
+            navigator.serviceWorker.addEventListener('controllerchange', handler);
+            // Safety fallback: proceed after 1 s even if event never fires
+            setTimeout(resolve, 1000);
+          });
+        }
+        setReady(true);
+      });
     });
   }, []);
 

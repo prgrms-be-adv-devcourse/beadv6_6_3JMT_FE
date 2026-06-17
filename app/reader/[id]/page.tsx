@@ -6,10 +6,14 @@ import Image from 'next/image';
 import api from '@/lib/api';
 import {
   ArrowLeft, CalendarCheck, FileText, Lock, Download,
-  AlertTriangle, CheckCircle2, MessageCircle,
-  Sparkles, Image as LucideImage, PenLine, CodeXml,
-  Megaphone, BarChart3,
+  AlertTriangle, CheckCircle2, MessageCircle, Sparkles,
 } from 'lucide-react';
+import { ICON_MAP } from '@/lib/iconMap';
+import { useToast } from '@/store/useToastStore';
+import StarRate from '@/components/ui/StarRate';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -41,18 +45,6 @@ const CATEGORIES = [
   { id: 'chatbot',   label: '챗봇·대화' },
   { id: 'data',      label: '데이터 분석' },
 ];
-
-/* ── Icon map ────────────────────────────────────────────────────────── */
-
-const ICON_MAP: Record<string, React.ComponentType<{ style?: React.CSSProperties }>> = {
-  sparkles:         Sparkles,
-  image:            LucideImage,
-  'pen-line':       PenLine,
-  'code-xml':       CodeXml,
-  megaphone:        Megaphone,
-  'message-circle': MessageCircle,
-  'bar-chart-3':    BarChart3,
-};
 
 /* ── Prompt text builder ────────────────────────────────────────────── */
 
@@ -137,197 +129,6 @@ function Badge({ tone = 'blue', children }: { tone?: 'blue' | 'neutral'; childre
   );
 }
 
-/* ── Card ────────────────────────────────────────────────────────────── */
-
-function Card({ children, padding = '16px', style }: { children: React.ReactNode; padding?: string; style?: React.CSSProperties }) {
-  return (
-    <div style={{
-      backgroundColor: 'var(--ph-surface)',
-      border: '1px solid var(--ph-border)',
-      borderRadius: 'var(--ph-radius-lg)',
-      padding,
-      boxSizing: 'border-box',
-      ...style,
-    }}>
-      {children}
-    </div>
-  );
-}
-
-/* ── Button ──────────────────────────────────────────────────────────── */
-
-function Button({
-  variant = 'solid',
-  size = 'md',
-  fullWidth = false,
-  disabled = false,
-  onClick,
-  children,
-  style,
-}: {
-  variant?: 'solid' | 'secondary';
-  size?: 'sm' | 'md' | 'lg';
-  fullWidth?: boolean;
-  disabled?: boolean;
-  onClick?: () => void;
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-}) {
-  const [hovered, setHovered] = useState(false);
-
-  const sizes: Record<string, React.CSSProperties> = {
-    sm: { fontSize: 14, padding: '7px 12px', minHeight: 34, minWidth: 64 },
-    md: { fontSize: 15, padding: '11px 16px', minHeight: 40, minWidth: 84 },
-    lg: { fontSize: 17, padding: '15px 24px', minHeight: 52, minWidth: 120 },
-  };
-
-  const variantStyle: React.CSSProperties =
-    variant === 'solid'
-      ? { background: hovered && !disabled ? 'var(--ph-blue-hover)' : 'var(--ph-primary)', color: '#fff', border: '1px solid transparent', borderRadius: 'var(--ph-radius-md)' }
-      : { background: hovered && !disabled ? 'var(--ph-gray-100)' : 'transparent', color: 'var(--ph-text)', border: '1px solid var(--ph-text)', borderRadius: 'var(--ph-radius-sm)' };
-
-  return (
-    <button
-      disabled={disabled}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        fontFamily: 'var(--ph-font-family)',
-        fontWeight: 600,
-        letterSpacing: 0,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        width: fullWidth ? '100%' : undefined,
-        opacity: disabled ? 0.4 : 1,
-        boxSizing: 'border-box',
-        transition: 'background-color .15s ease, opacity .15s ease',
-        ...sizes[size],
-        ...variantStyle,
-        ...style,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ── StarRate ────────────────────────────────────────────────────────── */
-
-function StarRate({ value, onRate, size = 34 }: { value: number; onRate: (n: number) => void; size?: number }) {
-  const [hover, setHover] = useState(0);
-  const active = hover || value;
-
-  return (
-    <div style={{ display: 'flex', gap: 4 }} onMouseLeave={() => setHover(0)}>
-      {[1, 2, 3, 4, 5].map((n) => {
-        const on = n <= active;
-        return (
-          <button
-            key={n}
-            onClick={() => onRate(n)}
-            onMouseEnter={() => setHover(n)}
-            aria-label={`${n}점`}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, lineHeight: 0 }}
-          >
-            <svg
-              width={size} height={size} viewBox="0 0 24 24"
-              fill={on ? 'var(--ph-primary)' : 'none'}
-              stroke={on ? 'var(--ph-primary)' : 'var(--ph-gray-line)'}
-              strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"
-              style={{ transition: 'fill .12s ease, stroke .12s ease' }}
-            >
-              <path d="M12 2.6l2.95 5.98 6.6.96-4.77 4.65 1.13 6.57L12 18.6l-5.91 3.11 1.13-6.57L2.45 9.54l6.6-.96z" />
-            </svg>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ── Toast ───────────────────────────────────────────────────────────── */
-
-function Toast({ message, onDone }: { message: string; onDone: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 2400);
-    return () => clearTimeout(t);
-  }, [onDone]);
-
-  return (
-    <div style={{
-      position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
-      background: 'var(--ph-black)', color: '#fff',
-      padding: '12px 22px', borderRadius: 'var(--ph-radius-full)',
-      fontSize: 14, fontWeight: 600, zIndex: 9999,
-      whiteSpace: 'nowrap', pointerEvents: 'none',
-      fontFamily: 'var(--ph-font-family)',
-    }}>
-      {message}
-    </div>
-  );
-}
-
-/* ── ConfirmDialog ───────────────────────────────────────────────────── */
-
-function ConfirmDialog({
-  title,
-  body,
-  onCancel,
-  onConfirm,
-}: {
-  title: string;
-  body: string;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <div
-      onClick={onCancel}
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.45)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000, padding: 20,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        style={{
-          background: '#fff', borderRadius: 'var(--ph-radius-xl)',
-          maxWidth: 420, width: '100%', padding: 28,
-        }}
-      >
-        <div style={{
-          width: 44, height: 44, borderRadius: 'var(--ph-radius-full)',
-          background: 'var(--ph-secondary)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginBottom: 16,
-        }}>
-          <AlertTriangle style={{ width: 22, height: 22, color: 'var(--ph-primary)' }} />
-        </div>
-        <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{title}</div>
-        <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ph-text-secondary)', margin: '0 0 24px' }}>
-          {body}
-        </p>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <div style={{ flex: 1 }}>
-            <Button variant="secondary" size="lg" fullWidth onClick={onCancel}>취소</Button>
-          </div>
-          <div style={{ flex: 1 }}>
-            <Button variant="solid" size="lg" fullWidth onClick={onConfirm}>다운로드 진행</Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ── Page ────────────────────────────────────────────────────────────── */
 
 export default function ReaderPage() {
@@ -339,9 +140,8 @@ export default function ReaderPage() {
   const [loading, setLoading] = useState(true);
   const [downloaded, setDownloaded] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [fmt, setFmt] = useState<FormatKey>('txt');
   const [myRating, setMyRating] = useState(0);
-  const [toast, setToast] = useState('');
+  const showToast = useToast();
 
   useEffect(() => {
     if (!id) { router.push('/mypage'); return; }
@@ -359,6 +159,25 @@ export default function ReaderPage() {
       .finally(() => setLoading(false));
   }, [id, router]);
 
+  // localStorage로 downloaded·rating 상태를 새로고침 후에도 유지
+  useEffect(() => {
+    if (!id) return;
+    if (localStorage.getItem(`ph_downloaded_${id}`) === 'true') setDownloaded(true);
+    const saved = localStorage.getItem(`ph_rating_${id}`);
+    if (saved) setMyRating(Number(saved));
+  }, [id]);
+
+  const handleRate = async (n: number) => {
+    try {
+      await api.post(`/api/v1/product/${id}/rating`, { rating: n });
+      setMyRating(n);
+      localStorage.setItem(`ph_rating_${id}`, String(n));
+      showToast(`${n}점 별점을 남겼어요`);
+    } catch {
+      showToast('별점 저장에 실패했어요. 다시 시도해 주세요');
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--ph-font-family)', color: 'var(--ph-text-muted)', fontSize: 16 }}>
@@ -375,8 +194,6 @@ export default function ReaderPage() {
     year: 'numeric', month: 'long', day: 'numeric',
   });
   const catLabel = (CATEGORIES.find((c) => c.id === p.category) || { label: '일반' }).label;
-
-  const showToast = (msg: string) => { setToast(msg); };
 
   const escapeHtml = (s: string) =>
     String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -417,11 +234,12 @@ export default function ReaderPage() {
   const confirmDownload = () => {
     setConfirmOpen(false);
     setDownloaded(true);
+    if (id) localStorage.setItem(`ph_downloaded_${id}`, 'true');
   };
 
   const backLink = (
     <button
-      onClick={() => router.push('/mypage')}
+      onClick={() => router.push('/mypage?tab=purchased')}
       style={{
         background: 'none', border: 'none', cursor: 'pointer',
         color: 'var(--ph-text-secondary)',
@@ -498,33 +316,15 @@ export default function ReaderPage() {
             </div>
 
             {downloaded ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <select
-                  value={fmt}
-                  onChange={(e) => setFmt(e.target.value as FormatKey)}
-                  aria-label="파일 형식"
-                  style={{
-                    height: 34, padding: '0 30px 0 12px',
-                    borderRadius: 'var(--ph-radius-sm)',
-                    border: '1px solid var(--ph-border)',
-                    background: '#fff',
-                    fontFamily: 'var(--ph-font-family)',
-                    fontSize: 14, fontWeight: 600,
-                    color: 'var(--ph-text)',
-                    cursor: 'pointer',
-                    appearance: 'none',
-                    WebkitAppearance: 'none',
-                    backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238B95A1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 10px center',
-                  }}
-                >
-                  <option value="txt">.txt</option>
-                  <option value="md">.md</option>
-                  <option value="pdf">.pdf</option>
-                </select>
-                <Button variant="solid" size="sm" onClick={() => doDownload(fmt)}>
-                  <Download style={{ width: 15, height: 15 }} /> 다운로드
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Button variant="secondary" size="sm" onClick={() => doDownload('txt')}>
+                  <Download style={{ width: 14, height: 14 }} /> TXT
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => doDownload('md')}>
+                  <Download style={{ width: 14, height: 14 }} /> MD
+                </Button>
+                <Button variant="solid" size="sm" onClick={() => doDownload('pdf')}>
+                  <Download style={{ width: 14, height: 14 }} /> PDF
                 </Button>
               </div>
             ) : (
@@ -583,12 +383,14 @@ export default function ReaderPage() {
             <div>
               <div style={{ fontSize: 15, fontWeight: 700 }}>이 프롬프트를 평가해 주세요</div>
               <div style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 4 }}>
-                {myRating
-                  ? `내 별점 ${myRating}.0 · 다시 누르면 변경돼요`
-                  : '별점을 남기면 다른 구매자에게 도움이 돼요'}
+                {!downloaded
+                  ? '다운로드 후 평가할 수 있어요'
+                  : myRating
+                    ? `내 별점 ${myRating}.0 · 다시 누르면 변경돼요`
+                    : '별점을 남기면 다른 구매자에게 도움이 돼요'}
               </div>
             </div>
-            <StarRate value={myRating} onRate={setMyRating} />
+            <StarRate value={myRating} onRate={handleRate} disabled={!downloaded} />
           </div>
         </Card>
 
@@ -635,17 +437,17 @@ export default function ReaderPage() {
       </div>
 
       {/* ── Download confirm dialog ──────────────────────────────────── */}
-      {confirmOpen && (
-        <ConfirmDialog
-          title="다운로드 전 확인"
-          body="다운로드 후에는 환불 처리가 불가합니다. 계속하시겠습니까?"
-          onCancel={() => setConfirmOpen(false)}
-          onConfirm={confirmDownload}
-        />
-      )}
+      <ConfirmDialog
+        open={confirmOpen}
+        title="다운로드 전 확인"
+        description="다운로드 후에는 환불 처리가 불가합니다. 계속하시겠습니까?"
+        iconBg="var(--ph-secondary)"
+        iconColor="var(--ph-primary)"
+        confirmLabel="다운로드 진행"
+        onConfirm={confirmDownload}
+        onCancel={() => setConfirmOpen(false)}
+      />
 
-      {/* ── Toast ───────────────────────────────────────────────────── */}
-      {toast && <Toast message={toast} onDone={() => setToast('')} />}
     </div>
   );
 }

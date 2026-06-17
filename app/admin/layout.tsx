@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
-import { useEffect } from 'react'
 
 const NAV_ITEMS = [
   { href: '/admin', label: '대시보드', icon: '▣' },
@@ -18,11 +17,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuthStore()
-
-  useEffect(() => {
-    if (pathname === '/admin/login') return
-    if (user && user.role !== 'admin') router.replace('/admin/login')
-  }, [user, router, pathname])
 
   // 로그인 페이지는 사이드바 없이 렌더링
   if (pathname === '/admin/login') return <>{children}</>

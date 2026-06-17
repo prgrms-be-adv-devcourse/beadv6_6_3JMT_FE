@@ -1,13 +1,17 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import api from '@/lib/api';
-import {
-  ArrowLeft, Store, Eye, Images, Check, CheckCircle2, X, Star,
-  LucideImage, PenLine, CodeXml, Megaphone, MessageCircle, BarChart3,
-} from 'lucide-react';
+import { ArrowLeft, Store, Eye, Images, Check, CheckCircle2, X } from 'lucide-react';
+import FormField from '@/components/ui/FormField';
+import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
+import ImageUpload from '@/components/ui/ImageUpload';
+import { useToast } from '@/store/useToastStore';
+import Label from '@/components/ui/Label';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Tag from '@/components/ui/Tag';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -23,90 +27,6 @@ const CATEGORIES: Category[] = [
   { id: 'chatbot',   label: '챗봇',        icon: 'message-circle' },
   { id: 'data',      label: '데이터 분석', icon: 'bar-chart-3'    },
 ];
-
-/* ── Icon map ────────────────────────────────────────────────────────── */
-
-type IconName = 'image' | 'pen-line' | 'code-xml' | 'megaphone' | 'message-circle' | 'bar-chart-3';
-
-const ICON_MAP: Record<IconName, React.ComponentType<{ style?: React.CSSProperties }>> = {
-  'image':          LucideImage,
-  'pen-line':       PenLine,
-  'code-xml':       CodeXml,
-  'megaphone':      Megaphone,
-  'message-circle': MessageCircle,
-  'bar-chart-3':    BarChart3,
-};
-
-function CatIcon({ name, style }: { name: string; style?: React.CSSProperties }) {
-  const C = ICON_MAP[name as IconName];
-  return C ? <C style={style} /> : null;
-}
-
-/* ── Button ─────────────────────────────────────────────────────────── */
-
-function Button({
-  variant = 'solid',
-  size = 'md',
-  fullWidth = false,
-  disabled = false,
-  type = 'button',
-  onClick,
-  children,
-  style,
-}: {
-  variant?: 'solid' | 'secondary';
-  size?: 'lg' | 'md' | 'sm';
-  fullWidth?: boolean;
-  disabled?: boolean;
-  type?: 'button' | 'submit';
-  onClick?: () => void;
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-}) {
-  const [hovered, setHovered] = useState(false);
-
-  const sizes: Record<string, React.CSSProperties> = {
-    sm: { fontSize: 14, padding: '7px 12px', minHeight: 34, minWidth: 64 },
-    md: { fontSize: 15, padding: '11px 16px', minHeight: 40, minWidth: 84 },
-    lg: { fontSize: 17, padding: '15px 24px', minHeight: 52, minWidth: 120 },
-  };
-
-  const variantStyle: React.CSSProperties =
-    variant === 'solid'
-      ? { background: disabled ? 'var(--ph-primary)' : hovered ? 'var(--ph-blue-hover)' : 'var(--ph-primary)', color: '#fff', border: '1px solid transparent', borderRadius: 'var(--ph-radius-md)' }
-      : { background: hovered ? 'var(--ph-gray-100)' : 'transparent', color: 'var(--ph-text)', border: '1px solid var(--ph-text)', borderRadius: 'var(--ph-radius-sm)' };
-
-  return (
-    <button
-      type={type}
-      disabled={disabled}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        fontFamily: 'var(--ph-font-family)',
-        fontWeight: 600,
-        letterSpacing: 0,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        textDecoration: 'none',
-        boxShadow: 'none',
-        width: fullWidth ? '100%' : undefined,
-        transition: 'background-color .15s ease, color .15s ease, opacity .15s ease',
-        opacity: disabled ? 0.4 : 1,
-        boxSizing: 'border-box',
-        ...sizes[size],
-        ...variantStyle,
-        ...style,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
 
 /* ── Input ───────────────────────────────────────────────────────────── */
 
@@ -164,191 +84,6 @@ function Input({
   );
 }
 
-/* ── Card ────────────────────────────────────────────────────────────── */
-
-function Card({
-  padding = '16px',
-  children,
-  style,
-}: {
-  padding?: string;
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <div
-      style={{
-        background: 'var(--ph-surface)',
-        border: '1px solid var(--ph-border)',
-        borderRadius: 'var(--ph-radius-lg)',
-        padding,
-        boxSizing: 'border-box',
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-/* ── Tag ─────────────────────────────────────────────────────────────── */
-
-function Tag({
-  selected = false,
-  onClick,
-  children,
-}: {
-  selected?: boolean;
-  onClick?: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        fontFamily: 'var(--ph-font-family)',
-        fontSize: 14,
-        fontWeight: 600,
-        lineHeight: 1,
-        padding: '9px 14px',
-        borderRadius: 'var(--ph-radius-full)',
-        cursor: 'pointer',
-        transition: 'background-color .15s ease, border-color .15s ease, color .15s ease',
-        background: selected ? 'var(--ph-secondary)' : 'var(--ph-white)',
-        color: selected ? 'var(--ph-primary)' : 'var(--ph-text-secondary)',
-        border: `1px solid ${selected ? 'transparent' : 'var(--ph-border)'}`,
-        boxShadow: 'none',
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ── Badge ───────────────────────────────────────────────────────────── */
-
-function Badge({
-  tone = 'blue',
-  soft = true,
-  children,
-  style,
-}: {
-  tone?: 'blue' | 'neutral';
-  soft?: boolean;
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-}) {
-  const bg =
-    tone === 'blue' && !soft ? 'var(--ph-primary)'
-    : tone === 'blue' ? 'var(--ph-secondary)'
-    : 'var(--ph-gray-100)';
-  const fg =
-    tone === 'blue' && !soft ? '#fff'
-    : tone === 'blue' ? 'var(--ph-primary)'
-    : 'var(--ph-gray-600)';
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        background: bg,
-        color: fg,
-        fontFamily: 'var(--ph-font-family)',
-        fontSize: 13,
-        fontWeight: 600,
-        lineHeight: 1,
-        padding: '5px 9px',
-        borderRadius: 'var(--ph-radius-full)',
-        whiteSpace: 'nowrap',
-        ...style,
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-/* ── Label ───────────────────────────────────────────────────────────── */
-
-function Label({ children, hint }: { children: React.ReactNode; hint?: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
-      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text)' }}>{children}</span>
-      {hint && <span style={{ fontSize: 12, color: 'var(--ph-text-muted)' }}>{hint}</span>}
-    </div>
-  );
-}
-
-/* ── ImageSlot ───────────────────────────────────────────────────────── */
-
-function ImageSlot({
-  placeholder,
-  height,
-  thumbnailUrl,
-}: {
-  placeholder: string;
-  height: number;
-  thumbnailUrl?: string | null;
-}) {
-  const [file, setFile] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) setFile(URL.createObjectURL(f));
-  };
-
-  const src = file ?? (thumbnailUrl ?? null);
-
-  return (
-    <div
-      onClick={() => inputRef.current?.click()}
-      style={{
-        width: '100%',
-        height,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: '1.5px dashed var(--ph-border)',
-        borderRadius: 12,
-        cursor: 'pointer',
-        overflow: 'hidden',
-        position: 'relative',
-        background: 'var(--ph-gray-50)',
-        transition: 'border-color .15s ease',
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--ph-primary)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--ph-border)'; }}
-    >
-      {src ? (
-        <Image src={src} alt="업로드 이미지" fill style={{ objectFit: 'cover' }} />
-      ) : (
-        <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', textAlign: 'center', padding: '0 8px', userSelect: 'none' }}>
-          {placeholder}
-        </span>
-      )}
-      <input ref={inputRef} type="file" accept="image/*" onChange={handleChange} style={{ display: 'none' }} />
-    </div>
-  );
-}
-
-/* ── won ─────────────────────────────────────────────────────────────── */
-
-function won(n: number | string) {
-  return '₩' + Number(n || 0).toLocaleString('ko-KR');
-}
-
-/* ── Toast ───────────────────────────────────────────────────────────── */
-
-function Toast({ message }: { message: string }) {
-  return (
-    <div style={{ position: 'fixed', left: '50%', bottom: 32, transform: 'translateX(-50%)', zIndex: 90, background: 'var(--ph-text)', color: '#fff', padding: '13px 22px', borderRadius: 'var(--ph-radius-full)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-      <CheckCircle2 style={{ width: 17, height: 17 }} />{message}
-    </div>
-  );
-}
-
 /* ── SellScreen ──────────────────────────────────────────────────────── */
 
 export default function SellPage() {
@@ -362,13 +97,10 @@ export default function SellPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [status, setStatus] = useState<null | 'saved' | 'submitted'>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 1800);
-  };
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  const [galleryUrls, setGalleryUrls] = useState<(string | null)[]>(Array(5).fill(null));
+  const showToast = useToast();
 
   const catObj = CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
 
@@ -404,18 +136,18 @@ export default function SellPage() {
     }
   };
 
-  const taStyle: React.CSSProperties = {
-    width: '100%',
-    boxSizing: 'border-box',
-    border: '1px solid var(--ph-border)',
-    borderRadius: 'var(--ph-radius-md)',
-    padding: '12px 14px',
-    fontFamily: 'var(--ph-font-family)',
-    fontSize: 15,
-    lineHeight: 1.6,
-    resize: 'vertical',
-    outline: 'none',
-    color: 'var(--ph-text)',
+  const previewItem: PromptItem = {
+    id: 'preview',
+    title: title.trim() || '프롬프트 제목이 여기에 표시돼요',
+    category,
+    icon: catObj.icon,
+    model: model.trim() || '모델 미정',
+    amount: price ? Number(price) : 0,
+    rating: '신규',
+    salesCount: 0,
+    seller: '내 상점',
+    desc: body || '',
+    thumbnail_url: thumbUrl ?? undefined,
   };
 
   return (
@@ -447,10 +179,7 @@ export default function SellPage() {
           {/* 기본 정보 카드 */}
           <Card padding="28px">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-              <div>
-                <Label hint={`${title.length}/60`}>프롬프트 제목</Label>
-                <Input value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} placeholder="예: 전환율 높이는 랜딩 카피 작성" />
-              </div>
+              <FormField label="프롬프트 제목" hint={`${title.length}/60`} value={title} maxLength={60} onChange={(v) => setTitle(v)} placeholder="예: 전환율 높이는 랜딩 카피 작성" />
               <div>
                 <Label>카테고리</Label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -460,33 +189,22 @@ export default function SellPage() {
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <Label>대상 모델</Label>
-                  <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder="예: GPT-4o" />
-                </div>
-                <div>
-                  <Label>가격</Label>
-                  <Input
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value.replace(/[^0-9]/g, ''))}
-                    inputMode="numeric"
-                    placeholder="4900"
-                    leading={<span style={{ fontWeight: 700 }}>₩</span>}
-                  />
-                </div>
+                <FormField label="대상 모델" value={model} onChange={(v) => setModel(v)} placeholder="예: GPT-4o" />
+                <FormField label="가격" value={price} onChange={(v) => setPrice(v.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="4900" leading={<span style={{ fontWeight: 700 }}>₩</span>} />
               </div>
             </div>
           </Card>
 
           {/* 프롬프트 내용 카드 */}
           <Card padding="28px">
-            <Label hint={`${body.length}자`}>프롬프트 내용</Label>
-            <textarea
+            <FormField
+              label="프롬프트 내용"
+              hint={`${body.length}자`}
+              type="textarea"
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={(v) => setBody(v)}
               rows={9}
               placeholder={'실제 판매할 프롬프트 본문을 입력하세요.\n\n예) 당신은 전문 카피라이터입니다. 아래 제품 정보를 바탕으로...\n- 타깃:\n- 톤앤매너:\n- 출력 형식:'}
-              style={taStyle}
             />
             <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Eye style={{ width: 14, height: 14 }} /> 입력한 내용은 오른쪽 미리보기에 실시간으로 반영돼요.
@@ -533,15 +251,30 @@ export default function SellPage() {
               {/* 대표 썸네일 */}
               <div>
                 <Label hint="권장 4:3 · 최대 5MB">대표 썸네일</Label>
-                <ImageSlot placeholder="썸네일을 드래그하거나 클릭해 업로드" height={220} />
+                <ImageUpload
+                  value={thumbUrl}
+                  onChange={setThumbUrl}
+                  height={220}
+                  placeholder="썸네일을 클릭하거나 드래그해 업로드"
+                />
               </div>
 
               {/* 소개 이미지 */}
               <div>
                 <Label hint="최대 5장">소개 이미지</Label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
-                  {[1, 2, 3, 4, 5].map((k) => (
-                    <ImageSlot key={k} placeholder="+ 추가" height={96} />
+                  {galleryUrls.map((url, i) => (
+                    <ImageUpload
+                      key={i}
+                      value={url}
+                      onChange={(v) => setGalleryUrls((prev) => {
+                        const next = [...prev];
+                        next[i] = v;
+                        return next;
+                      })}
+                      height={96}
+                      placeholder="+ 추가"
+                    />
                   ))}
                 </div>
                 <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -576,29 +309,8 @@ export default function SellPage() {
             <Eye style={{ width: 15, height: 15 }} /> 미리보기
           </div>
 
-          {/* 프롬프트 카드 미리보기 */}
-          <Card padding="14px" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ height: 150, borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--ph-border)' }}>
-              <CatIcon name={catObj.icon} style={{ width: 40, height: 40, color: 'var(--ph-primary)', opacity: 0.85 } as React.CSSProperties} />
-            </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <Badge tone="neutral" style={{ whiteSpace: 'nowrap' }}>{model || '모델 미정'}</Badge>
-              <Badge tone="blue" style={{ whiteSpace: 'nowrap' }}>{catObj.label}</Badge>
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.35, color: title ? 'var(--ph-text)' : 'var(--ph-text-muted)' }}>
-              {title || '프롬프트 제목이 여기에 표시돼요'}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ph-text-muted)', fontSize: 13 }}>
-              <Star style={{ width: 14, height: 14, fill: 'var(--ph-primary)', color: 'var(--ph-primary)' } as React.CSSProperties} />
-              <span style={{ color: 'var(--ph-text)', fontWeight: 600 }}>신규</span>
-              <span>·</span>
-              <span>내 상점</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-              <span style={{ fontSize: 17, fontWeight: 700 }}>{price ? won(price) : '₩ —'}</span>
-              <span style={{ fontSize: 13, color: 'var(--ph-text-muted)' }}>0회 판매</span>
-            </div>
-          </Card>
+          {/* 프롬프트 카드 미리보기 — PromptCard 컴포넌트 재사용 */}
+          <PromptCard p={previewItem} />
 
           {/* 내용 미리보기 */}
           <Card padding="16px">
@@ -617,7 +329,6 @@ export default function SellPage() {
 
       <div style={{ height: 80 }} />
 
-      {toast && <Toast message={toast} />}
     </div>
   );
 }

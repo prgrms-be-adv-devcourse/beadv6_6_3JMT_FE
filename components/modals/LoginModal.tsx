@@ -207,11 +207,13 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, padding: '10px 12px', background: 'var(--ph-gray-50)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-md)', fontSize: 12.5, color: 'var(--ph-text-muted)', lineHeight: 1.5 }}>
             <Info style={{ width: 14, height: 14, flexShrink: 0 }} />
             <span>
-              데모: 로그인 시 계정 권한이 자동 확인돼요. 판매자:{' '}
+              데모 계정 (비밀번호: <b style={{ color: 'var(--ph-text-secondary)' }}>password123</b>)
+              {' '}— 구매자:{' '}
+              <b style={{ color: 'var(--ph-text-secondary)' }}>buyer@prompthub.kr</b>
+              {' '}/ 판매자:{' '}
               <b style={{ color: 'var(--ph-text-secondary)' }}>seller@prompthub.kr</b>
-              {' '} / 관리자:{' '}
+              {' '}/ 관리자:{' '}
               <b style={{ color: 'var(--ph-text-secondary)' }}>admin@prompthub.kr</b>
-              {' '}(비밀번호: password123)
             </span>
           </div>
         )}

@@ -1,45 +1,104 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCartStore } from '@/store/useCartStore';
+import { useToast } from '@/store/useToastStore';
 import api from '@/lib/api';
-import { ShoppingCart, Trash2, ArrowLeft, CreditCard } from 'lucide-react';
+import { ShoppingCart, Trash2, ArrowLeft, CreditCard, CheckCircle2 } from 'lucide-react';
+import { won } from '@/lib/utils';
 
-function won(n: number) {
-  return '₩' + n.toLocaleString('ko-KR');
-}
+type LineItem = { id: string; title: string; amount: number; thumbnailUrl: string | null };
 
-export default function CheckoutPage() {
+/* ─── 실제 결제 콘텐츠 (useSearchParams 사용 → Suspense 필요) ─── */
+
+function CheckoutContent() {
   const router = useRouter();
-  const { items, removeItem, clearCart } = useCartStore();
+  const searchParams = useSearchParams();
+  const productId = searchParams.get('id');
+  const isSingle = !!productId;
+
+  const { items: cartItems, removeItem, clearCart } = useCartStore();
+  const showToast = useToast();
+
+  const [singleItem, setSingleItem] = useState<LineItem | null>(null);
+  const [fetchErr, setFetchErr] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (items.length === 0) {
+    if (isSingle) {
+      api.get(`/api/v1/product/${productId}`)
+        .then((res) => {
+          const d = res.data.data;
+          setSingleItem({
+            id: String(d.id),
+            title: d.title,
+            amount: d.amount,
+            thumbnailUrl: d.thumbnail_url ?? null,
+          });
+        })
+        .catch(() => setFetchErr(true));
+    } else if (cartItems.length === 0) {
       router.replace('/shop');
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const items: LineItem[] = isSingle ? (singleItem ? [singleItem] : []) : cartItems;
   const total = items.reduce((s, i) => s + i.amount, 0);
 
   const handleOrder = async () => {
-    if (loading) return;
+    if (loading || done || items.length === 0) return;
     setError(null);
     setLoading(true);
     try {
       await api.post('/api/v1/payments/confirm', { productIds: items.map((i) => Number(i.id)) });
-      clearCart();
-      router.push('/mypage');
+      if (!isSingle) clearCart();
+      setDone(true);
+      showToast('결제가 완료됐어요');
+      setTimeout(() => router.push(isSingle ? `/reader/${productId}` : '/mypage'), 1200);
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? '주문 처리 중 오류가 발생했습니다.';
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        '주문 처리 중 오류가 발생했습니다.';
       setError(msg);
     } finally {
       setLoading(false);
     }
   };
+
+  /* 상품 조회 실패 */
+  if (fetchErr) {
+    return (
+      <div style={{ maxWidth: 680, margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
+        <p style={{ fontSize: 16, color: 'var(--ph-text-secondary)', marginBottom: 24 }}>
+          상품 정보를 불러올 수 없어요.
+        </p>
+        <button
+          onClick={() => router.back()}
+          style={{
+            background: 'var(--ph-primary)', color: '#fff', border: 'none',
+            borderRadius: 'var(--ph-radius-md)', padding: '12px 24px',
+            fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            fontFamily: 'var(--ph-font-family)',
+          }}
+        >
+          뒤로 가기
+        </button>
+      </div>
+    );
+  }
+
+  /* 단건 상품 로딩 중 */
+  if (isSingle && !singleItem) {
+    return (
+      <div style={{ maxWidth: 680, margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
+        <p style={{ fontSize: 15, color: 'var(--ph-text-muted)' }}>불러오는 중...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ph-bg)', paddingTop: 80 }}>
@@ -49,25 +108,60 @@ export default function CheckoutPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
           <button
             onClick={() => router.back()}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ph-text-secondary)', fontSize: 14, padding: 0 }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--ph-text-secondary)', fontSize: 14, padding: 0,
+              fontFamily: 'var(--ph-font-family)',
+            }}
           >
             <ArrowLeft style={{ width: 18, height: 18 }} />
             뒤로
           </button>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ph-text)', margin: 0 }}>주문 확인</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ph-text)', margin: 0 }}>
+            {done ? '결제 완료' : '주문 확인'}
+          </h1>
         </div>
 
+        {/* 결제 완료 배너 */}
+        {done && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '14px 18px',
+            background: 'var(--ph-secondary)',
+            border: '1px solid color-mix(in srgb, var(--ph-primary) 25%, transparent)',
+            borderRadius: 'var(--ph-radius-md)',
+            marginBottom: 20,
+            fontSize: 15, fontWeight: 600, color: 'var(--ph-primary)',
+          }}>
+            <CheckCircle2 style={{ width: 20, height: 20, flexShrink: 0 }} />
+            결제가 완료됐어요. 잠시 후 이동합니다…
+          </div>
+        )}
+
         {/* 상품 목록 */}
-        <div style={{ background: 'var(--ph-surface)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius)', overflow: 'hidden', marginBottom: 20 }}>
+        <div style={{
+          background: 'var(--ph-surface)',
+          border: '1px solid var(--ph-border)',
+          borderRadius: 'var(--ph-radius-lg)',
+          overflow: 'hidden',
+          marginBottom: 20,
+        }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--ph-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <ShoppingCart style={{ width: 16, height: 16, color: 'var(--ph-primary)' }} />
-            <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--ph-text)' }}>주문 상품 {items.length}개</span>
+            <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--ph-text)' }}>
+              주문 상품 {items.length}개
+            </span>
           </div>
 
           {items.map((item) => (
             <div
               key={item.id}
-              style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', borderBottom: '1px solid var(--ph-border)' }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                padding: '16px 20px',
+                borderBottom: '1px solid var(--ph-border)',
+              }}
             >
               <div style={{ width: 52, height: 52, borderRadius: 'var(--ph-radius-sm)', overflow: 'hidden', flexShrink: 0, background: 'var(--ph-bg)' }}>
                 <Image
@@ -76,65 +170,116 @@ export default function CheckoutPage() {
                   width={52}
                   height={52}
                   style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                  unoptimized
                 />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {item.title}
+                </div>
               </div>
               <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ph-text)', whiteSpace: 'nowrap' }}>
                 {item.amount === 0 ? '무료' : won(item.amount)}
               </div>
-              <button
-                onClick={() => removeItem(item.id)}
-                aria-label="삭제"
-                style={{ display: 'inline-flex', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ph-text-muted)', padding: 4, borderRadius: 'var(--ph-radius-sm)' }}
-              >
-                <Trash2 style={{ width: 16, height: 16 }} />
-              </button>
+              {/* 카트 모드에서만 삭제 버튼 표시 */}
+              {!isSingle && !done && (
+                <button
+                  onClick={() => removeItem(item.id)}
+                  aria-label="삭제"
+                  style={{
+                    display: 'inline-flex', background: 'none', border: 'none',
+                    cursor: 'pointer', color: 'var(--ph-text-muted)',
+                    padding: 4, borderRadius: 'var(--ph-radius-sm)',
+                  }}
+                >
+                  <Trash2 style={{ width: 16, height: 16 }} />
+                </button>
+              )}
             </div>
           ))}
         </div>
 
         {/* 결제 요약 */}
-        <div style={{ background: 'var(--ph-surface)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius)', padding: '20px', marginBottom: 20 }}>
+        <div style={{
+          background: 'var(--ph-surface)',
+          border: '1px solid var(--ph-border)',
+          borderRadius: 'var(--ph-radius-lg)',
+          padding: '20px',
+          marginBottom: 20,
+        }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <span style={{ fontSize: 14, color: 'var(--ph-text-secondary)' }}>상품 금액</span>
-            <span style={{ fontSize: 14, color: 'var(--ph-text)' }}>{won(total)}</span>
+            <span style={{ fontSize: 14, color: 'var(--ph-text)' }}>
+              {total === 0 ? '무료' : won(total)}
+            </span>
           </div>
           <div style={{ height: 1, background: 'var(--ph-border)', margin: '12px 0' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--ph-text)' }}>최종 결제 금액</span>
-            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--ph-primary)' }}>{won(total)}</span>
+            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--ph-primary)' }}>
+              {total === 0 ? '무료' : won(total)}
+            </span>
           </div>
         </div>
 
         {/* 에러 메시지 */}
         {error && (
-          <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--ph-radius-sm)', color: '#dc2626', fontSize: 13, marginBottom: 16 }}>
+          <div style={{
+            padding: '12px 16px',
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: 'var(--ph-radius-sm)',
+            color: '#dc2626',
+            fontSize: 13,
+            marginBottom: 16,
+          }}>
             {error}
           </div>
         )}
 
-        {/* 주문 버튼 */}
-        <button
-          onClick={handleOrder}
-          disabled={loading || items.length === 0}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            width: '100%', height: 52, border: 'none',
-            borderRadius: 'var(--ph-radius)', background: loading ? 'var(--ph-text-muted)' : 'var(--ph-primary)',
-            color: '#fff', fontFamily: 'var(--ph-font-family)', fontSize: 16, fontWeight: 700,
-            cursor: loading ? 'not-allowed' : 'pointer', transition: 'background 0.2s',
-          }}
-        >
-          <CreditCard style={{ width: 20, height: 20 }} />
-          {loading ? '처리 중...' : `${won(total)} 주문하기`}
-        </button>
+        {/* 결제 버튼 */}
+        {!done && (
+          <button
+            onClick={handleOrder}
+            disabled={loading || items.length === 0}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              width: '100%', height: 52, border: 'none',
+              borderRadius: 'var(--ph-radius-lg)',
+              background: (loading || items.length === 0) ? 'var(--ph-text-muted)' : 'var(--ph-primary)',
+              color: '#fff',
+              fontFamily: 'var(--ph-font-family)',
+              fontSize: 16, fontWeight: 700,
+              cursor: (loading || items.length === 0) ? 'not-allowed' : 'pointer',
+              transition: 'background 0.2s',
+            }}
+          >
+            <CreditCard style={{ width: 20, height: 20 }} />
+            {loading
+              ? '처리 중...'
+              : total === 0
+              ? '무료로 받기'
+              : `${won(total)} 결제하기`}
+          </button>
+        )}
 
         <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--ph-text-muted)', marginTop: 12 }}>
-          주문 완료 후 구매 내역은 마이페이지에서 확인할 수 있습니다.
+          {isSingle
+            ? '결제 완료 후 리더 페이지에서 바로 사용할 수 있어요.'
+            : '주문 완료 후 구매 내역은 마이페이지에서 확인할 수 있습니다.'}
         </p>
+
       </div>
     </div>
+  );
+}
+
+/* ─── Page export: Suspense로 래핑 (useSearchParams 요건) ─── */
+
+export default function CheckoutPage() {
+  return (
+    <Suspense>
+      <CheckoutContent />
+    </Suspense>
   );
 }

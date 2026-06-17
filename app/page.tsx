@@ -4,16 +4,11 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ShaderBackground from '@/components/ui/shader-background';
+import PromptCard from '@/components/ui/PromptCard';
 import api from '@/lib/api';
-import {
-  Sparkles, Search, Image as LucideImage, PenLine,
-  CodeXml, Megaphone, MessageCircle, BarChart3,
-  ChevronRight, Star, ShieldCheck, Zap, Wallet,
-  Heart, ShoppingCart,
-} from 'lucide-react';
+import { ICON_MAP } from '@/lib/iconMap';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useWishStore } from '@/store/useWishStore';
-import { useCartStore } from '@/store/useCartStore';
+import Card from '@/components/ui/Card';
 
 /* ── Mock Data ─────────────────────────────────────────────────────── */
 
@@ -41,24 +36,6 @@ type Prompt = {
   seller: string; badge?: string; desc: string;
 };
 
-
-/* ── Lucide icon map ─────────────────────────────────────────────── */
-
-const ICON_MAP: Record<string, React.ComponentType<{ style?: React.CSSProperties }>> = {
-  sparkles:         Sparkles,
-  search:           Search,
-  image:            LucideImage,
-  'pen-line':       PenLine,
-  'code-xml':       CodeXml,
-  megaphone:        Megaphone,
-  'message-circle': MessageCircle,
-  'bar-chart-3':    BarChart3,
-  'chevron-right':  ChevronRight,
-  star:             Star,
-  'shield-check':   ShieldCheck,
-  zap:              Zap,
-  wallet:           Wallet,
-};
 
 function Icon({ name, style }: { name: string; style?: React.CSSProperties }) {
   const C = ICON_MAP[name];
@@ -156,126 +133,6 @@ function PopularTags({ onPick, dark }: { onPick: (q: string) => void; dark?: boo
   );
 }
 
-function Card({ children, padding = '16px', style }: {
-  children: React.ReactNode;
-  padding?: string;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <div style={{ background: 'var(--ph-surface)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-lg)', padding, ...style }}>
-      {children}
-    </div>
-  );
-}
-
-function won(n: number) {
-  return '₩' + n.toLocaleString('ko-KR');
-}
-
-function PriceTag({ p }: { p: Prompt }) {
-  if (p.amount === 0) return <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--ph-primary)' }}>무료</span>;
-  if (p.originalAmount && p.originalAmount > p.amount) {
-    const pct = Math.round((1 - p.amount / p.originalAmount) * 100);
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ph-error)' }}>{pct}%</span>
-        <span style={{ fontSize: 17, fontWeight: 700 }}>{won(p.amount)}</span>
-        <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', textDecoration: 'line-through' }}>{won(p.originalAmount)}</span>
-      </span>
-    );
-  }
-  return <span style={{ fontSize: 17, fontWeight: 700 }}>{won(p.amount)}</span>;
-}
-
-function Thumb({ icon }: { icon: string }) {
-  return (
-    <div style={{ height: 150, borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--ph-border)' }}>
-      <Icon name={icon || 'sparkles'} style={{ width: 40, height: 40, color: 'var(--ph-primary)', opacity: 0.85 }} />
-    </div>
-  );
-}
-
-function PromptCard({ p }: { p: Prompt }) {
-  const router = useRouter();
-  const { isLoggedIn, openLoginModal } = useAuthStore();
-  const { items: wishItems, toggle } = useWishStore();
-  const { addItem } = useCartStore();
-  const [hovered, setHovered] = useState(false);
-
-  const isWished = wishItems.some((i) => i.id === String(p.id));
-
-  const onWish = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isLoggedIn) { openLoginModal(); return; }
-    toggle({ id: String(p.id), title: p.title, amount: p.amount, thumbnailUrl: null });
-  };
-
-  const onCart = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isLoggedIn) { openLoginModal(); return; }
-    addItem({ id: String(p.id), title: p.title, amount: p.amount, thumbnailUrl: null });
-  };
-
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={() => router.push('/detail/' + p.id)}
-      style={{
-        background: 'var(--ph-surface)', border: `1px solid ${hovered ? 'var(--ph-primary)' : 'var(--ph-border)'}`,
-        borderRadius: 'var(--ph-radius-lg)', padding: 14, cursor: 'pointer',
-        display: 'flex', flexDirection: 'column', gap: 12,
-        transition: 'border-color .15s ease',
-      }}
-    >
-      <div className="ph-card-media" style={{ position: 'relative' }}>
-        <Thumb icon={p.icon} />
-        {(p.amount === 0 || p.badge) && (
-          <div style={{ position: 'absolute', top: 10, left: 10 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 8px', borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-primary)', color: '#fff', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
-              {p.amount === 0 ? '무료' : p.badge}
-            </span>
-          </div>
-        )}
-        <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <button
-            onClick={onWish}
-            title="찜하기"
-            style={{ width: 32, height: 32, borderRadius: 'var(--ph-radius-md)', background: 'rgba(255,255,255,0.92)', border: '1px solid var(--ph-border)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
-          >
-            <Heart style={{ width: 16, height: 16, color: isWished ? 'var(--ph-error)' : 'var(--ph-text-muted)', fill: isWished ? 'var(--ph-error)' : 'none' }} />
-          </button>
-          {p.amount !== 0 && (
-            <button
-              onClick={onCart}
-              title="장바구니 담기"
-              style={{ width: 32, height: 32, borderRadius: 'var(--ph-radius-md)', background: 'rgba(255,255,255,0.92)', border: '1px solid var(--ph-border)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
-            >
-              <ShoppingCart style={{ width: 16, height: 16, color: 'var(--ph-text-muted)' }} />
-            </button>
-          )}
-        </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 8px', borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-gray-50)', border: '1px solid var(--ph-border)', fontSize: 12, fontWeight: 600, color: 'var(--ph-text-secondary)', whiteSpace: 'nowrap' }}>
-          {p.model}
-        </span>
-      </div>
-      <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.35, color: 'var(--ph-text)' }}>{p.title}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ph-text-muted)', fontSize: 13 }}>
-        <Icon name="star" style={{ width: 14, height: 14, color: 'var(--ph-primary)' }} />
-        <span style={{ color: 'var(--ph-text)', fontWeight: 600 }}>{p.rating}</span>
-        <span>·</span>
-        <span>{p.seller}</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 2 }}>
-        <PriceTag p={p} />
-        <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', whiteSpace: 'nowrap' }}>{p.salesCount.toLocaleString()}회 판매</span>
-      </div>
-    </div>
-  );
-}
-
 /* ── Hero — Toss 방향 ────────────────────────────────────────────── */
 
 function HeroToss({ query, onChange, onSearch }: {
@@ -341,6 +198,7 @@ function SectionHead({ title, sub, actionLabel, onAction }: {
 /* ── Popular Grid ────────────────────────────────────────────────── */
 
 function PopularGrid() {
+  const router = useRouter();
   const [featured, setFeatured] = useState<Prompt[]>([]);
 
   useEffect(() => {
@@ -355,10 +213,12 @@ function PopularGrid() {
         title="이번 주 인기 프롬프트"
         sub="가장 많이 팔린 프롬프트를 만나보세요"
         actionLabel="전체 보기 →"
-        onAction={() => { window.location.href = '/browse'; }}
+        onAction={() => router.push('/browse')}
       />
       <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
-        {featured.map((p) => <PromptCard key={p.id} p={p} />)}
+        {featured.map((p) => (
+          <PromptCard key={p.id} p={p} showActions onOpen={(item) => router.push('/detail/' + item.id)} />
+        ))}
       </div>
     </section>
   );
@@ -469,7 +329,7 @@ export default function HomeScreen() {
   const [query, setQuery] = useState('');
 
   const onSearch = (q: string) => {
-    window.location.href = `/browse?q=${encodeURIComponent(q)}`;
+    router.push(`/browse?q=${encodeURIComponent(q)}`);
   };
 
   return (

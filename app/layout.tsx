@@ -3,6 +3,7 @@ import './globals.css';
 import ConditionalLayout from '@/components/layout/ConditionalLayout';
 import MockProvider from '@/components/providers/MockProvider';
 import AuthSync from '@/components/providers/AuthSync';
+import Toast from '@/components/ui/Toast';
 
 export const metadata: Metadata = {
   title: 'PromptHub',
@@ -28,6 +29,7 @@ export default function RootLayout({
           <ConditionalLayout>
             {children}
           </ConditionalLayout>
+          <Toast />
         </MockProvider>
       </body>
     </html>

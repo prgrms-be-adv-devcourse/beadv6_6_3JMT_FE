@@ -1,7 +1,7 @@
 import { HttpResponse } from 'msw';
 
-export function ok<T>(data: T, status = 200) {
-  return HttpResponse.json({ success: true, data, message: 'success' }, { status });
+export function ok<T>(data: T, status = 200, message = 'success') {
+  return HttpResponse.json({ success: true, data, message }, { status });
 }
 
 export function err(code: string, message: string, status: number) {

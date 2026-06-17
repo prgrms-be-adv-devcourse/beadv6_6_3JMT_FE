@@ -3,13 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import { useAuthStore } from '@/store/useAuthStore';
 import Image from 'next/image';
 import {
   Plus, Layers, ShoppingBag, Wallet,
-  Info, Clock, SearchCheck, Pencil, CirclePause, Lock,
-  AlertTriangle, Star, Receipt,
-  Image as LucideImage, PenLine, CodeXml, Megaphone, MessageCircle, BarChart3, Sparkles,
+  Info, SearchCheck, Pencil, CirclePause, Lock,
+  AlertTriangle, Receipt,
 } from 'lucide-react';
+import PromptCard from '@/components/ui/PromptCard';
+import PaymentTable from '@/components/ui/PaymentTable';
+import { won } from '@/lib/utils';
+import Button from '@/components/ui/Button';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -41,185 +45,12 @@ type Payment = {
 type ActiveTab = 'listings' | 'payments';
 type PaymentsFilter = 'all' | 'paid' | 'requested' | 'refunded';
 
-/* ── Icon utility ───────────────────────────────────────────────────── */
-
-const ICON_MAP: Record<string, React.ComponentType<{ style?: React.CSSProperties }>> = {
-  sparkles:         Sparkles,
-  image:            LucideImage,
-  'pen-line':       PenLine,
-  'code-xml':       CodeXml,
-  megaphone:        Megaphone,
-  'message-circle': MessageCircle,
-  'bar-chart-3':    BarChart3,
-};
-
-function PromptIcon({ name, style }: { name: string; style?: React.CSSProperties }) {
-  const C = ICON_MAP[name] ?? Sparkles;
-  return <C style={style} />;
-}
-
-/* ── helpers ────────────────────────────────────────────────────────── */
-
-function won(n: number) { return '₩' + n.toLocaleString('ko-KR'); }
-
-/* ── Thumb ──────────────────────────────────────────────────────────── */
-
-function Thumb({ icon, thumbnailUrl, badge, isFree }: { icon: string; thumbnailUrl?: string | null; badge?: string; isFree?: boolean }) {
-  return (
-    <div style={{ height: 150, borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--ph-border)', overflow: 'hidden', position: 'relative' }}>
-      {thumbnailUrl ? (
-        <Image src={thumbnailUrl} alt="썸네일" fill style={{ objectFit: 'cover' }} />
-      ) : (
-        <PromptIcon name={icon || 'sparkles'} style={{ width: 40, height: 40, color: 'var(--ph-primary)', opacity: 0.85 } as React.CSSProperties} />
-      )}
-      {(isFree || badge) && (
-        <div style={{ position: 'absolute', top: 10, left: 10 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 8px', borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-primary)', color: '#fff', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
-            {isFree ? '무료' : badge}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── StatusBadge ────────────────────────────────────────────────────── */
-
-function StatusBadge({ status, stopped }: { status?: string; stopped?: boolean }) {
-  if (status === 'review') {
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-text)', color: '#fff', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
-        <Clock style={{ width: 12, height: 12 }} /> 검수중
-      </span>
-    );
-  }
-  if (stopped) {
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 11px', borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-gray-100)', color: 'var(--ph-gray-600)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
-        판매 중단
-      </span>
-    );
-  }
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 11px', borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-primary)', color: '#fff', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
-      판매중
-    </span>
-  );
-}
-
-/* ── PromptCard ─────────────────────────────────────────────────────── */
-
-function PromptCard({ p }: { p: Prompt }) {
-  return (
-    <div
-      style={{
-        background: 'var(--ph-surface)',
-        border: '1px solid var(--ph-border)',
-        borderRadius: 'var(--ph-radius-lg)',
-        padding: '14px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12,
-        width: '100%',
-        minWidth: 0,
-        boxSizing: 'border-box',
-      }}
-    >
-      <div className="ph-card-media">
-        <Thumb icon={p.icon} thumbnailUrl={p.thumbnail_url} badge={p.badge} isFree={p.amount === 0} />
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 8px', borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-gray-50)', border: '1px solid var(--ph-border)', fontSize: 12, fontWeight: 600, color: 'var(--ph-text-secondary)', whiteSpace: 'nowrap' }}>
-          {p.model}
-        </span>
-      </div>
-      <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.35, color: 'var(--ph-text)' }}>{p.title}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ph-text-muted)', fontSize: 13 }}>
-        <Star style={{ width: 14, height: 14, color: 'var(--ph-primary)', fill: 'var(--ph-primary)' } as React.CSSProperties} />
-        <span style={{ color: 'var(--ph-text)', fontWeight: 600 }}>{p.rating}</span>
-        <span>·</span>
-        <span>{p.seller}</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 2 }}>
-        {p.amount === 0
-          ? <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--ph-primary)' }}>무료</span>
-          : <span style={{ fontSize: 17, fontWeight: 700 }}>{won(p.amount)}</span>}
-        <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', whiteSpace: 'nowrap' }}>{p.salesCount.toLocaleString()}회 판매</span>
-      </div>
-    </div>
-  );
-}
-
-/* ── Button ─────────────────────────────────────────────────────────── */
-
-function Button({
-  variant = 'solid',
-  size = 'md',
-  fullWidth = false,
-  disabled = false,
-  onClick,
-  children,
-}: {
-  variant?: 'solid' | 'secondary';
-  size?: 'sm' | 'md' | 'lg';
-  fullWidth?: boolean;
-  disabled?: boolean;
-  onClick?: () => void;
-  children: React.ReactNode;
-}) {
-  const [hovered, setHovered] = useState(false);
-
-  const sizes: Record<string, React.CSSProperties> = {
-    sm: { fontSize: 14, padding: '7px 12px', minHeight: 34, minWidth: 64 },
-    md: { fontSize: 15, padding: '11px 16px', minHeight: 40, minWidth: 84 },
-    lg: { fontSize: 17, padding: '15px 24px', minHeight: 52, minWidth: 120 },
-  };
-
-  const variantStyle: React.CSSProperties =
-    variant === 'solid'
-      ? { background: hovered && !disabled ? 'var(--ph-blue-hover)' : 'var(--ph-primary)', color: '#fff', border: '1px solid transparent', borderRadius: 'var(--ph-radius-md)' }
-      : { background: hovered && !disabled ? 'var(--ph-gray-100)' : 'transparent', color: 'var(--ph-text)', border: '1px solid var(--ph-text)', borderRadius: 'var(--ph-radius-sm)' };
-
-  return (
-    <button
-      disabled={disabled}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        fontFamily: 'var(--ph-font-family)',
-        fontWeight: 600,
-        letterSpacing: 0,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        width: fullWidth ? '100%' : undefined,
-        opacity: disabled ? 0.4 : 1,
-        boxSizing: 'border-box',
-        transition: 'background-color .15s ease, opacity .15s ease',
-        ...sizes[size],
-        ...variantStyle,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ── Payment status config ──────────────────────────────────────────── */
-
-const PAYMENT_STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
-  paid:      { label: '결제완료',      color: 'var(--ph-primary)',  bg: 'var(--ph-secondary)' },
-  requested: { label: '환불 신청 중', color: 'var(--ph-red)',      bg: 'rgba(217,45,32,0.10)' },
-  refunded:  { label: '환불 완료',    color: 'var(--ph-gray-600)', bg: 'var(--ph-gray-100)' },
-};
 
 /* ── ShopPage ───────────────────────────────────────────────────────── */
 
 export default function ShopPage() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<ActiveTab>('listings');
   const [stopped, setStopped] = useState<Record<string | number, boolean>>({});
   const [confirmId, setConfirmId] = useState<string | number | null>(null);
@@ -283,7 +114,7 @@ export default function ShopPage() {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ fontSize: 33, fontWeight: 700, letterSpacing: '-0.015em', margin: 0 }}>내 상점</h1>
-          <p style={{ fontSize: 16, color: 'var(--ph-text-secondary)', margin: '8px 0 0' }}>프롬프트랩님의 판매 현황이에요</p>
+          <p style={{ fontSize: 16, color: 'var(--ph-text-secondary)', margin: '8px 0 0' }}>{user?.name ?? '판매자'}님의 판매 현황이에요</p>
         </div>
         <Button variant="solid" size="lg" onClick={() => router.push('/sell')}>
           <Plus style={{ width: 17, height: 17 }} /> 새 프롬프트 등록
@@ -364,13 +195,8 @@ export default function ShopPage() {
               return (
                 <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {/* 카드 + 오버레이 */}
-                  <div style={{ position: 'relative' }}>
-                    <div style={{ position: 'absolute', top: 24, right: 24, zIndex: 2 }}>
-                      <StatusBadge status={p.status} stopped={off} />
-                    </div>
-                    <div style={{ opacity: dim ? 0.5 : 1, filter: dim ? 'grayscale(0.7)' : 'none', pointerEvents: dim ? 'none' : 'auto', transition: 'opacity .15s ease, filter .15s ease' }}>
-                      <PromptCard p={p} />
-                    </div>
+                  <div style={{ opacity: dim ? 0.5 : 1, filter: dim ? 'grayscale(0.7)' : 'none', pointerEvents: dim ? 'none' : 'auto', transition: 'opacity .15s ease, filter .15s ease' }}>
+                    <PromptCard p={p} showStatus stopped={off} />
                   </div>
 
                   {/* 카드 아래 액션 */}
@@ -450,58 +276,15 @@ export default function ShopPage() {
               <p style={{ margin: '14px 0 0', fontSize: 15 }}>결제 내역이 없어요.</p>
             </div>
           ) : (
-            <div style={{ background: 'var(--ph-surface)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-lg)', overflow: 'hidden' }}>
-              {/* 테이블 헤더 */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(0,1fr) 130px 110px 130px',
-                gap: 12, padding: '14px 22px',
-                borderBottom: '1px solid var(--ph-border)',
-                fontSize: 13, fontWeight: 600, color: 'var(--ph-text-muted)',
-                background: 'var(--ph-gray-50)',
-              }}>
-                <div>상품명</div>
-                <div>결제일</div>
-                <div>금액</div>
-                <div>상태</div>
-              </div>
-              {filteredPayments.map((pay, i) => {
-                const product = myListings.find((p) => String(p.id) === String(pay.productId));
-                const meta = PAYMENT_STATUS_MAP[pay.status] ?? PAYMENT_STATUS_MAP.paid;
-                return (
-                  <div
-                    key={pay.id}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'minmax(0,1fr) 130px 110px 130px',
-                      gap: 12, padding: '16px 22px',
-                      borderTop: i ? '1px solid var(--ph-border)' : 'none',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {product?.title ?? `상품 #${pay.productId}`}
-                    </div>
-                    <div style={{ fontSize: 13, color: 'var(--ph-text-secondary)' }}>
-                      {new Date(pay.paidAt).toLocaleDateString('ko-KR')}
-                    </div>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>
-                      {won(pay.amount)}
-                    </div>
-                    <div>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center',
-                        padding: '4px 10px', borderRadius: 'var(--ph-radius-full)',
-                        fontSize: 12, fontWeight: 600,
-                        color: meta.color, background: meta.bg, whiteSpace: 'nowrap',
-                      }}>
-                        {meta.label}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <PaymentTable
+              payments={filteredPayments.map((pay) => ({
+                id: pay.id,
+                title: myListings.find((p) => String(p.id) === String(pay.productId))?.title ?? `상품 #${pay.productId}`,
+                amount: pay.amount,
+                status: pay.status,
+                paidAt: pay.paidAt,
+              }))}
+            />
           )}
         </section>
       )}

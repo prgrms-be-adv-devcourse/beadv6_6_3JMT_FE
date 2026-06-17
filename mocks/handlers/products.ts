@@ -1,9 +1,12 @@
 import { http } from 'msw';
 import { PRODUCTS, PRODUCT_VERSIONS } from '../data/products';
-import { ok, okList, ERR, extractToken, getUserIdFromToken } from '../utils';
+import { ok, okList, err, ERR, extractToken, getUserIdFromToken } from '../utils';
 import { MOCK_USERS } from '../data/users';
 
 const BASE = '/api/v1/product';
+
+// userId → productId → rating (MSW 세션 동안 유지)
+const RATINGS: Record<string, Record<number, number>> = {};
 
 export const productHandlers = [
   // GET /api/v1/products
@@ -96,7 +99,7 @@ export const productHandlers = [
     return ok(newProduct, 201);
   }),
 
-  // PUT /api/v1/products/:id
+  // PUT /api/v1/product/:id (versionType: PATCH | MAJOR, changeReason)
   http.put(`${BASE}/:id`, async ({ params, request }) => {
     const token  = extractToken(request);
     const userId = getUserIdFromToken(token);
@@ -106,14 +109,83 @@ export const productHandlers = [
     if (idx === -1) return ERR.notFound('프로덕트');
     if (PRODUCTS[idx].sellerId !== userId) return ERR.forbidden();
 
-    const body = await request.json() as Partial<typeof PRODUCTS[number]>;
+    // 검수 중인 상품은 수정 불가
+    if (PRODUCTS[idx].status === 'review') {
+      return err('CONFLICT', '검수 중인 상품은 수정할 수 없어요.', 409);
+    }
+
+    const body = await request.json() as {
+      title?: string; category?: string; model?: string;
+      amount?: number; desc?: string; content?: string;
+      versionType?: 'MAJOR' | 'PATCH';
+      changeReason?: string;
+    };
+    const { versionType = 'PATCH', changeReason, ...fields } = body;
+
+    // 버전 계산: MAJOR → major+1, patch=0 / PATCH → patch+1
+    const rawVer = (PRODUCT_VERSIONS[0]?.ver ?? 'v1.0').replace(/^v/, '');
+    const [majStr, patStr = '0'] = rawVer.split('.');
+    const maj = parseInt(majStr, 10) || 1;
+    const pat = parseInt(patStr, 10) || 0;
+    const newVer = versionType === 'MAJOR' ? `v${maj + 1}.0` : `v${maj}.${pat + 1}`;
+
+    // MAJOR만 review 전환, PATCH는 기존 status 유지
+    const newStatus: 'active' | 'review' =
+      versionType === 'MAJOR' ? 'review' : (PRODUCTS[idx].status ?? 'active');
+
     PRODUCTS[idx] = {
       ...PRODUCTS[idx],
-      ...body,
-      status: 'review',
+      ...(fields as Partial<typeof PRODUCTS[number]>),
+      status: newStatus,
       updatedAt: new Date().toISOString(),
     };
-    return ok(PRODUCTS[idx]);
+
+    // 버전 이력 선두에 추가
+    PRODUCT_VERSIONS.unshift({
+      ver: newVer,
+      date: new Date().toISOString().slice(0, 10),
+      note: changeReason || '수정됨',
+    });
+
+    return ok({ ...PRODUCTS[idx], versions: PRODUCT_VERSIONS });
+  }),
+
+  // GET /api/v1/product/:id/rating — 내 별점 조회
+  http.get(`${BASE}/:id/rating`, ({ params, request }) => {
+    const token  = extractToken(request);
+    const userId = getUserIdFromToken(token);
+    if (!userId) return ERR.unauthorized();
+
+    const productId = Number(params.id);
+    const rating = RATINGS[userId]?.[productId] ?? 0;
+    return ok({ rating });
+  }),
+
+  // POST /api/v1/product/:id/rating — 별점 등록/수정
+  http.post(`${BASE}/:id/rating`, async ({ params, request }) => {
+    const token  = extractToken(request);
+    const userId = getUserIdFromToken(token);
+    if (!userId) return ERR.unauthorized();
+
+    const productId = Number(params.id);
+    const product   = PRODUCTS.find((p) => p.id === productId);
+    if (!product) return ERR.notFound('프로덕트');
+
+    const body = await request.json() as { rating?: number };
+    const n    = Number(body?.rating);
+    if (!n || n < 1 || n > 5) return ERR.validation('별점은 1~5 사이여야 합니다.');
+
+    if (!RATINGS[userId]) RATINGS[userId] = {};
+    RATINGS[userId][productId] = n;
+
+    // 상품 평균 rating 업데이트 (소수점 1자리)
+    const allRatings = Object.values(RATINGS)
+      .map((r) => r[productId])
+      .filter((v): v is number => v !== undefined);
+    const avg = allRatings.reduce((s, v) => s + v, 0) / allRatings.length;
+    product.rating = Math.round(avg * 10) / 10;
+
+    return ok({ rating: n });
   }),
 
   // DELETE /api/v1/products/:id

@@ -43,7 +43,7 @@ export const authHandlers = [
   }),
 
   http.post(`${BASE}/logout`, () => {
-    return ok({ message: '로그아웃 되었습니다.' });
+    return ok(null, 200, '로그아웃 되었습니다.');
   }),
 
   http.put(`${BASE}/password`, async ({ request }) => {
@@ -62,6 +62,6 @@ export const authHandlers = [
     if (currentPassword !== stored) return ERR.validation('현재 비밀번호가 올바르지 않아요.');
 
     MOCK_PASSWORDS[userId] = newPassword;
-    return ok({ message: '비밀번호가 변경되었습니다.' });
+    return ok(null, 200, '비밀번호가 변경되었습니다.');
   }),
 ];
