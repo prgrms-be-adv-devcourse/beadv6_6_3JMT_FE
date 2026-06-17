@@ -92,6 +92,7 @@ export const productHandlers = [
       updatedAt: new Date().toISOString(),
     };
 
+    PRODUCTS.push(newProduct as typeof PRODUCTS[number]);
     return ok(newProduct, 201);
   }),
 

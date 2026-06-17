@@ -13,12 +13,11 @@ export const authHandlers = [
 
     const role = getRoleByEmail(email);
     const existing = MOCK_USERS.find((u) => u.email === email);
-    const user = existing ?? {
-      id: `user-${Date.now()}`,
-      name: email.split('@')[0],
-      email,
-      role,
-    };
+    let user = existing;
+    if (!user) {
+      user = { id: `user-${Date.now()}`, name: email.split('@')[0], email, role };
+      MOCK_USERS.push(user);
+    }
 
     const token = `mock-token::${user.id}`;
     return ok({ user, token });
@@ -31,12 +30,12 @@ export const authHandlers = [
     if (!email || !password) return ERR.validation('이메일과 비밀번호를 입력해주세요.');
 
     const role = getRoleByEmail(email);
-    const user = {
-      id: `user-${Date.now()}`,
-      name: name ?? email.split('@')[0],
-      email,
-      role,
-    };
+    const existing = MOCK_USERS.find((u) => u.email === email);
+    let user = existing;
+    if (!user) {
+      user = { id: `user-${Date.now()}`, name: name ?? email.split('@')[0], email, role };
+      MOCK_USERS.push(user);
+    }
 
     const token = `mock-token::${user.id}`;
     return ok({ user, token });
