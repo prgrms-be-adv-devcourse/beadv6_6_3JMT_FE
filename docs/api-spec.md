@@ -91,9 +91,12 @@ Base URL: `http://localhost:3000/api/v1` (MSW Mock)
 {
   "name": "홍길동",
   "email": "user@example.com",
-  "password": "password123"
+  "password": "password123",
+  "serviceAgree": true
 }
 ```
+
+> `serviceAgree` — 서비스 이용약관 및 개인정보 처리방침 동의 여부 (필수, `true`만 허용)
 
 **Response 200** — 로그인과 동일한 형식
 
@@ -107,6 +110,36 @@ Base URL: `http://localhost:3000/api/v1` (MSW Mock)
 ```json
 { "success": true, "data": { "message": "로그아웃 되었습니다." }, "message": "success" }
 ```
+
+---
+
+### PUT /api/v1/auth/password (인증 필요)
+
+비밀번호 변경.
+
+**Request**
+```json
+{
+  "currentPassword": "password123",
+  "newPassword": "newPassword456"
+}
+```
+
+> `newPassword` — 8자 이상 필수. 현재 비밀번호와 동일 불가.
+
+**Response 200**
+```json
+{ "success": true, "data": { "message": "비밀번호가 변경되었습니다." }, "message": "success" }
+```
+
+**에러 케이스**
+
+| 상황 | code | status |
+|------|------|--------|
+| 토큰 없음 | `UNAUTHORIZED` | 401 |
+| 현재 비밀번호 불일치 | `VALIDATION_ERROR` | 422 |
+| 새 비밀번호 8자 미만 | `VALIDATION_ERROR` | 422 |
+| 현재·새 비밀번호 동일 | `VALIDATION_ERROR` | 422 |
 
 ---
 
@@ -152,7 +185,7 @@ https://kauth.kakao.com/oauth/authorize
 
 ## Products
 
-### GET /api/v1/products
+### GET /api/v1/product
 
 **Query Parameters**
 
@@ -172,13 +205,13 @@ https://kauth.kakao.com/oauth/authorize
     {
       "id": 1,
       "title": "사진 같은 제품 목업 생성기",
-      "cat": "image",
+      "category": "image",
       "icon": "image",
       "model": "Midjourney v6",
-      "price": 5900,
-      "originalPrice": null,
+      "amount": 5900,
+      "originalAmount": null,
       "rating": 4.9,
-      "sales": 1240,
+      "salesCount": 1240,
       "seller": "비주얼랩",
       "sellerId": "seller-1",
       "badge": "신규",
@@ -200,7 +233,7 @@ https://kauth.kakao.com/oauth/authorize
 
 ---
 
-### GET /api/v1/products/:id
+### GET /api/v1/product/:id
 
 **Response 200**
 ```json
@@ -208,12 +241,12 @@ https://kauth.kakao.com/oauth/authorize
   "data": {
     "id": 1,
     "title": "사진 같은 제품 목업 생성기",
-    "cat": "image",
+    "category": "image",
     "icon": "image",
     "model": "Midjourney v6",
-    "price": 5900,
+    "amount": 5900,
     "rating": 4.9,
-    "sales": 1240,
+    "salesCount": 1240,
     "seller": "비주얼랩",
     "sellerId": "seller-1",
     "badge": "신규",
@@ -235,24 +268,24 @@ https://kauth.kakao.com/oauth/authorize
 
 ---
 
-### GET /api/v1/products/:id/related
+### GET /api/v1/product/:id/related
 
 **Query Parameters**: `limit` (default: 4)
 
-**Response 200** — 동일 카테고리의 상품 배열 (products 배열과 동일한 item 형식)
+**Response 200** — 동일 카테고리의 상품 배열 (product 배열과 동일한 item 형식)
 
 ---
 
-### POST /api/v1/products (인증 필요, seller 전용)
+### POST /api/v1/product (인증 필요, seller 전용)
 
 **Request**
 ```json
 {
   "title": "새 프롬프트 제목",
-  "cat": "coding",
+  "category": "coding",
   "model": "Claude 3.5",
   "desc": "설명",
-  "price": 5000,
+  "amount": 5000,
   "content": "실제 프롬프트 내용"
 }
 ```
@@ -261,15 +294,18 @@ https://kauth.kakao.com/oauth/authorize
 
 ---
 
-### PUT /api/v1/products/:id (인증 필요, 본인 상품만)
+### PUT /api/v1/product/:id (인증 필요, 본인 상품만)
 
 **Request** — 수정할 필드만 포함 (partial update)
 
 **Response 200** — 업데이트된 product 객체
+수정 요청 후 상품은 `status: 'review'`(검수 대기) 상태로 전환되며, 관리자 승인 후 다시 판매중 상태가 됩니다.
 
 ---
 
-### DELETE /api/v1/products/:id (인증 필요, 본인 상품만)
+### DELETE /api/v1/product/:id (인증 필요, 본인 상품만)
+
+판매 중단 처리. 중단된 상품은 재등록할 수 없습니다.
 
 **Response 200**
 ```json
@@ -302,61 +338,99 @@ https://kauth.kakao.com/oauth/authorize
 
 **Request** — 수정할 필드만 포함
 ```json
-{ "name": "새이름", "email": "new@example.com" }
+{ "name": "새이름", "email": "new@example.com", "password": "password" }
 ```
 
 **Response 200** — 업데이트된 user 객체 (공통 단건 형식)
 
 ---
 
-### GET /api/v1/users/me/orders (인증 필요)
+## Wishlist
+
+### POST /api/v1/wishlists (인증 필요)
+
+**Request**
+```json
+{ "productId": "uuid" }
+```
+
+**Response 201**
+```json
+{
+  "success": true,
+  "data": {
+    "wishlistId": "wl-1718500000000",
+    "productId": 1,
+    "createdAt": "2026-06-17T10:00:00"
+  },
+  "message": "success"
+}
+```
+
+**에러 케이스**
+
+| 상황 | code | status |
+|------|------|--------|
+| 이미 찜한 상품 | `VALIDATION_ERROR` | 409 |
+
+---
+
+### DELETE /api/v1/wishlists/:wishlistId (인증 필요)
+
+**Response 204** — No Content
+
+**에러 케이스**
+
+| 상황 | code | status |
+|------|------|--------|
+| 본인 찜 아님 | `FORBIDDEN` | 403 |
+| 존재하지 않는 wishlistId | `NOT_FOUND` | 404 |
+
+---
+
+### GET /api/v1/wishlists (인증 필요)
+
+**Query Parameters**: `page` (default: 0), `size` (default: 20)
 
 **Response 200**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "orderId": "order-101",
-      "purchasedAt": "2026-06-01T00:00:00.000Z",
-      "product": { }
-    }
-  ],
+  "data": {
+    "content": [
+      {
+        "wishlistId": "wl-1",
+        "productId": 3,
+        "createdAt": "2026-06-01T00:00:00.000Z",
+        "product": { }
+      }
+    ],
+    "page": 0,
+    "size": 20,
+    "totalElements": 2
+  },
   "message": "success"
 }
 ```
 
 ---
 
-### GET /api/v1/users/me/wishlist (인증 필요)
+### GET /api/v1/wishlists/exists (인증 필요)
 
-**Response 200** — 공통 단건 형식, `data`는 product 객체 배열
+상품 상세 진입 시 하트 버튼 활성화 여부 판단용.
 
----
-
-## Wishlist
-
-### POST /api/v1/wishlist/:productId (인증 필요)
+**Query Parameters**: `productId` (required)
 
 **Response 200**
 ```json
-{ "success": true, "data": { "message": "찜 목록에 추가되었습니다." }, "message": "success" }
-```
-
----
-
-### DELETE /api/v1/wishlist/:productId (인증 필요)
-
-**Response 200**
-```json
-{ "success": true, "data": { "message": "찜 목록에서 제거되었습니다." }, "message": "success" }
+{ "success": true, "data": { "wished": true }, "message": "success" }
 ```
 
 ---
 
 ## Sellers
 
-### POST /api/v1/sellers/apply (인증 필요)
+### POST /api/v1/seller (인증 필요)
 
 **Request**
 ```json
@@ -388,7 +462,7 @@ https://kauth.kakao.com/oauth/authorize
 
 ### GET /api/v1/sellers/me/products (인증 필요, seller 전용)
 
-**Response 200** — 공통 단건 형식, `data`는 본인이 등록한 product 배열
+**Response 200** — 공통 단건 형식, `data`는 본인이 등록한 product 배열 (`status` 필드 포함)
 
 ---
 
@@ -399,7 +473,7 @@ https://kauth.kakao.com/oauth/authorize
 {
   "success": true,
   "data": {
-    "totalSales": 2110,
+    "totalSalesCount": 2110,
     "totalRevenue": 11890000,
     "rating": 4.8
   },
@@ -432,7 +506,57 @@ https://kauth.kakao.com/oauth/authorize
 
 ---
 
+## Payments
+
+### POST /api/v1/payments/confirm (인증 필요)
+
+결제 처리 + 주문 생성을 단일 호출로 수행. `productIds`는 반드시 `number[]`로 전송.
+
+**Request**
+```json
+{ "productIds": [1, 2] }
+```
+
+**Response 201**
+```json
+{
+  "success": true,
+  "data": {
+    "paymentId": "pay-1718500000000",
+    "orderId": "order-1718500000000",
+    "totalAmount": 14700,
+    "status": "paid"
+  },
+  "message": "success"
+}
+```
+
+> Mock 동작: 즉시 결제 완료 처리. Toss PG 연동 후(Phase 11) 실제 결제 흐름으로 교체 예정.
+
+---
+
 ## Orders
+
+### GET /api/v1/orders (인증 필요)
+
+내 주문 목록 조회. JWT 기반으로 본인 주문만 반환.
+
+**Response 200**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "orderId": "order-101",
+      "purchasedAt": "2026-06-01T00:00:00.000Z",
+      "product": { }
+    }
+  ],
+  "message": "success"
+}
+```
+
+---
 
 ### POST /api/v1/orders (인증 필요)
 
@@ -447,7 +571,7 @@ https://kauth.kakao.com/oauth/authorize
   "success": true,
   "data": {
     "orderId": "order-1718500000000",
-    "totalPrice": 14700,
+    "totalAmount": 14700,
     "products": []
   },
   "message": "success"
@@ -492,20 +616,21 @@ https://kauth.kakao.com/oauth/authorize
 type Product = {
   id: number;
   title: string;
-  cat: 'image' | 'writing' | 'coding' | 'marketing' | 'chatbot' | 'data';
+  category: 'image' | 'writing' | 'coding' | 'marketing' | 'chatbot' | 'data';
   icon: string;
   model: string;
-  price: number;
-  originalPrice?: number;
+  amount: number;
+  originalAmount?: number;
   rating: number;
-  sales: number;
+  salesCount: number;
   seller: string;
   sellerId: string;
   badge?: string;
   desc: string;
   thumbnail_url: string | null;
-  content?: string;       // 구매자에게만 노출
-  createdAt: string;      // ISO 8601
+  content?: string;                    // 구매자에게만 노출
+  status?: 'active' | 'review';       // 판매중(기본) | 검수 대기
+  createdAt: string;                   // ISO 8601
   updatedAt: string;
 };
 ```

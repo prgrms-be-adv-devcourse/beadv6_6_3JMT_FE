@@ -36,7 +36,7 @@ app/apply/page.tsx 를 실제 API로 연결해줘.
 
 - 페이지 마운트 시 GET /api/v1/sellers/apply-status 호출
   → status가 pending/approved/rejected 면 바로 완료 화면 표시
-- submit 버튼 클릭 시 POST /api/v1/sellers/apply 호출
+- submit 버튼 클릭 시 POST /api/v1/seller 호출
   body: { selectedCategories, introduction, portfolioLink, agreedToTerms }
 - 성공 시 setDone(true)
 ```
@@ -50,12 +50,13 @@ app/apply/page.tsx 를 실제 API로 연결해줘.
 ```
 찜 기능을 서버와 동기화해줘.
 
-1. 로그인 성공 직후 GET /api/v1/users/me/wishlist 호출하여 useWishStore 초기화
+1. 로그인 성공 직후 GET /api/v1/wishlists 호출하여 useWishStore 초기화
    - useAuthStore 의 login() 직후 또는 app/layout.tsx 에서 처리
 
 2. app/detail/[id]/page.tsx 의 찜 버튼 핸들러에 낙관적 업데이트 패턴 적용
-   - 찜 추가: 즉시 UI 업데이트 → POST /api/v1/wishlist/{productId} → 실패 시 롤백
-   - 찜 제거: 즉시 UI 업데이트 → DELETE /api/v1/wishlist/{productId} → 실패 시 롤백
+   - 찜 추가: 즉시 UI 업데이트 → POST /api/v1/wishlists { productId } → wishlistId 저장 → 실패 시 롤백
+   - 찜 제거: 즉시 UI 업데이트 → DELETE /api/v1/wishlists/{wishlistId} → 실패 시 롤백
+   - 상세 진입 시 GET /api/v1/wishlists/exists?productId={id} 호출 → 하트 초기 상태
 ```
 
 ---
@@ -74,15 +75,15 @@ components/layout/Header.tsx 의 알림 드롭다운을 실제 API로 연결해�
 
 ---
 
-## Phase 5. 상품 등록 API 연결
+## Phase 5. 상품 등록 API 연결 ✅ 완료
 
 **현재 상황**: `sell/page.tsx`의 등록 버튼이 `/shop`으로 리다이렉트만 하고 API 미호출.
 
 ```
 app/sell/page.tsx 를 실제 API로 연결해줘.
 
-- 등록 버튼 → POST /api/v1/products 호출
-  body: { title, cat, model, price: Number(price), desc, content }
+- 등록 버튼 → POST /api/v1/product 호출
+  body: { title, category, model, price: Number(price), desc, content }
   (현재 body textarea 값을 desc와 content 양쪽에 매핑)
 - 성공 시 /shop 으로 이동
 - 실패 시 에러 토스트 표시
@@ -92,26 +93,28 @@ app/sell/page.tsx 를 실제 API로 연결해줘.
 
 ---
 
-## Phase 6. 상품 수정/삭제 API 연결
+## Phase 6. 상품 수정/삭제 API 연결 ✅ 완료 (재수정: 판매중단 UI 유지 & 검수중 상태 반영)
 
 **현재 상황**: `edit/[id]/page.tsx`가 하드코딩 PROMPTS 배열에서 데이터 로드. 저장 시 API 미호출.
 
 ```
 app/edit/[id]/page.tsx 를 실제 API로 연결해줘.
 
-- 페이지 마운트 시 GET /api/v1/products/{id} 호출하여 폼 초기값 세팅
+- 페이지 마운트 시 GET /api/v1/product/{id} 호출하여 폼 초기값 세팅
   (현재 하드코딩 PROMPTS 배열 제거)
-- 저장 버튼 → PUT /api/v1/products/{id} 호출
-  body: { title, cat, model, price, desc, content }
+- 저장 버튼 → PUT /api/v1/product/{id} 호출
+  body: { title, category, model, price, desc, content }
 
 app/shop/page.tsx 의 삭제 버튼도 연결해줘.
-- DELETE /api/v1/products/{id} 호출
+- DELETE /api/v1/product/{id} 호출
 - 성공 시 목록에서 해당 상품 제거
 ```
 
 ---
 
-## Phase 7. 주문/결제 페이지 구현
+## Phase 7. 주문/결제 페이지 구현 ✅ 완료 (PG 미포함 — Toss 연동은 Phase 11)
+
+> 보완: POST /api/v1/payments/confirm MSW 핸들러 추가 (결제+주문 단일 호출). checkout 페이지는 이 엔드포인트를 호출하며 productIds를 number[]로 변환하여 전송.
 
 **현재 상황**: Header 장바구니 "결제하기" 버튼이 드롭다운만 닫음. 결제 페이지 없음.
 
@@ -120,7 +123,7 @@ app/shop/page.tsx 의 삭제 버튼도 연결해줘.
 
 1. app/checkout/page.tsx 신규 생성
    - useCartStore.items 목록과 총 금액 표시
-   - "주문하기" 버튼 → POST /api/v1/orders { productIds: cart.map(i => i.id) }
+   - "주문하기" 버튼 → POST /api/v1/payments/confirm { productIds: cart.map(i => i.id) }
    - 성공 시 clearCart() 호출 후 /mypage 로 이동
 
 2. components/layout/Header.tsx 의 장바구니 "결제하기" 버튼에 router.push('/checkout') 연결
@@ -130,7 +133,7 @@ app/shop/page.tsx 의 삭제 버튼도 연결해줘.
 
 ---
 
-## Phase 8. 마이페이지 완성
+## Phase 8. 마이페이지 완성 ✅ 완료
 
 **현재 상황**: 프로필 수정 저장 버튼이 API 미호출. reader 페이지가 하드코딩 데이터 사용.
 
@@ -138,9 +141,11 @@ app/shop/page.tsx 의 삭제 버튼도 연결해줘.
 app/mypage/page.tsx 설정 탭의 프로필 수정을 API로 연결해줘.
 - 저장 버튼 → PUT /api/v1/users/me { name, email }
 - 성공 시 useAuthStore.login(updatedUser, currentToken) 재호출로 스토어 갱신
+- 구매 내역: GET /api/v1/order
+- 찜 목록: GET /api/v1/wishlists
 
 app/reader/[id]/page.tsx 의 하드코딩 MOCK_PURCHASED 데이터를 실제 API로 교체해줘.
-- GET /api/v1/users/me/orders 호출 후 현재 id에 해당하는 주문 찾기
+- GET /api/v1/order 호출 후 현재 id에 해당하는 주문 찾기
 - 해당 주문이 없으면 /mypage 로 리다이렉트
 
 app/shop/page.tsx 에 판매자 결제 내역 탭 구현해줘.
@@ -195,6 +200,29 @@ PUT  /api/v1/admin/sellers/:id/reject
 GET  /api/v1/admin/orders
 PUT  /api/v1/admin/orders/:id/refund
 GET  /api/v1/admin/payments
+```
+
+---
+
+## Phase 11. Toss Payments PG 연동
+
+**전제**: Phase 7 완료 후 진행. 현재는 POST /api/v1/payments/confirm 직접 호출로 즉시 결제 처리 중.
+
+```
+app/checkout/page.tsx 에 Toss Payments 결제 위젯을 연동해줘.
+
+실제 PG 연동 흐름:
+1. @tosspayments/tosspayments-sdk 설치
+2. app/checkout/page.tsx 에서 loadTossPayments()로 결제 위젯 렌더링
+3. 결제 완료 후 /checkout/success?orderId=...&paymentKey=...&amount=... 콜백
+4. app/checkout/success/page.tsx 에서 POST /api/v1/payments/confirm 호출
+   body: { orderId, paymentKey, amount }
+5. 성공 시 clearCart() → /mypage 이동
+6. app/checkout/fail/page.tsx — 실패 처리
+
+백엔드 개발자에게 요청:
+- POST /api/v1/payments/confirm (Toss 서버 결제 승인 처리)
+- TOSS_CLIENT_KEY (프론트용 클라이언트 키)
 ```
 
 ---
