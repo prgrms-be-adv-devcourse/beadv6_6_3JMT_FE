@@ -103,7 +103,6 @@ const SELLER_APPLIES: Record<string, { userId: string; userName: string; email: 
 };
 
 let ordersStore = [...ADMIN_ORDERS];
-let settlementSeq = ADMIN_PAYMENTS.length;
 
 export const adminHandlers = [
   // 대시보드 통계 (KPI + 최근 7일 거래량)
@@ -265,24 +264,5 @@ export const adminHandlers = [
     if (next === 'APPROVED' && !settlement.confirmedAt) settlement.confirmedAt = now;
     if (next === 'PAID') settlement.paidAt = now;
     return ok(settlement);
-  }),
-
-  // 정산 재산정 (취소된 건 → 같은 판매자/기간으로 새 대기 건 생성, 취소 건은 이력 보존)
-  http.post(`${BASE}/payments/:id/recalculate`, ({ request, params }) => {
-    if (!isAdmin(request)) return ERR.forbidden();
-    const { id } = params;
-    const src = ADMIN_PAYMENTS.find((p) => p.id === id);
-    if (!src) return ERR.notFound('정산');
-    if (src.status !== 'CANCELLED') return ERR.validation('취소된 정산 건만 재산정할 수 있습니다.');
-    const next: Settlement = {
-      ...src,
-      id: `stl-${++settlementSeq}`,
-      status: 'PENDING_APPROVAL',
-      calculatedAt: new Date().toISOString(),
-      confirmedAt: null,
-      paidAt: null,
-    };
-    ADMIN_PAYMENTS.push(next);
-    return ok(next);
   }),
 ];

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Clock, CircleCheck, PauseCircle, Banknote, Check, Pause, RotateCcw, X, CheckCheck, XCircle, RefreshCw } from 'lucide-react'
+import { Clock, CircleCheck, PauseCircle, Banknote, Check, Pause, RotateCcw, X, CheckCheck, XCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/api'
 import { SectionCard } from '@/components/admin/SectionCard'
@@ -161,22 +161,6 @@ export default function AdminPaymentsPage() {
     setCancelTarget(null)
   }
 
-  // 취소된 정산 재산정: 같은 판매자/기간으로 새 대기 건 생성 (취소 건은 이력 보존)
-  const recalc = async (id: string) => {
-    if (!token) return
-    setActingId(id)
-    try {
-      await api.post(
-        `/api/v1/admin/payments/${id}/recalculate`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
-      load()
-    } finally {
-      setActingId(null)
-    }
-  }
-
   const sumBy = (statuses: SettlementStatus[]) =>
     rows.filter((r) => statuses.includes(r.status)).reduce((acc, r) => acc + r.settlementTotalAmount, 0)
   const countBy = (statuses: SettlementStatus[]) => rows.filter((r) => statuses.includes(r.status)).length
@@ -320,16 +304,10 @@ export default function AdminPaymentsPage() {
                               지급 완료
                             </span>
                           ) : (
-                            <div className="inline-flex items-center gap-[8px]">
-                              <span className="inline-flex items-center gap-[5px] text-[13px] text-ph-text-muted">
-                                <XCircle size={15} />
-                                취소됨
-                              </span>
-                              <RowBtn tone="neutral" onClick={() => recalc(r.id)} disabled={actingId === r.id}>
-                                <RefreshCw size={15} />
-                                재산정
-                              </RowBtn>
-                            </div>
+                            <span className="inline-flex items-center gap-[5px] text-[13px] text-ph-text-muted">
+                              <XCircle size={15} />
+                              취소됨
+                            </span>
                           )}
                         </div>
                       </Td>
