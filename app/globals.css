@@ -71,6 +71,11 @@
   --ph-label-sm-lh: 20px;
   --ph-label-sm-weight: 600;
 
+  /* Caption — 13px (rem 기반, Tailwind v4 --spacing: 0.25rem 체계와 통일) */
+  --ph-caption-size: 0.8125rem;
+  --ph-caption-lh: 1.4;
+  --ph-caption-weight: 400;
+
   --ph-letter-spacing: 0px;
 
   /* Spacing */
@@ -147,6 +152,7 @@
   --font-size-ph-label-lg: var(--ph-label-lg-size);
   --font-size-ph-label-md: var(--ph-label-md-size);
   --font-size-ph-label-sm: var(--ph-label-sm-size);
+  --font-size-ph-caption: var(--ph-caption-size);
 
   /* Line height */
   --line-height-ph-headline-display: var(--ph-headline-display-lh);
@@ -158,6 +164,7 @@
   --line-height-ph-label-lg: var(--ph-label-lg-lh);
   --line-height-ph-label-md: var(--ph-label-md-lh);
   --line-height-ph-label-sm: var(--ph-label-sm-lh);
+  --line-height-ph-caption: var(--ph-caption-lh);
 
   /* Spacing */
   --spacing-ph-2xs: var(--ph-space-2xs);

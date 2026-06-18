@@ -10,7 +10,16 @@
 
 - 이 프로젝트는 **Tailwind v4** → `tailwind.config.ts` 없음. 토큰은 `app/globals.css`의 `:root`(원시값) + `@theme`(Tailwind 매핑) 2단 구조.
 - **원본이 토큰(`var(--ph-*)`)으로 쓴 건 토큰으로, 인라인 리터럴(`#fdeceb` 등)로 쓴 건 그대로 인라인으로** 이식한다. (임의 토큰화 금지 — 원본과 달라짐)
-- `app/globals.css`에 원본 어드민이 참조하는 `--ph-*` 토큰 24개가 **전부** 존재함. **추가할 토큰 없음.**
+
+### Tailwind v4 단위 규칙
+- Tailwind v4 기본 spacing 단위: `--spacing: 0.25rem` → `gap-4` = 1rem ≈ 16px
+- **단위 없는 소수점 클래스**가 동작한다: `gap-2.5` = 2.5 × 0.25rem ≈ 10px
+- 새로 추가하는 **폰트 크기 토큰**은 rem 기반으로 정의한다 (`--ph-caption-size: 0.8125rem`)
+
+**간격 우선순위**: `--ph-*` 토큰 클래스 → Tailwind 소수점 스케일(`gap-2.5`) → px 임의값(`gap-[10px]`)
+
+**폰트 크기 우선순위**: `--ph-*` 토큰 클래스 → px 임의값(`text-[13.5px]`)
+(rem 임의값 `text-[0.84375rem]`은 가독성이 낮아 사용하지 않는다)
 
 ---
 
@@ -48,15 +57,50 @@
 **폰트**: `--ph-font-family` (Pretendard Variable) — `font-ph`
 **가중치**: regular 400 / semibold 600 / bold 700
 
+### 폰트 크기 토큰
+
+| 토큰 | 값 | Tailwind 클래스 | 용도 |
+|---|---|---|---|
+| `--ph-headline-display-size` | 40px | `text-ph-headline-display` | 히어로 대제목 |
+| `--ph-headline-lg-size` | 33px | `text-ph-headline-lg` | 페이지 h1 |
+| `--ph-headline-md-size` | 27px | `text-ph-headline-md` | 섹션 제목 |
+| `--ph-body-lg-size` | 18px | `text-ph-body-lg` | 큰 본문 |
+| `--ph-body-md-size` | 15px | `text-ph-body-md` | 기본 본문 |
+| `--ph-body-sm-size` | 14px | `text-ph-body-sm` | 작은 본문 |
+| `--ph-label-lg-size` | 15px | `text-ph-label-lg` | 큰 레이블 |
+| `--ph-label-md-size` | 15px | `text-ph-label-md` | 기본 레이블 |
+| `--ph-label-sm-size` | 14px | `text-ph-label-sm` | 작은 레이블 |
+| `--ph-caption-size` | **0.8125rem** (13px) | `text-ph-caption` | 캡션·보조 텍스트·뱃지 |
+
+> **임의값 변환 가이드** (토큰 없는 비표준 크기 — rem으로 표기)
+> - 13.5px → `text-[0.84375rem]`
+> - 12.5px → `text-[0.78125rem]`
+> - 12px → Tailwind 기본 `text-xs` (0.75rem)
+> - 11.5px → `text-[0.71875rem]`
+
+### Border Radius 토큰
+
 | radius | 값 | 클래스 | 용도 |
 |---|---|---|---|
 | `--ph-radius-sm` | 4px | `rounded-ph-sm` | 보조 버튼, 아이콘 버튼 |
-| `--ph-radius-md` | 7px | `rounded-ph-md` | 기본 버튼, 사이드바 메뉴, 토픽바 아이콘 |
+| `--ph-radius-md` | 7px | `rounded-ph-md` | 기본 버튼, 사이드바 메뉴 |
 | `--ph-radius-lg` | 8px | `rounded-ph-lg` | 카드/패널(SectionCard) |
 | `--ph-radius-xl` | 16px | `rounded-ph-xl` | 큰 미디어/패널 |
 | `--ph-radius-full` | 9999px | `rounded-ph-full` | 뱃지/pill |
 
-간격 토큰: `--ph-space-*` → `*-ph-8`(8px) `*-ph-16`(16px) `*-ph-24`(24px) `*-ph-40`(40px) 등.
+### 간격 토큰
+
+`--ph-space-*` → Tailwind `*-ph-{n}` 클래스. 예: `gap-ph-8`(8px), `p-ph-16`(16px), `px-ph-24`(24px).
+
+| 토큰 | 값 | 클래스 예시 |
+|---|---|---|
+| `--ph-space-4` | 4px | `gap-ph-4`, `p-ph-4` |
+| `--ph-space-2xs` / `--ph-space-8` | 6px / 8px | `gap-ph-2xs`, `gap-ph-8` |
+| `--ph-space-xs` | 10px | `gap-ph-xs` |
+| `--ph-space-12` | 12px | `gap-ph-12` |
+| `--ph-space-16` | 16px | `gap-ph-16` |
+| `--ph-space-24` | 24px | `gap-ph-24` |
+| `--ph-space-40` | 40px | `gap-ph-40` |
 
 ---
 

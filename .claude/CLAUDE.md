@@ -19,6 +19,22 @@
 - :root의 --ph-* 변수와 @theme 블록은 항상 동기화 상태를 유지한다
 - 임의로 값을 바꾸지 않는다
 
+### Tailwind v4 단위 규칙
+Tailwind v4는 spacing 기본 단위가 `--spacing: 0.25rem`이라 **단위 없는 소수점 클래스**가 동작한다.
+(`gap-2.5` = 2.5 × 0.25rem = 0.625rem ≈ 10px)
+
+**간격 우선순위**
+1. `--ph-*` 토큰 클래스 — `gap-ph-xs`(10px), `gap-ph-8`(8px) 등
+2. Tailwind 소수점 스케일 — `gap-2.5`, `p-3.5` 등 (토큰 미정의 값)
+3. px 임의값 — `gap-[10px]` (위 두 방법 모두 부적합할 때만)
+
+**폰트 크기 우선순위**
+1. `--ph-*` 토큰 클래스 — `text-ph-caption`(13px), `text-ph-body-sm`(14px) 등
+2. px 임의값 — `text-[13.5px]` (토큰 미정의 크기; rem 소수점 임의값은 가독성이 낮아 사용하지 않는다)
+
+**토큰 추가 기준** (`globals.css`)
+- 새 폰트 크기 토큰은 rem 단위로 정의한다 (`--ph-caption-size: 0.8125rem`)
+
 ## 디자인/페이지 작업 시 토큰 사용 (필수)
 - **새 디자인·페이지·컴포넌트를 만들 때는 반드시 `--ph-*` 디자인 토큰을 사용**한다
   - Tailwind 클래스: `bg-ph-primary`, `text-ph-text-secondary`, `border-ph-border`, `rounded-ph-lg`, `font-ph` 등
@@ -27,6 +43,7 @@
   - 예외: 원본 HTML이 토큰화하지 않고 인라인 리터럴로 쓴 값(예: 에러 배경 `#fdeceb`, 그라데이션)은 원본 픽셀 보존을 위해 그대로 둔다
 - 토큰 ↔ 클래스 매핑·치수·공통 컴포넌트 스펙은 **`docs/design-tokens.md`** 치트시트를 먼저 참고한다
 - 어드민 공통 컴포넌트는 `components/admin/*`(Badge/StatusBadge, SectionCard, Table 등)를 재사용한다
+- 상수·컴포넌트·스타일 사용 규칙은 **`docs/conventions.md`** 를 먼저 확인한다
 
 ## 디자인 시스템 ↔ 문서 동기화 (필수)
 - `app/globals.css`(토큰)나 `components/admin/*`(공통 컴포넌트)에 **새 토큰/컴포넌트를 추가·변경하면**, 같은 작업에서 **`docs/design-tokens.md`를 반드시 동기화**한다
