@@ -579,6 +579,49 @@ https://kauth.kakao.com/oauth/authorize
 
 ---
 
+### GET /api/v1/sellers/me/settlements (인증 필요, seller 전용)
+
+본인의 월별 정산 내역. 어드민 정산 리스트(`GET /api/v1/admin/payments`)와 동일한 `Settlement` 구조이며, 본인 `sellerId` 건만 반환한다.
+
+**정산 상태(`status`) enum**: `PENDING_APPROVAL`(대기) · `SETTLEMENT_ON_HOLD`(승인 보류) · `APPROVED`(승인) · `PAYOUT_REQUESTED`(지급 신청) · `PAYOUT_ON_HOLD`(지급 보류) · `PAID`(지급 완료) · `CANCELLED`(취소)
+
+**Response 200**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "stl-13",
+      "sellerId": "user-3",
+      "sellerName": "판매자",
+      "shop": "판매자샵",
+      "periodStart": "2026-05-01",
+      "periodEnd": "2026-05-31",
+      "productCount": 18,
+      "totalAmount": 260000,
+      "feeTotalAmount": 39000,
+      "refundAmount": 0,
+      "settlementTotalAmount": 221000,
+      "status": "APPROVED",
+      "calculatedAt": "2026-06-01T02:00:00.000Z",
+      "confirmedAt": "2026-06-02T09:00:00.000Z",
+      "paidAt": null
+    }
+  ],
+  "message": "success"
+}
+```
+
+---
+
+### PUT /api/v1/sellers/me/settlements/:id/request-payout (인증 필요, seller 전용)
+
+승인(`APPROVED`) 상태의 본인 정산 건에 대해 지급을 신청한다. 상태가 `PAYOUT_REQUESTED`로 전이된다. 승인 상태가 아니면 422.
+
+**Response 200** — 전이된 `Settlement` 객체
+
+---
+
 ## Payments
 
 ### POST /api/v1/payments/confirm (인증 필요)

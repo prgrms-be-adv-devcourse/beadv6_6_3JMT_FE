@@ -3,6 +3,7 @@ import { MOCK_USERS } from '../data/users';
 import { PRODUCTS } from '../data/products';
 import { ok, okList, ERR, extractToken, getUserIdFromToken } from '../utils';
 import { SELLER_APPLY_STATUS } from '../data/users';
+import { SETTLEMENTS, nextSettlementStatus } from '../data/settlements';
 
 const BASE = '/api/v1/admin';
 
@@ -23,81 +24,6 @@ const ADMIN_ORDERS = [
   { id: 'order-401', userId: 'user-4', userName: '이준혁', productId: 5, productTitle: 'ChatGPT 프롬프트 마스터팩', amount: 9900, status: 'FAILED', createdAt: '2026-06-14T00:00:00.000Z' },
   { id: 'order-501', userId: 'user-5', userName: '박지현', productId: 7, productTitle: '유튜브 썸네일 카피 생성기', amount: 3900, status: 'CANCELED', createdAt: '2026-06-15T00:00:00.000Z' },
 ];
-
-// 어드민 정산 내역 (Settlement 상태머신)
-type SettlementStatus =
-  | 'PENDING_APPROVAL'
-  | 'SETTLEMENT_ON_HOLD'
-  | 'APPROVED'
-  | 'PAYOUT_ON_HOLD'
-  | 'PAID'
-  | 'CANCELLED';
-
-interface Settlement {
-  id: string;
-  sellerId: string;
-  sellerName: string;
-  shop: string;
-  periodStart: string;
-  periodEnd: string;
-  productCount: number;
-  totalAmount: number;
-  feeTotalAmount: number;
-  refundAmount: number;
-  settlementTotalAmount: number;
-  status: SettlementStatus;
-  calculatedAt: string;
-  confirmedAt: string | null;
-  paidAt: string | null;
-}
-
-const ADMIN_PAYMENTS: Settlement[] = [
-  // ── 대기 (PENDING_APPROVAL) ──
-  { id: 'stl-1', sellerId: 'user-2', sellerName: '프롬트랩', shop: '프롬트랩 스튜디오', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 37, totalAmount: 540000, feeTotalAmount: 81000, refundAmount: 0, settlementTotalAmount: 459000, status: 'PENDING_APPROVAL', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
-  { id: 'stl-2', sellerId: 'user-3', sellerName: '판매자', shop: '판매자샵', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 22, totalAmount: 320000, feeTotalAmount: 48000, refundAmount: 12000, settlementTotalAmount: 260000, status: 'PENDING_APPROVAL', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
-  // ── 승인 보류 (SETTLEMENT_ON_HOLD) ──
-  { id: 'stl-3', sellerId: 'seller-6', sellerName: '데이터핀', shop: '데이터핀', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 15, totalAmount: 210000, feeTotalAmount: 31500, refundAmount: 0, settlementTotalAmount: 178500, status: 'SETTLEMENT_ON_HOLD', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
-  { id: 'stl-4', sellerId: 'seller-12', sellerName: '애널리틱스랩', shop: '애널리틱스랩', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 19, totalAmount: 280000, feeTotalAmount: 42000, refundAmount: 0, settlementTotalAmount: 238000, status: 'SETTLEMENT_ON_HOLD', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
-  // ── 승인 (APPROVED) ──
-  { id: 'stl-5', sellerId: 'seller-5', sellerName: '토크봇', shop: '토크봇 랩', periodStart: '2026-05-01', periodEnd: '2026-05-31', productCount: 41, totalAmount: 610000, feeTotalAmount: 91500, refundAmount: 0, settlementTotalAmount: 518500, status: 'APPROVED', calculatedAt: '2026-06-01T02:00:00.000Z', confirmedAt: '2026-06-02T09:00:00.000Z', paidAt: null },
-  { id: 'stl-6', sellerId: 'seller-11', sellerName: '챗플로우', shop: '챗플로우', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 26, totalAmount: 390000, feeTotalAmount: 58500, refundAmount: 5000, settlementTotalAmount: 326500, status: 'APPROVED', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: '2026-07-02T09:00:00.000Z', paidAt: null },
-  // ── 지급 보류 (PAYOUT_ON_HOLD) ──
-  { id: 'stl-7', sellerId: 'user-2', sellerName: '프롬트랩', shop: '프롬트랩 스튜디오', periodStart: '2026-05-01', periodEnd: '2026-05-31', productCount: 28, totalAmount: 430000, feeTotalAmount: 64500, refundAmount: 8000, settlementTotalAmount: 357500, status: 'PAYOUT_ON_HOLD', calculatedAt: '2026-06-01T02:00:00.000Z', confirmedAt: '2026-06-02T09:00:00.000Z', paidAt: null },
-  { id: 'stl-8', sellerId: 'seller-5', sellerName: '토크봇', shop: '토크봇 랩', periodStart: '2026-04-01', periodEnd: '2026-04-30', productCount: 33, totalAmount: 470000, feeTotalAmount: 70500, refundAmount: 0, settlementTotalAmount: 399500, status: 'PAYOUT_ON_HOLD', calculatedAt: '2026-05-01T02:00:00.000Z', confirmedAt: '2026-05-02T09:00:00.000Z', paidAt: null },
-  // ── 지급 완료 (PAID) ──
-  { id: 'stl-9', sellerId: 'seller-11', sellerName: '챗플로우', shop: '챗플로우', periodStart: '2026-05-01', periodEnd: '2026-05-31', productCount: 33, totalAmount: 500000, feeTotalAmount: 75000, refundAmount: 0, settlementTotalAmount: 425000, status: 'PAID', calculatedAt: '2026-06-01T02:00:00.000Z', confirmedAt: '2026-06-02T09:00:00.000Z', paidAt: '2026-06-03T09:00:00.000Z' },
-  { id: 'stl-10', sellerId: 'seller-6', sellerName: '데이터핀', shop: '데이터핀', periodStart: '2026-04-01', periodEnd: '2026-04-30', productCount: 24, totalAmount: 360000, feeTotalAmount: 54000, refundAmount: 0, settlementTotalAmount: 306000, status: 'PAID', calculatedAt: '2026-05-01T02:00:00.000Z', confirmedAt: '2026-05-02T09:00:00.000Z', paidAt: '2026-05-03T09:00:00.000Z' },
-  // ── 취소 (CANCELLED) ──
-  { id: 'stl-11', sellerId: 'user-3', sellerName: '판매자', shop: '판매자샵', periodStart: '2026-04-01', periodEnd: '2026-04-30', productCount: 9, totalAmount: 120000, feeTotalAmount: 18000, refundAmount: 60000, settlementTotalAmount: 42000, status: 'CANCELLED', calculatedAt: '2026-05-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
-  { id: 'stl-12', sellerId: 'seller-12', sellerName: '애널리틱스랩', shop: '애널리틱스랩', periodStart: '2026-05-01', periodEnd: '2026-05-31', productCount: 12, totalAmount: 160000, feeTotalAmount: 24000, refundAmount: 0, settlementTotalAmount: 136000, status: 'CANCELLED', calculatedAt: '2026-06-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
-];
-
-// 정산 상태 전이 규칙 (action → 다음 상태). 허용되지 않으면 null
-function nextSettlementStatus(current: SettlementStatus, action: string): SettlementStatus | null {
-  switch (current) {
-    case 'PENDING_APPROVAL':
-      if (action === 'approve') return 'APPROVED';
-      if (action === 'hold') return 'SETTLEMENT_ON_HOLD';
-      return null;
-    case 'SETTLEMENT_ON_HOLD':
-      if (action === 'approve') return 'APPROVED';
-      if (action === 'unhold') return 'PENDING_APPROVAL';
-      if (action === 'cancel') return 'CANCELLED';
-      return null;
-    case 'APPROVED':
-      if (action === 'pay') return 'PAID';
-      if (action === 'hold') return 'PAYOUT_ON_HOLD';
-      if (action === 'cancel') return 'CANCELLED';
-      return null;
-    case 'PAYOUT_ON_HOLD':
-      if (action === 'pay') return 'PAID';
-      if (action === 'unhold') return 'APPROVED';
-      if (action === 'cancel') return 'CANCELLED';
-      return null;
-    default:
-      return null;
-  }
-}
 
 // 어드민 판매자 신청 목록
 const SELLER_APPLIES: Record<string, { userId: string; userName: string; email: string; categories: string[]; introduction: string; portfolioLink: string; appliedAt: string; status: 'pending' | 'approved' | 'rejected' }> = {
@@ -248,7 +174,7 @@ export const adminHandlers = [
   // 정산 내역
   http.get(`${BASE}/payments`, ({ request }) => {
     if (!isAdmin(request)) return ERR.forbidden();
-    return ok(ADMIN_PAYMENTS);
+    return ok(SETTLEMENTS);
   }),
 
   // 정산 상태 전이 (승인/보류/보류취소/취소/지급)
@@ -256,7 +182,7 @@ export const adminHandlers = [
     if (!isAdmin(request)) return ERR.forbidden();
     const { id } = params;
     const body = (await request.json()) as { action?: string };
-    const settlement = ADMIN_PAYMENTS.find((p) => p.id === id);
+    const settlement = SETTLEMENTS.find((p) => p.id === id);
     if (!settlement) return ERR.notFound('정산');
     const action = body.action ?? '';
     const next = nextSettlementStatus(settlement.status, action);

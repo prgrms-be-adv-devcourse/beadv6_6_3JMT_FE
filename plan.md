@@ -227,6 +227,26 @@ app/checkout/page.tsx 에 Toss Payments 결제 위젯을 연동해줘.
 
 ---
 
+## Phase 12. 판매자 정산 내역/지급 신청 ✅ 완료
+
+**현재 상황**: `/shop` 통계 카드 3개(등록 프롬프트/누적 판매/누적 수익) + "정산 내역" 탭이 실제로는 결제 내역(`/sellers/me/payments`)을 표시 중이었음.
+
+```
+app/shop/page.tsx 에 판매자 정산 기능을 추가했다.
+- 통계 카드에 "누적 정산 수익" 추가 (지급 완료(PAID) 정산 건의 지급액 합계)
+- "정산 내역" 탭을 결제 내역 → 어드민 정산 리스트와 동일 구조의 월별 정산 테이블로 교체
+  - 컬럼: 정산 기간 / 판매 / 총 거래액 / 수수료 / 지급액 / 상태 (판매자 컬럼은 본인이라 제외)
+  - 어드민과 달리 상태 전이 액션 없음. 단, 승인(APPROVED) 건에만 "지급 신청하기" 버튼 노출
+- 정산 데이터/상태머신을 mocks/data/settlements.ts 공유 모듈로 분리 (admin/seller 핸들러가 동일 참조 공유)
+- 정산 상태머신에 PAYOUT_REQUESTED(지급 신청) 상태 추가: APPROVED --requestPayout--> PAYOUT_REQUESTED
+
+추가/사용 엔드포인트 (백엔드 팀에 요청):
+GET  /api/v1/sellers/me/settlements              (본인 월별 정산 내역)
+PUT  /api/v1/sellers/me/settlements/:id/request-payout  (승인 건 지급 신청)
+```
+
+---
+
 ## 백엔드 개발자에게 요청할 정보
 
 | 항목 | 내용 |
