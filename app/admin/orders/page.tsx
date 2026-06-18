@@ -18,11 +18,22 @@ interface AdminOrder {
   createdAt: string
 }
 
+const FILTER_OPTIONS = [
+  { value: 'all', label: '전체' },
+  { value: 'PENDING', label: '대기' },
+  { value: 'PAID', label: '완료' },
+  { value: 'FAILED', label: '실패' },
+  { value: 'CANCELED', label: '취소' },
+  { value: 'REFUNDED', label: '환불' },
+]
+
 export default function AdminOrdersPage() {
   const { token } = useAuthStore()
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [loading, setLoading] = useState(true)
-  const [refunding, setRefunding] = useState<string | null>(null)
+  const [filter, setFilter] = useState('all')
+
+  const filtered = filter === 'all' ? orders : orders.filter((o) => o.status === filter)
 
   useEffect(() => {
     if (!token) return
@@ -32,23 +43,27 @@ export default function AdminOrdersPage() {
       .finally(() => setLoading(false))
   }, [token])
 
-  async function handleRefund(id: string) {
-    if (!confirm('해당 주문을 환불 처리하시겠습니까?')) return
-    setRefunding(id)
-    try {
-      await api.put(
-        `/api/v1/admin/orders/${id}/refund`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: 'refunded' } : o)))
-    } finally {
-      setRefunding(null)
-    }
-  }
+  const filterBar = (
+    <div className="flex flex-wrap gap-[8px]">
+      {FILTER_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => setFilter(opt.value)}
+          className="rounded-ph-full px-[14px] py-[7px] text-[13px] font-semibold transition-colors"
+          style={
+            filter === opt.value
+              ? { backgroundColor: 'var(--ph-primary)', color: 'var(--ph-on-accent)' }
+              : { backgroundColor: 'var(--ph-gray-100)', color: 'var(--ph-gray-600)' }
+          }
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
 
   return (
-    <SectionCard title="주문 관리" sub={`총 ${orders.length}건`}>
+    <SectionCard title="주문 관리" sub={`총 ${filtered.length}건`} headerExtra={filterBar}>
       <div className="overflow-x-auto">
         <Table>
           <thead>
@@ -59,21 +74,20 @@ export default function AdminOrdersPage() {
               <Th align="right">금액</Th>
               <Th align="center">상태</Th>
               <Th>주문일</Th>
-              <Th align="center">관리</Th>
             </tr>
           </thead>
           <tbody>
             {loading
               ? Array.from({ length: 6 }).map((_, i) => (
                   <Tr key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 6 }).map((_, j) => (
                       <Td key={j}>
                         <div className="h-[16px] animate-pulse rounded-ph-sm bg-ph-gray-100" />
                       </Td>
                     ))}
                   </Tr>
                 ))
-              : orders.map((order) => (
+              : filtered.map((order) => (
                   <Tr key={order.id}>
                     <Td>
                       <span className="text-[12.5px] text-ph-text-muted">{order.id}</span>
@@ -95,27 +109,13 @@ export default function AdminOrdersPage() {
                         {new Date(order.createdAt).toLocaleDateString('ko-KR')}
                       </span>
                     </Td>
-                    <Td align="center">
-                      {order.status === 'paid' && order.amount > 0 ? (
-                        <button
-                          onClick={() => handleRefund(order.id)}
-                          disabled={refunding === order.id}
-                          className="inline-flex items-center justify-center rounded-ph-sm px-[12px] py-[6px] text-[13px] font-semibold text-ph-error transition-colors hover:bg-[#fdeceb] disabled:cursor-not-allowed disabled:opacity-40"
-                          style={{ border: '1px solid var(--ph-error)' }}
-                        >
-                          {refunding === order.id ? '처리중...' : '환불'}
-                        </button>
-                      ) : (
-                        <span className="text-[13px] text-ph-text-muted">—</span>
-                      )}
-                    </Td>
                   </Tr>
                 ))}
           </tbody>
         </Table>
-        {!loading && orders.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <div className="py-[48px] text-center text-[14px] text-ph-text-muted">
-            주문이 없습니다.
+            {filter === 'all' ? '주문이 없습니다.' : '해당 상태의 주문이 없습니다.'}
           </div>
         )}
       </div>

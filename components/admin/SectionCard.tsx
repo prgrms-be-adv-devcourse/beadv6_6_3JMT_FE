@@ -6,23 +6,27 @@ interface SectionCardProps {
   title?: ReactNode
   sub?: ReactNode
   action?: ReactNode
+  headerExtra?: ReactNode
   children?: ReactNode
   bodyStyle?: CSSProperties
   className?: string
 }
 
-export function SectionCard({ title, sub, action, children, bodyStyle, className }: SectionCardProps) {
+export function SectionCard({ title, sub, action, headerExtra, children, bodyStyle, className }: SectionCardProps) {
   return (
     <section
       className={`flex flex-col rounded-ph-lg border border-ph-border bg-ph-white ${className ?? ''}`}
     >
-      {(title || action) && (
-        <div className="flex items-center gap-[14px] border-b border-ph-border px-[22px] py-[18px]">
-          <div className="min-w-0 flex-1">
-            {title && <h2 className="m-0 text-[16.5px] font-bold tracking-[-0.01em]">{title}</h2>}
-            {sub && <p className="mt-[4px] text-[13px] text-ph-text-muted">{sub}</p>}
+      {(title || action || headerExtra) && (
+        <div className="flex flex-col gap-[12px] border-b border-ph-border px-[22px] py-[18px]">
+          <div className="flex items-center gap-[14px]">
+            <div className="min-w-0 flex-1">
+              {title && <h2 className="m-0 text-[16.5px] font-bold tracking-[-0.01em]">{title}</h2>}
+              {sub && <p className="mt-[4px] text-[13px] text-ph-text-muted">{sub}</p>}
+            </div>
+            {action}
           </div>
-          {action}
+          {headerExtra}
         </div>
       )}
       <div style={bodyStyle}>{children}</div>

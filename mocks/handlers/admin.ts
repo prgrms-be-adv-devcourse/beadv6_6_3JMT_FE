@@ -15,11 +15,13 @@ function isAdmin(request: Request): boolean {
 
 // 어드민 주문 목록 (전체)
 const ADMIN_ORDERS = [
-  { id: 'order-101', userId: 'user-1', userName: '김민서', productId: 1, productTitle: '사진 같은 제품 목업 생성기', amount: 5900, status: 'paid', createdAt: '2026-06-01T00:00:00.000Z' },
-  { id: 'order-102', userId: 'user-1', userName: '김민서', productId: 2, productTitle: '전환율 높이는 랜딩 카피 작성', amount: 4900, status: 'paid', createdAt: '2026-05-20T00:00:00.000Z' },
-  { id: 'order-103', userId: 'user-1', userName: '김민서', productId: 4, productTitle: '30일 SNS 콘텐츠 캘린더', amount: 3900, status: 'paid', createdAt: '2026-04-10T00:00:00.000Z' },
-  { id: 'order-201', userId: 'user-2', userName: '프롬트랩', productId: 6, productTitle: '엑셀 데이터 인사이트 요약', amount: 0, status: 'refunded', createdAt: '2026-06-10T00:00:00.000Z' },
-  { id: 'order-301', userId: 'user-3', userName: '판매자', productId: 3, productTitle: '리액트 컴포넌트 리팩터링 도우미', amount: 7900, status: 'paid', createdAt: '2026-06-12T00:00:00.000Z' },
+  { id: 'order-101', userId: 'user-1', userName: '김민서', productId: 1, productTitle: '사진 같은 제품 목업 생성기', amount: 5900, status: 'PAID', createdAt: '2026-06-01T00:00:00.000Z' },
+  { id: 'order-102', userId: 'user-1', userName: '김민서', productId: 2, productTitle: '전환율 높이는 랜딩 카피 작성', amount: 4900, status: 'PAID', createdAt: '2026-05-20T00:00:00.000Z' },
+  { id: 'order-103', userId: 'user-1', userName: '김민서', productId: 4, productTitle: '30일 SNS 콘텐츠 캘린더', amount: 3900, status: 'PENDING', createdAt: '2026-04-10T00:00:00.000Z' },
+  { id: 'order-201', userId: 'user-2', userName: '프롬트랩', productId: 6, productTitle: '엑셀 데이터 인사이트 요약', amount: 4900, status: 'REFUNDED', createdAt: '2026-06-10T00:00:00.000Z' },
+  { id: 'order-301', userId: 'user-3', userName: '판매자', productId: 3, productTitle: '리액트 컴포넌트 리팩터링 도우미', amount: 7900, status: 'PAID', createdAt: '2026-06-12T00:00:00.000Z' },
+  { id: 'order-401', userId: 'user-4', userName: '이준혁', productId: 5, productTitle: 'ChatGPT 프롬프트 마스터팩', amount: 9900, status: 'FAILED', createdAt: '2026-06-14T00:00:00.000Z' },
+  { id: 'order-501', userId: 'user-5', userName: '박지현', productId: 7, productTitle: '유튜브 썸네일 카피 생성기', amount: 3900, status: 'CANCELED', createdAt: '2026-06-15T00:00:00.000Z' },
 ];
 
 // 어드민 정산 내역 (Settlement 상태머신)
@@ -239,7 +241,7 @@ export const adminHandlers = [
     const { id } = params;
     const order = ordersStore.find((o) => o.id === id);
     if (!order) return ERR.notFound('주문');
-    order.status = 'refunded';
+    order.status = 'REFUNDED';
     return ok(order);
   }),
 

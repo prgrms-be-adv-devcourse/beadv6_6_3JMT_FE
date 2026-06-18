@@ -112,6 +112,11 @@
 | rejected | 반려 | error | ✓ | `#d92d20` |
 | paid | 지급 완료 | blue | ✗(filled) | `#fff` |
 | held | 보류 | error | ✓ | `#d92d20` |
+| **PENDING** | 대기 | neutral | ✓ | `#8b95a1` |
+| **PAID** | 완료 | blue | ✗(filled) | `#fff` |
+| **FAILED** | 실패 | error | ✓ | `#d92d20` |
+| **CANCELED** | 취소 | neutral | ✓ | `#8b95a1` |
+| **REFUNDED** | 환불 | error | ✓ | `#d92d20` |
 
 뱃지: `gap 6, padding 5px 10px, 6px dot(원형) + label`
 
@@ -134,6 +139,7 @@
 ### SectionCard (`shared-admin-ui.js:148`)
 - `bg-ph-white` + `border-ph-border` + `rounded-ph-lg`
 - 헤더(`padding 18px 22px`, 하단 border): title 16.5px/700 + sub 13px muted + 우측 action
+- `headerExtra` prop: title/sub 아래에 렌더링되는 추가 헤더 콘텐츠 (예: 필터 탭). 헤더 내부에 위치하므로 구분선은 `headerExtra` 아래에 생김
 
 ### Table (`shared-admin-ui.js:176`)
 - `<table>` width 100%, `border-collapse`, `tabular-nums`
