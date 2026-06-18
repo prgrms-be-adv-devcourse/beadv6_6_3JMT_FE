@@ -19,6 +19,20 @@
 - :root의 --ph-* 변수와 @theme 블록은 항상 동기화 상태를 유지한다
 - 임의로 값을 바꾸지 않는다
 
+## 디자인/페이지 작업 시 토큰 사용 (필수)
+- **새 디자인·페이지·컴포넌트를 만들 때는 반드시 `--ph-*` 디자인 토큰을 사용**한다
+  - Tailwind 클래스: `bg-ph-primary`, `text-ph-text-secondary`, `border-ph-border`, `rounded-ph-lg`, `font-ph` 등
+  - 인라인 스타일: `var(--ph-*)`
+- **임의 색상 금지**: 표준 Tailwind 색상 클래스(`bg-blue-500`, `text-gray-600` 등)나 하드코딩 HEX를 새로 도입하지 않는다
+  - 예외: 원본 HTML이 토큰화하지 않고 인라인 리터럴로 쓴 값(예: 에러 배경 `#fdeceb`, 그라데이션)은 원본 픽셀 보존을 위해 그대로 둔다
+- 토큰 ↔ 클래스 매핑·치수·공통 컴포넌트 스펙은 **`docs/design-tokens.md`** 치트시트를 먼저 참고한다
+- 어드민 공통 컴포넌트는 `components/admin/*`(Badge/StatusBadge, SectionCard, Table 등)를 재사용한다
+
+## 디자인 시스템 ↔ 문서 동기화 (필수)
+- `app/globals.css`(토큰)나 `components/admin/*`(공통 컴포넌트)에 **새 토큰/컴포넌트를 추가·변경하면**, 같은 작업에서 **`docs/design-tokens.md`를 반드시 동기화**한다
+- 이 두 경로를 Edit/Write 하면 PostToolUse hook이 동기화 리마인더를 띄운다 (`.claude/settings.json`)
+- 동기화 항목: 추가된 색상/타이포/간격/radius 토큰, 새 공통 컴포넌트의 props·치수·사용 예시
+
 ## 컴포넌트 규칙
 - `'use client'` 는 useState / useEffect / 이벤트 핸들러 사용 시에만 추가
 - 이미지는 `<img>` 금지 → Next.js `<Image>` 컴포넌트만 사용

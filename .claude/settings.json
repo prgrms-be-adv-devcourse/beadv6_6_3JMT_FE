@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | grep -qE '(app/globals\\.css|components/admin/)' && jq -n '{hookSpecificOutput:{hookEventName:\"PostToolUse\",additionalContext:\"⚠️ 디자인 시스템 파일(globals.css / components/admin)이 변경되었습니다. 새 디자인 토큰이나 공통 컴포넌트가 추가·변경됐다면 docs/design-tokens.md를 동기화하세요.\"}}' || true",
+            "statusMessage": "디자인 토큰 동기화 확인 중..."
+          }
+        ]
+      }
+    ]
+  }
+}
