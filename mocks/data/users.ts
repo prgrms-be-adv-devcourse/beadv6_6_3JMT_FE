@@ -3,6 +3,7 @@ export type MockUser = {
   name: string;
   email: string;
   role: 'buyer' | 'seller' | 'admin';
+  status?: 'active' | 'suspended' | 'withdrawn';
 };
 
 export type OrderItem = {

@@ -3,18 +3,31 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/api'
+import { SectionCard } from '@/components/admin/SectionCard'
+import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
+import { StatusBadge } from '@/components/admin/Badge'
+import { CircleCheck, CirclePause, CircleX } from 'lucide-react'
+
+type UserStatus = 'active' | 'suspended' | 'withdrawn'
 
 interface AdminUser {
   id: string
   name: string
   email: string
   role: 'buyer' | 'seller'
+  status?: UserStatus
 }
 
-const ROLE_LABEL: Record<string, { label: string; cls: string }> = {
-  buyer: { label: '구매자', cls: 'bg-blue-100 text-blue-700' },
-  seller: { label: '판매자', cls: 'bg-violet-100 text-violet-700' },
+const ROLE_LABEL: Record<string, string> = {
+  buyer: '구매자',
+  seller: '판매자',
 }
+
+const STATUS_OPTS: { id: UserStatus; label: string; icon: typeof CircleCheck; danger?: boolean }[] = [
+  { id: 'active', label: '활성', icon: CircleCheck },
+  { id: 'suspended', label: '정지', icon: CirclePause },
+  { id: 'withdrawn', label: '탈퇴', icon: CircleX, danger: true },
+]
 
 export default function AdminUsersPage() {
   const { token } = useAuthStore()
@@ -46,66 +59,109 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function handleStatusChange(userId: string, newStatus: UserStatus) {
+    setChanging(userId)
+    try {
+      await api.put(`/api/v1/admin/users/${userId}`, { status: newStatus }, { headers: { Authorization: `Bearer ${token}` } })
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, status: newStatus } : u)))
+    } finally {
+      setChanging(null)
+    }
+  }
+
+  const buyerCount = users.filter((u) => u.role === 'buyer').length
+  const sellerCount = users.filter((u) => u.role === 'seller').length
+
   return (
-    <div className="bg-white rounded-2xl shadow-sm">
-      <div className="px-6 py-4 border-b border-[#f1f5f9] flex items-center justify-between">
-        <h2 className="text-[#0f172a] font-semibold">전체 유저</h2>
-        <span className="text-[#64748b] text-sm">{users.length}명</span>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[#f1f5f9]">
-              <th className="px-6 py-3 text-left text-[#64748b] font-medium">ID</th>
-              <th className="px-6 py-3 text-left text-[#64748b] font-medium">이름</th>
-              <th className="px-6 py-3 text-left text-[#64748b] font-medium">이메일</th>
-              <th className="px-6 py-3 text-center text-[#64748b] font-medium">역할</th>
-              <th className="px-6 py-3 text-center text-[#64748b] font-medium">역할 변경</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="border-b border-[#f8fafc]">
-                    {Array.from({ length: 5 }).map((_, j) => (
-                      <td key={j} className="px-6 py-4">
-                        <div className="h-4 bg-[#f1f5f9] rounded animate-pulse" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              : users.map((user) => {
-                  const r = ROLE_LABEL[user.role] ?? { label: user.role, cls: 'bg-gray-100 text-gray-700' }
-                  return (
-                    <tr key={user.id} className="border-b border-[#f8fafc] hover:bg-[#f8fafc]">
-                      <td className="px-6 py-4 text-[#64748b] font-mono text-xs">{user.id}</td>
-                      <td className="px-6 py-4 text-[#0f172a] font-medium">{user.name}</td>
-                      <td className="px-6 py-4 text-[#64748b]">{user.email}</td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${r.cls}`}>
-                          {r.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <select
-                          value={user.role}
-                          disabled={changing === user.id}
-                          onChange={(e) => handleRoleChange(user.id, e.target.value as 'buyer' | 'seller')}
-                          className="text-xs border border-[#e2e8f0] rounded-lg px-2 py-1.5 text-[#0f172a] disabled:opacity-50 cursor-pointer"
-                        >
-                          <option value="buyer">구매자</option>
-                          <option value="seller">판매자</option>
-                        </select>
-                      </td>
-                    </tr>
-                  )
-                })}
-          </tbody>
-        </table>
-        {!loading && users.length === 0 && (
-          <div className="text-center py-12 text-[#94a3b8]">유저가 없습니다.</div>
+    <div className="flex flex-col gap-[20px]">
+      <SectionCard
+        title="사용자 목록"
+        sub={`총 ${users.length.toLocaleString('ko-KR')}명 · 구매자 ${buyerCount}명 · 판매자 ${sellerCount}명`}
+        bodyStyle={{ padding: 0 }}
+      >
+        {loading ? (
+          <div className="px-[22px] py-[40px] text-center text-[14px] text-ph-text-muted">불러오는 중…</div>
+        ) : users.length === 0 ? (
+          <div className="px-[22px] py-[40px] text-center text-[14px] text-ph-text-muted">사용자가 없습니다.</div>
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <Th>사용자</Th>
+                <Th>회원 ID</Th>
+                <Th>유형</Th>
+                <Th>상태</Th>
+                <Th align="right">유형 변경</Th>
+                <Th align="right">상태 변경</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => {
+                const status = u.status ?? 'active'
+                return (
+                  <Tr key={u.id}>
+                    <Td>
+                      <Identity name={u.name} sub={u.email} />
+                    </Td>
+                    <Td>
+                      <span className="text-[13px] text-ph-text-muted" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {u.id}
+                      </span>
+                    </Td>
+                    <Td>
+                      <span className="text-[13.5px] font-semibold text-ph-text-secondary">
+                        {ROLE_LABEL[u.role] ?? u.role}
+                      </span>
+                    </Td>
+                    <Td>
+                      <StatusBadge status={status} />
+                    </Td>
+                    <Td align="right">
+                      <select
+                        value={u.role}
+                        disabled={changing === u.id}
+                        onChange={(e) => handleRoleChange(u.id, e.target.value as 'buyer' | 'seller')}
+                        className="cursor-pointer rounded-ph-sm border border-ph-border px-[8px] py-[6px] text-[13px] text-ph-text disabled:opacity-50"
+                      >
+                        <option value="buyer">구매자</option>
+                        <option value="seller">판매자</option>
+                      </select>
+                    </Td>
+                    <Td align="right">
+                      <div className="inline-flex justify-end gap-[6px]">
+                        {STATUS_OPTS.map((o) => {
+                          const Icon = o.icon
+                          const isActive = status === o.id
+                          return (
+                            <button
+                              key={o.id}
+                              type="button"
+                              disabled={changing === u.id || isActive}
+                              onClick={() => handleStatusChange(u.id, o.id)}
+                              title={`${o.label}으로 변경`}
+                              className="inline-flex items-center gap-[5px] rounded-ph-sm border px-[9px] py-[6px] text-[12.5px] font-semibold disabled:cursor-default disabled:opacity-50"
+                              style={
+                                isActive
+                                  ? { borderColor: 'var(--ph-primary)', color: 'var(--ph-primary)', background: 'var(--ph-secondary)' }
+                                  : o.danger
+                                    ? { borderColor: 'var(--ph-border)', color: 'var(--ph-error)', background: 'transparent' }
+                                    : { borderColor: 'var(--ph-border)', color: 'var(--ph-text-secondary)', background: 'transparent' }
+                              }
+                            >
+                              <Icon size={14} />
+                              {o.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </Td>
+                  </Tr>
+                )
+              })}
+            </tbody>
+          </Table>
         )}
-      </div>
+      </SectionCard>
     </div>
   )
 }

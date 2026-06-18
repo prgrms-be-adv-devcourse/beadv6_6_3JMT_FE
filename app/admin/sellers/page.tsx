@@ -1,8 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Check, X, Store } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/api'
+import { SectionCard } from '@/components/admin/SectionCard'
+import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
+import { Badge, StatusBadge } from '@/components/admin/Badge'
 
 interface SellerApply {
   id: string
@@ -16,21 +20,23 @@ interface SellerApply {
   status: 'pending' | 'approved' | 'rejected'
 }
 
-const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  pending: { label: '검토중', cls: 'bg-amber-100 text-amber-700' },
-  approved: { label: '승인됨', cls: 'bg-emerald-100 text-emerald-700' },
-  rejected: { label: '거절됨', cls: 'bg-red-100 text-red-700' },
+const CATEGORY_LABEL: Record<string, string> = {
+  image: '이미지',
+  writing: '글쓰기',
+  coding: '코딩',
+  marketing: '마케팅',
+  chatbot: '챗봇',
+  data: '데이터',
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  image: '이미지', writing: '글쓰기', coding: '코딩', marketing: '마케팅', chatbot: '챗봇', data: '데이터',
-}
+type FilterId = 'pending' | 'approved' | 'rejected' | 'all'
 
 export default function AdminSellersPage() {
   const { token } = useAuthStore()
   const [applies, setApplies] = useState<SellerApply[]>([])
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState<string | null>(null)
+  const [filter, setFilter] = useState<FilterId>('pending')
 
   useEffect(() => {
     fetchApplies()
@@ -39,7 +45,9 @@ export default function AdminSellersPage() {
   async function fetchApplies() {
     if (!token) return
     try {
-      const res = await api.get('/api/v1/admin/sellers/applies', { headers: { Authorization: `Bearer ${token}` } })
+      const res = await api.get('/api/v1/admin/sellers/applies', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       setApplies(res.data.data ?? [])
     } finally {
       setLoading(false)
@@ -66,74 +74,168 @@ export default function AdminSellersPage() {
     }
   }
 
+  const counts = {
+    all: applies.length,
+    pending: applies.filter((a) => a.status === 'pending').length,
+    approved: applies.filter((a) => a.status === 'approved').length,
+    rejected: applies.filter((a) => a.status === 'rejected').length,
+  }
+
+  const tabs: { id: FilterId; label: string; count: number }[] = [
+    { id: 'pending', label: '대기', count: counts.pending },
+    { id: 'approved', label: '승인', count: counts.approved },
+    { id: 'rejected', label: '반려', count: counts.rejected },
+    { id: 'all', label: '전체', count: counts.all },
+  ]
+
+  const filtered = filter === 'all' ? applies : applies.filter((a) => a.status === filter)
+
   return (
-    <div className="space-y-4">
-      {loading
-        ? Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl shadow-sm p-6 animate-pulse">
-              <div className="h-5 w-40 bg-[#f1f5f9] rounded mb-4" />
-              <div className="h-4 w-full bg-[#f1f5f9] rounded" />
-            </div>
-          ))
-        : applies.length === 0
-          ? <div className="bg-white rounded-2xl shadow-sm py-20 text-center text-[#94a3b8]">판매자 신청이 없습니다.</div>
-          : applies.map((apply) => {
-              const s = STATUS_LABEL[apply.status]
-              return (
-                <div key={apply.id} className="bg-white rounded-2xl shadow-sm p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-[#0f172a] font-semibold">{apply.userName}</h3>
-                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>
-                          {s.label}
-                        </span>
+    <div className="flex flex-col gap-[20px]">
+      <SectionCard
+        title="판매자 신청"
+        sub={`${counts.pending}건 승인 대기 중`}
+        bodyStyle={{ padding: 0 }}
+      >
+        {/* 필터 탭 */}
+        <div className="flex gap-[8px] border-b border-ph-border px-[22px] py-[16px]">
+          {tabs.map((t) => {
+            const active = filter === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => setFilter(t.id)}
+                className={`inline-flex items-center gap-[6px] rounded-ph-full px-[14px] py-[7px] text-[13.5px] font-semibold transition-colors ${
+                  active
+                    ? 'bg-ph-secondary text-ph-primary'
+                    : 'text-ph-text-secondary hover:bg-ph-gray-50'
+                }`}
+              >
+                {t.label}
+                <span
+                  className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-ph-full px-[5px] text-[11.5px] font-bold ${
+                    active ? 'bg-ph-primary text-ph-on-accent' : 'bg-ph-gray-100 text-ph-text-secondary'
+                  }`}
+                >
+                  {t.count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {loading ? (
+          <div className="px-[22px] py-[60px] text-center text-[13.5px] text-ph-text-muted">
+            불러오는 중...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center gap-[10px] px-[22px] py-[60px] text-center">
+            <span className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-ph-full bg-ph-gray-50 text-ph-text-muted">
+              <Store size={22} />
+            </span>
+            <div className="text-[14.5px] font-bold text-ph-text">해당하는 신청이 없어요</div>
+            <div className="text-[13px] text-ph-text-muted">다른 상태 탭을 확인해 보세요.</div>
+          </div>
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <Th width="22%">신청자</Th>
+                <Th>판매 소개</Th>
+                <Th>카테고리</Th>
+                <Th align="right">샘플</Th>
+                <Th>신청일</Th>
+                <Th>상태</Th>
+                <Th align="right" width={170}>처리</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((a) => (
+                <Tr key={a.id}>
+                  <Td>
+                    <Identity name={a.userName} sub={a.email} />
+                  </Td>
+                  <Td style={{ maxWidth: 360 }}>
+                    <span
+                      className="text-[13.5px] text-ph-text-secondary"
+                      style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {a.introduction || '—'}
+                    </span>
+                  </Td>
+                  <Td>
+                    {a.categories.length > 0 ? (
+                      <div className="flex flex-wrap gap-[6px]">
+                        {a.categories.map((cat) => (
+                          <Badge key={cat} tone="blue">
+                            {CATEGORY_LABEL[cat] ?? cat}
+                          </Badge>
+                        ))}
                       </div>
-                      <p className="text-[#64748b] text-sm mb-3">{apply.email}</p>
-                      {apply.categories.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-3">
-                          {apply.categories.map((cat) => (
-                            <span key={cat} className="px-2 py-0.5 bg-[#e8f3ff] text-[#1B64DA] text-xs rounded-full">
-                              {CATEGORY_LABEL[cat] ?? cat}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {apply.introduction && (
-                        <p className="text-[#475569] text-sm mb-2 line-clamp-2">{apply.introduction}</p>
-                      )}
-                      {apply.portfolioLink && (
-                        <a href={apply.portfolioLink} target="_blank" rel="noopener noreferrer"
-                          className="text-[#1B64DA] text-xs hover:underline">
-                          포트폴리오 보기 →
-                        </a>
-                      )}
-                    </div>
-                    {apply.status === 'pending' && (
-                      <div className="flex gap-2 ml-6 flex-shrink-0">
+                    ) : (
+                      <span className="text-[13.5px] text-ph-text-muted">—</span>
+                    )}
+                  </Td>
+                  <Td align="right">
+                    {a.portfolioLink ? (
+                      <a
+                        href={a.portfolioLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-[13.5px] font-semibold text-ph-primary hover:underline"
+                      >
+                        보기
+                      </a>
+                    ) : (
+                      <span className="text-[13.5px] text-ph-text-muted">—</span>
+                    )}
+                  </Td>
+                  <Td>
+                    <span className="text-ph-text-secondary">
+                      {new Date(a.appliedAt).toLocaleDateString('ko-KR')}
+                    </span>
+                  </Td>
+                  <Td>
+                    <StatusBadge status={a.status} />
+                  </Td>
+                  <Td align="right">
+                    {a.status === 'pending' ? (
+                      <div className="inline-flex justify-end gap-[6px]">
                         <button
-                          onClick={() => handleApprove(apply.id)}
-                          disabled={acting === apply.id}
-                          className="px-4 py-2 bg-[#1B64DA] text-white text-sm rounded-xl hover:bg-[#1957bd] disabled:opacity-50 transition-colors"
+                          onClick={() => handleApprove(a.id)}
+                          disabled={acting === a.id}
+                          className="inline-flex items-center gap-[5px] rounded-ph-md bg-ph-secondary px-[12px] py-[7px] text-[13px] font-semibold text-ph-primary transition-colors hover:bg-ph-blue-hover hover:text-ph-on-accent disabled:opacity-50"
                         >
+                          <Check size={15} />
                           승인
                         </button>
                         <button
-                          onClick={() => handleReject(apply.id)}
-                          disabled={acting === apply.id}
-                          className="px-4 py-2 bg-[#f1f5f9] text-[#ef4444] text-sm rounded-xl hover:bg-[#fee2e2] disabled:opacity-50 transition-colors"
+                          onClick={() => handleReject(a.id)}
+                          disabled={acting === a.id}
+                          className="inline-flex items-center gap-[5px] rounded-ph-md px-[12px] py-[7px] text-[13px] font-semibold text-ph-error transition-colors hover:bg-[#fdeceb] disabled:opacity-50"
+                          style={{ backgroundColor: '#fdeceb' }}
                         >
-                          거절
+                          <X size={15} />
+                          반려
                         </button>
                       </div>
+                    ) : (
+                      <span className="text-[13px] text-ph-text-muted">처리 완료</span>
                     )}
-                  </div>
-                  <p className="mt-3 text-[#94a3b8] text-xs">
-                    신청일: {new Date(apply.appliedAt).toLocaleDateString('ko-KR')}
-                  </p>
-                </div>
-              )
-            })}
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </SectionCard>
     </div>
   )
 }
