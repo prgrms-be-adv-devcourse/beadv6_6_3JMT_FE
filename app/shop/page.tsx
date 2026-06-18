@@ -8,10 +8,11 @@ import Image from 'next/image';
 import {
   Plus, Layers, ShoppingBag, Wallet,
   Info, SearchCheck, Pencil, CirclePause, Lock,
-  AlertTriangle, Receipt,
+  AlertTriangle, Receipt, Banknote,
 } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
-import PaymentTable from '@/components/ui/PaymentTable';
+import { StatusBadge } from '@/components/admin/Badge';
+import { Table, Th, Td, Tr } from '@/components/admin/DataTable';
 import { won } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 
@@ -34,16 +35,29 @@ type Prompt = {
   thumbnail_url?: string | null;
 };
 
-type Payment = {
+type SettlementStatus =
+  | 'PENDING_APPROVAL'
+  | 'SETTLEMENT_ON_HOLD'
+  | 'APPROVED'
+  | 'PAYOUT_REQUESTED'
+  | 'PAYOUT_ON_HOLD'
+  | 'PAID'
+  | 'CANCELLED';
+
+type Settlement = {
   id: string;
-  productId: number | string;
-  amount: number;
-  status: 'paid' | 'requested' | 'refunded';
-  paidAt: string;
+  periodStart: string;
+  periodEnd: string;
+  productCount: number;
+  totalAmount: number;
+  feeTotalAmount: number;
+  refundAmount: number;
+  settlementTotalAmount: number;
+  status: SettlementStatus;
 };
 
-type ActiveTab = 'listings' | 'payments';
-type PaymentsFilter = 'all' | 'paid' | 'requested' | 'refunded';
+type ActiveTab = 'listings' | 'settlements';
+type SettlementFilter = 'all' | SettlementStatus;
 
 
 /* ── ShopPage ───────────────────────────────────────────────────────── */
@@ -55,31 +69,48 @@ export default function ShopPage() {
   const [stopped, setStopped] = useState<Record<string | number, boolean>>({});
   const [confirmId, setConfirmId] = useState<string | number | null>(null);
   const [myListings, setMyListings] = useState<Prompt[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [paymentsFilter, setPaymentsFilter] = useState<PaymentsFilter>('all');
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
+  const [settlementFilter, setSettlementFilter] = useState<SettlementFilter>('all');
+  const [requestingId, setRequestingId] = useState<string | null>(null);
   const [stats, setStats] = useState([
     { label: '등록 프롬프트', value: '-',  icon: Layers      },
     { label: '누적 판매',     value: '-',  icon: ShoppingBag },
     { label: '이번 달 수익',  value: '-',  icon: Wallet      },
   ]);
 
+  const loadSettlements = () => {
+    api.get('/api/v1/sellers/me/settlements')
+      .then((res) => setSettlements(res.data.data ?? []))
+      .catch(() => setSettlements([]));
+  };
+
   useEffect(() => {
     Promise.all([
       api.get('/api/v1/sellers/me/products').catch(() => ({ data: { data: [] } })),
       api.get('/api/v1/sellers/me/stats').catch(() => ({ data: { data: {} } })),
-      api.get('/api/v1/sellers/me/payments').catch(() => ({ data: { data: [] } })),
-    ]).then(([productsRes, statsRes, paymentsRes]) => {
+    ]).then(([productsRes, statsRes]) => {
       const products = productsRes.data.data ?? [];
       const d = statsRes.data.data ?? {};
       setMyListings(products);
-      setPayments(paymentsRes.data.data ?? []);
       setStats([
         { label: '등록 프롬프트', value: `${products.length}개`,                               icon: Layers      },
         { label: '누적 판매',     value: `${(d.totalSalesCount ?? 0).toLocaleString('ko-KR')}회`,   icon: ShoppingBag },
         { label: '누적 수익',     value: `₩${(d.totalRevenue ?? 0).toLocaleString('ko-KR')}`, icon: Wallet      },
       ]);
     });
+    loadSettlements();
   }, []);
+
+  // 지급 신청 (승인 건 → 지급 신청)
+  const requestPayout = async (id: string) => {
+    setRequestingId(id);
+    try {
+      await api.put(`/api/v1/sellers/me/settlements/${id}/request-payout`);
+      loadSettlements();
+    } finally {
+      setRequestingId(null);
+    }
+  };
 
   const isStopped = (id: string | number) => !!stopped[id];
   const stopSelling = async (id: string | number) => {
@@ -96,16 +127,36 @@ export default function ShopPage() {
   const activeCount = myListings.filter((p) => !isStopped(p.id) && p.status !== 'review').length;
   const reviewCount = myListings.filter((p) => p.status === 'review').length;
 
-  const filteredPayments = paymentsFilter === 'all'
-    ? payments
-    : payments.filter((p) => p.status === paymentsFilter);
+  // 누적 정산 수익 = 지급 완료(PAID) 정산 건의 지급액 합계
+  const settledRevenue = settlements
+    .filter((s) => s.status === 'PAID')
+    .reduce((sum, s) => sum + s.settlementTotalAmount, 0);
 
-  const FILTER_OPTIONS: { value: PaymentsFilter; label: string }[] = [
-    { value: 'all',       label: '전체' },
-    { value: 'paid',      label: '결제완료' },
-    { value: 'requested', label: '환불 신청 중' },
-    { value: 'refunded',  label: '환불 완료' },
+  const cards = [
+    ...stats,
+    { label: '누적 정산 수익', value: won(settledRevenue), icon: Banknote },
   ];
+
+  const filteredSettlements = settlementFilter === 'all'
+    ? settlements
+    : settlements.filter((s) => s.status === settlementFilter);
+
+  const SETTLEMENT_FILTERS: { value: SettlementFilter; label: string }[] = [
+    { value: 'all',                label: '전체' },
+    { value: 'PENDING_APPROVAL',   label: '대기' },
+    { value: 'SETTLEMENT_ON_HOLD', label: '승인 보류' },
+    { value: 'APPROVED',           label: '승인' },
+    { value: 'PAYOUT_REQUESTED',   label: '지급 신청' },
+    { value: 'PAYOUT_ON_HOLD',     label: '지급 보류' },
+    { value: 'PAID',               label: '지급 완료' },
+    { value: 'CANCELLED',          label: '취소' },
+  ];
+
+  const fmtPeriod = (start: string, end: string) => {
+    const s = start.replace(/-/g, '.');
+    const e = end.slice(5).replace(/-/g, '.');
+    return `${s} ~ ${e}`;
+  };
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '44px 32px 0' }}>
@@ -121,9 +172,9 @@ export default function ShopPage() {
         </Button>
       </div>
 
-      {/* ── 통계 카드 3개 ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, margin: '28px 0 8px' }}>
-        {stats.map(({ label, value, icon: Icon }) => (
+      {/* ── 통계 카드 4개 ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, margin: '28px 0 8px' }}>
+        {cards.map(({ label, value, icon: Icon }) => (
           <div
             key={label}
             style={{ background: 'var(--ph-surface)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-lg)', padding: '22px', display: 'flex', alignItems: 'center', gap: 14 }}
@@ -143,7 +194,7 @@ export default function ShopPage() {
       <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--ph-border)', marginTop: 36 }}>
         {([
           { id: 'listings', label: '내 프롬프트', icon: Layers },
-          { id: 'payments', label: '정산 내역',   icon: Receipt },
+          { id: 'settlements', label: '정산 내역', icon: Receipt },
         ] as { id: ActiveTab; label: string; icon: React.ComponentType<{ style?: React.CSSProperties }> }[]).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -240,17 +291,20 @@ export default function ShopPage() {
         </section>
       )}
 
-      {/* ── 결제 내역 탭 ── */}
-      {activeTab === 'payments' && (
+      {/* ── 정산 내역 탭 ── */}
+      {activeTab === 'settlements' && (
         <section style={{ marginTop: 28, paddingBottom: 80 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>결제 내역</h2>
-            {/* 필터 버튼 */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              {FILTER_OPTIONS.map(({ value, label }) => (
+            <div>
+              <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>정산 내역</h2>
+              <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '6px 0 0' }}>판매 수수료 15% 차감 후 지급액 기준 · 승인 건은 지급 신청할 수 있어요</p>
+            </div>
+            {/* 상태 필터 */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {SETTLEMENT_FILTERS.map(({ value, label }) => (
                 <button
                   key={value}
-                  onClick={() => setPaymentsFilter(value)}
+                  onClick={() => setSettlementFilter(value)}
                   style={{
                     fontFamily: 'var(--ph-font-family)',
                     fontSize: 13, fontWeight: 600,
@@ -259,9 +313,9 @@ export default function ShopPage() {
                     border: '1px solid',
                     cursor: 'pointer',
                     transition: 'background .15s ease, color .15s ease, border-color .15s ease',
-                    background: paymentsFilter === value ? 'var(--ph-primary)' : 'transparent',
-                    color: paymentsFilter === value ? '#fff' : 'var(--ph-text-secondary)',
-                    borderColor: paymentsFilter === value ? 'var(--ph-primary)' : 'var(--ph-border)',
+                    background: settlementFilter === value ? 'var(--ph-primary)' : 'transparent',
+                    color: settlementFilter === value ? '#fff' : 'var(--ph-text-secondary)',
+                    borderColor: settlementFilter === value ? 'var(--ph-primary)' : 'var(--ph-border)',
                   }}
                 >
                   {label}
@@ -270,21 +324,73 @@ export default function ShopPage() {
             </div>
           </div>
 
-          {filteredPayments.length === 0 ? (
+          {filteredSettlements.length === 0 ? (
             <div style={{ padding: '72px 0', textAlign: 'center', color: 'var(--ph-text-muted)' }}>
-              <Receipt style={{ width: 40, height: 40, display: 'block', margin: '0 auto' }} />
-              <p style={{ margin: '14px 0 0', fontSize: 15 }}>결제 내역이 없어요.</p>
+              <Banknote style={{ width: 40, height: 40, display: 'block', margin: '0 auto' }} />
+              <p style={{ margin: '14px 0 0', fontSize: 15 }}>정산 내역이 없어요.</p>
             </div>
           ) : (
-            <PaymentTable
-              payments={filteredPayments.map((pay) => ({
-                id: pay.id,
-                title: myListings.find((p) => String(p.id) === String(pay.productId))?.title ?? `상품 #${pay.productId}`,
-                amount: pay.amount,
-                status: pay.status,
-                paidAt: pay.paidAt,
-              }))}
-            />
+            <div style={{ border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-lg)', overflowX: 'auto' }}>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>정산 기간</Th>
+                    <Th align="right">판매</Th>
+                    <Th align="right">총 거래액</Th>
+                    <Th align="right">수수료</Th>
+                    <Th align="right">지급액</Th>
+                    <Th>상태</Th>
+                    <Th align="right" width={170}> </Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSettlements.map((r) => (
+                    <Tr key={r.id}>
+                      <Td>
+                        <span className="whitespace-nowrap text-ph-text-secondary">
+                          {fmtPeriod(r.periodStart, r.periodEnd)}
+                        </span>
+                      </Td>
+                      <Td align="right">
+                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {r.productCount.toLocaleString('ko-KR')}
+                        </span>
+                      </Td>
+                      <Td align="right">
+                        <span className="text-ph-text-secondary" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {won(r.totalAmount)}
+                        </span>
+                      </Td>
+                      <Td align="right">
+                        <span className="text-ph-text-muted" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          −{won(r.feeTotalAmount)}
+                        </span>
+                      </Td>
+                      <Td align="right">
+                        <span className="font-bold" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {won(r.settlementTotalAmount)}
+                        </span>
+                      </Td>
+                      <Td>
+                        <StatusBadge status={r.status} />
+                      </Td>
+                      <Td align="right">
+                        {r.status === 'APPROVED' ? (
+                          <button
+                            onClick={() => requestPayout(r.id)}
+                            disabled={requestingId === r.id}
+                            className="inline-flex h-[34px] items-center justify-center gap-[5px] whitespace-nowrap rounded-ph-sm border border-transparent bg-ph-primary px-[12px] text-[13.5px] font-semibold text-white transition-colors hover:bg-ph-blue-hover disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <Banknote size={15} />
+                            지급 신청하기
+                          </button>
+                        ) : null}
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
           )}
         </section>
       )}

@@ -2,6 +2,7 @@ import { http } from 'msw';
 import { MOCK_USERS, SELLER_APPLY_STATUS } from '../data/users';
 import { PRODUCTS } from '../data/products';
 import { ok, ERR, extractToken, getUserIdFromToken } from '../utils';
+import { SETTLEMENTS, nextSettlementStatus } from '../data/settlements';
 
 const BASE = '/api/v1/sellers';
 
@@ -88,5 +89,38 @@ export const sellerHandlers = [
 
     const filtered = status ? payments.filter((p) => p.status === status) : payments;
     return ok(filtered);
+  }),
+
+  // GET /api/v1/sellers/me/settlements — 본인 월별 정산 내역 (어드민 정산 리스트와 동일 구조)
+  http.get(`${BASE}/me/settlements`, ({ request }) => {
+    const token  = extractToken(request);
+    const userId = getUserIdFromToken(token);
+    if (!userId) return ERR.unauthorized();
+
+    const user = MOCK_USERS.find((u) => u.id === userId);
+    if (!user || user.role !== 'seller') return ERR.forbidden();
+
+    const mine = SETTLEMENTS.filter((s) => s.sellerId === userId);
+    return ok(mine);
+  }),
+
+  // PUT /api/v1/sellers/me/settlements/:id/request-payout — 승인 건 지급 신청 (APPROVED → PAYOUT_REQUESTED)
+  http.put(`${BASE}/me/settlements/:id/request-payout`, ({ request, params }) => {
+    const token  = extractToken(request);
+    const userId = getUserIdFromToken(token);
+    if (!userId) return ERR.unauthorized();
+
+    const user = MOCK_USERS.find((u) => u.id === userId);
+    if (!user || user.role !== 'seller') return ERR.forbidden();
+
+    const { id } = params;
+    const settlement = SETTLEMENTS.find((s) => s.id === id);
+    if (!settlement) return ERR.notFound('정산');
+    if (settlement.sellerId !== userId) return ERR.forbidden();
+
+    const next = nextSettlementStatus(settlement.status, 'requestPayout');
+    if (!next) return ERR.validation('승인 상태의 정산 건만 지급 신청할 수 있습니다.');
+    settlement.status = next;
+    return ok(settlement);
   }),
 ];

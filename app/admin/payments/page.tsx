@@ -14,6 +14,7 @@ type SettlementStatus =
   | 'PENDING_APPROVAL'
   | 'SETTLEMENT_ON_HOLD'
   | 'APPROVED'
+  | 'PAYOUT_REQUESTED'
   | 'PAYOUT_ON_HOLD'
   | 'PAID'
   | 'CANCELLED'
@@ -48,6 +49,8 @@ function actionsFor(status: SettlementStatus): Action[] {
     case 'SETTLEMENT_ON_HOLD':
       return ['approve', 'unhold', 'cancel']
     case 'APPROVED':
+      return ['pay', 'hold', 'cancel']
+    case 'PAYOUT_REQUESTED':
       return ['pay', 'hold', 'cancel']
     case 'PAYOUT_ON_HOLD':
       return ['pay', 'unhold', 'cancel']
@@ -105,6 +108,7 @@ const TABS: { id: 'all' | SettlementStatus; label: string }[] = [
   { id: 'PENDING_APPROVAL', label: '대기' },
   { id: 'SETTLEMENT_ON_HOLD', label: '승인 보류' },
   { id: 'APPROVED', label: '승인' },
+  { id: 'PAYOUT_REQUESTED', label: '지급 신청' },
   { id: 'PAYOUT_ON_HOLD', label: '지급 보류' },
   { id: 'PAID', label: '지급 완료' },
   { id: 'CANCELLED', label: '취소' },
@@ -167,7 +171,7 @@ export default function AdminPaymentsPage() {
 
   const summary = [
     { label: '정산 대기', Icon: Clock, value: sumBy(['PENDING_APPROVAL', 'SETTLEMENT_ON_HOLD']), note: `${countBy(['PENDING_APPROVAL', 'SETTLEMENT_ON_HOLD'])}건` },
-    { label: '승인 완료', Icon: CircleCheck, value: sumBy(['APPROVED']), note: `${countBy(['APPROVED'])}건` },
+    { label: '승인 완료', Icon: CircleCheck, value: sumBy(['APPROVED', 'PAYOUT_REQUESTED']), note: `${countBy(['APPROVED', 'PAYOUT_REQUESTED'])}건` },
     { label: '지급 보류', Icon: PauseCircle, value: sumBy(['PAYOUT_ON_HOLD']), note: `${countBy(['PAYOUT_ON_HOLD'])}건` },
     { label: '지급 완료', Icon: Banknote, value: sumBy(['PAID']), note: `${countBy(['PAID'])}건` },
   ]
