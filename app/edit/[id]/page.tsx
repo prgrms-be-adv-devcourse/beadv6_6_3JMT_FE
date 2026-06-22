@@ -31,6 +31,18 @@ type Prompt = {
   versions?: Version[];
 };
 
+type ProductDetailResponse = Omit<Prompt, 'category'> & {
+  category?: string;
+  cat?: string;
+};
+
+function normalizeProductDetail(product: ProductDetailResponse): Prompt {
+  return {
+    ...product,
+    category: product.category ?? product.cat ?? '',
+  };
+}
+
 /* ── Data ───────────────────────────────────────────────────────────── */
 
 const CATEGORIES: Category[] = [
@@ -136,7 +148,7 @@ function EditScreen({ id, prompt, versions }: { id: number; prompt: Prompt; vers
     if (saving) return;
     setSaving(true);
     try {
-      await api.put(`/api/v1/product/${id}`, {
+      await api.put(`/api/v1/products/${id}`, {
         title, category, model,
         amount: Number(price),
         desc: body, content: body,
@@ -331,10 +343,10 @@ export default function EditPage() {
 
   useEffect(() => {
     if (!id) return;
-    api.get(`/api/v1/product/${id}`)
+    api.get(`/api/v1/products/${id}`)
       .then((res) => {
         const d = res.data.data;
-        setPrompt(d);
+        setPrompt(normalizeProductDetail(d));
         setVersions(d.versions ?? []);
       })
       .catch(() => setError(true))

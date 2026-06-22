@@ -4,11 +4,11 @@ import { PRODUCTS } from '../data/products';
 import { ok, ERR, extractToken, getUserIdFromToken } from '../utils';
 import { SETTLEMENTS, nextSettlementStatus } from '../data/settlements';
 
-const BASE = '/api/v1/sellers';
+const BASE = '*/api/v1/sellers';
 
 export const sellerHandlers = [
   // POST /api/v1/seller
-  http.post('/api/v1/seller', async ({ request }) => {
+  http.post('*/api/v1/seller', async ({ request }) => {
     const token  = extractToken(request);
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();

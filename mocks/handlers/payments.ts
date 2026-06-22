@@ -3,7 +3,7 @@ import { MOCK_ORDERS, MOCK_PAYMENTS } from '../data/users';
 import { PRODUCTS } from '../data/products';
 import { ok, ERR, extractToken, getUserIdFromToken } from '../utils';
 
-const BASE = '/api/v1/payments';
+const BASE = '*/api/v1/payments';
 
 export const paymentHandlers = [
   // POST /api/v1/payments/confirm

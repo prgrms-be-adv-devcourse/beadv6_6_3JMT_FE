@@ -2,7 +2,7 @@ import { http } from 'msw';
 import { MOCK_NOTIFICATIONS } from '../data/users';
 import { ok, ERR, extractToken, getUserIdFromToken } from '../utils';
 
-const BASE = '/api/v1/notifications';
+const BASE = '*/api/v1/notifications';
 
 export const notificationHandlers = [
   // GET /api/v1/notifications

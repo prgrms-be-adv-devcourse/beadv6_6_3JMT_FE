@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { MOCK_USERS, MOCK_PASSWORDS, getRoleByEmail } from '../data/users';
 import { ok, ERR, extractToken, getUserIdFromToken } from '../utils';
 
-const BASE = '/api/v1/auth';
+const BASE = '*/api/v1/auth';
 
 export const authHandlers = [
   http.post(`${BASE}/login`, async ({ request }) => {

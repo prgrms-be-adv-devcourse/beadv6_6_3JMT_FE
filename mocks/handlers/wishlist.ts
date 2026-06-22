@@ -3,7 +3,7 @@ import { MOCK_WISHLISTS, WishlistItem } from '../data/users';
 import { PRODUCTS } from '../data/products';
 import { ok, okList, ERR, extractToken, getUserIdFromToken } from '../utils';
 
-const BASE = '/api/v1/wishlists';
+const BASE = '*/api/v1/wishlists';
 
 export const wishlistHandlers = [
   // POST /api/v1/wishlists

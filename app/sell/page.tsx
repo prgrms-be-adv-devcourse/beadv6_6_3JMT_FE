@@ -117,7 +117,7 @@ export default function SellPage() {
     if (loading) return;
     setLoading(true);
     try {
-      await api.post('/api/v1/product', {
+      await api.post('/api/v1/products', {
         title,
         category,
         model,

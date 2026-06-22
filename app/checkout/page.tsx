@@ -30,7 +30,7 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (isSingle) {
-      api.get(`/api/v1/product/${productId}`)
+      api.get(`/api/v1/products/${productId}`)
         .then((res) => {
           const d = res.data.data;
           setSingleItem({

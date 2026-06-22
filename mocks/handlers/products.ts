@@ -3,7 +3,7 @@ import { PRODUCTS, PRODUCT_VERSIONS } from '../data/products';
 import { ok, okList, err, ERR, extractToken, getUserIdFromToken } from '../utils';
 import { MOCK_USERS } from '../data/users';
 
-const BASE = '/api/v1/product';
+const BASE = '*/api/v1/products';
 
 // userId → productId → rating (MSW 세션 동안 유지)
 const RATINGS: Record<string, Record<number, number>> = {};
@@ -21,7 +21,7 @@ export const productHandlers = [
     let filtered = PRODUCTS.filter((p) => {
       const matchCat  = category === 'all' || p.category === category;
       const matchQ    = !q || p.title.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q);
-      return matchCat && matchQ;
+      return matchCat && matchQ && (p.status ?? 'active') === 'active';
     });
 
     if (sort === 'rating') {
@@ -42,8 +42,11 @@ export const productHandlers = [
     const product = PRODUCTS.find((p) => p.id === Number(params.id));
     if (!product) return ERR.notFound('프로덕트');
 
+    const { category, ...productWithoutCategory } = product;
+
     return ok({
-      ...product,
+      ...productWithoutCategory,
+      cat: category,
       versions: PRODUCT_VERSIONS,
       features: [
         '고해상도 출력 지원',
@@ -61,7 +64,11 @@ export const productHandlers = [
 
     const url    = new URL(request.url);
     const limit  = Number(url.searchParams.get('limit') ?? 4);
-    const related = PRODUCTS.filter((p) => p.category === product.category && p.id !== product.id).slice(0, limit);
+    const related = PRODUCTS.filter((p) =>
+      p.category === product.category &&
+      p.id !== product.id &&
+      (p.status ?? 'active') === 'active'
+    ).slice(0, limit);
 
     return ok(related);
   }),

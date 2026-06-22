@@ -41,6 +41,18 @@ type Prompt = {
 
 type Version = { ver: string; date: string; note: string };
 
+type ProductDetailResponse = Omit<Prompt, 'category'> & {
+  category?: string;
+  cat?: string;
+};
+
+function normalizeProductDetail(product: ProductDetailResponse): Prompt {
+  return {
+    ...product,
+    category: product.category ?? product.cat ?? '',
+  };
+}
+
 /* ── Mock data ──────────────────────────────────────────────────────── */
 
 
@@ -474,11 +486,11 @@ export default function DetailPage() {
   useEffect(() => {
     if (!id) return;
     Promise.all([
-      api.get(`/api/v1/product/${id}`),
-      api.get(`/api/v1/product/${id}/related`),
+      api.get(`/api/v1/products/${id}`),
+      api.get(`/api/v1/products/${id}/related`),
     ])
       .then(([pRes, rRes]) => {
-        setProduct(pRes.data.data);
+        setProduct(normalizeProductDetail(pRes.data.data));
         setRelated(rRes.data.data ?? []);
       })
       .catch(() => {})

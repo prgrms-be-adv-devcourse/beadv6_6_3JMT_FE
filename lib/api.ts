@@ -18,7 +18,9 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout()
-      window.location.href = '/'
+      if (process.env.NEXT_PUBLIC_API_MOCKING !== 'enabled' && typeof window !== 'undefined') {
+        window.location.href = '/'
+      }
     }
     return Promise.reject(error)
   }

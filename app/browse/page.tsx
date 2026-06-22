@@ -57,7 +57,7 @@ function BrowseScreen() {
     setLoading(true);
     setList([]);
     const sortParam = sort === '평점순' ? 'rating' : sort === '가격순' ? 'price-asc' : 'popular';
-    api.get('/api/v1/product', {
+    api.get('/api/v1/products', {
       params: { q: query || undefined, category: category !== 'all' ? category : undefined, sort: sortParam },
     })
       .then((res) => setList(res.data.data ?? []))

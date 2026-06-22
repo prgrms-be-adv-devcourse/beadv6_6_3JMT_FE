@@ -202,7 +202,7 @@ function PopularGrid() {
   const [featured, setFeatured] = useState<Prompt[]>([]);
 
   useEffect(() => {
-    api.get('/api/v1/product', { params: { sort: 'popular', size: '8' } })
+    api.get('/api/v1/products', { params: { sort: 'popular', size: '8' } })
       .then((res) => setFeatured(res.data.data ?? []))
       .catch(() => {});
   }, []);

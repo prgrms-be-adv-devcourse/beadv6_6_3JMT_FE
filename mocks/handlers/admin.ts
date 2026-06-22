@@ -5,7 +5,7 @@ import { ok, okList, ERR, extractToken, getUserIdFromToken } from '../utils';
 import { SELLER_APPLY_STATUS } from '../data/users';
 import { SETTLEMENTS, nextSettlementStatus } from '../data/settlements';
 
-const BASE = '/api/v1/admin';
+const BASE = '*/api/v1/admin';
 
 function isAdmin(request: Request): boolean {
   const token = extractToken(request);

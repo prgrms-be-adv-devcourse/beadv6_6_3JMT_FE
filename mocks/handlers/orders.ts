@@ -3,7 +3,7 @@ import { MOCK_ORDERS } from '../data/users';
 import { PRODUCTS } from '../data/products';
 import { ok, ERR, extractToken, getUserIdFromToken } from '../utils';
 
-const BASE = '/api/v1/orders';
+const BASE = '*/api/v1/orders';
 
 export const orderHandlers = [
   // GET /api/v1/orders — 내 주문 목록

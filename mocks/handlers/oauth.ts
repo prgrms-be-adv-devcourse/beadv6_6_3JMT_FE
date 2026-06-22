@@ -1,7 +1,7 @@
 import { http } from 'msw';
 import { ok, ERR } from '../utils';
 
-const BASE = '/api/v1/auth/oauth';
+const BASE = '*/api/v1/auth/oauth';
 
 export const oauthHandlers = [
   http.post(`${BASE}/kakao`, async ({ request }) => {

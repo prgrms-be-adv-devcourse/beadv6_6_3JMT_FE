@@ -115,7 +115,7 @@ export default function ShopPage() {
   const isStopped = (id: string | number) => !!stopped[id];
   const stopSelling = async (id: string | number) => {
     try {
-      await api.delete(`/api/v1/product/${id}`);
+      await api.delete(`/api/v1/products/${id}`);
     } catch {
       // 실패해도 UI는 동일하게 처리
     } finally {

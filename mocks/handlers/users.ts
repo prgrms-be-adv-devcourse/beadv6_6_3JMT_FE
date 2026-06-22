@@ -2,7 +2,7 @@ import { http } from 'msw';
 import { MOCK_USERS } from '../data/users';
 import { ok, ERR, extractToken, getUserIdFromToken } from '../utils';
 
-const BASE = '/api/v1/users/me';
+const BASE = '*/api/v1/users/me';
 
 export const userHandlers = [
   // GET /api/v1/users/me
