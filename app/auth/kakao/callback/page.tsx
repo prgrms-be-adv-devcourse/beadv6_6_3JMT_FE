@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useToast } from '@/store/useToastStore';
 
 function LoadingUI() {
   return (
@@ -44,33 +45,85 @@ function KakaoCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useAuthStore((s) => s.login);
+  const showToast = useToast();
   const called = useRef(false);
 
   useEffect(() => {
     if (called.current) return;
     called.current = true;
 
-    const code = searchParams.get('code');
-
-    if (!code) {
+    const error = searchParams.get('error');
+    if (error) {
+      if (error === 'access_denied') {
+        showToast('카카오 로그인을 취소했습니다.');
+      } else {
+        showToast(searchParams.get('error_description') ?? '카카오 로그인에 실패했습니다.');
+      }
       router.replace('/');
       return;
     }
 
-    api
-      .post<{ data: { user: { id: string; name: string; email: string; role: 'buyer' | 'seller' }; token: string } }>(
-        '/api/v1/auth/oauth/kakao',
-        { code },
+    const code = searchParams.get('code');
+    if (!code) {
+      showToast('인증 코드가 없습니다. 다시 시도해주세요.');
+      router.replace('/');
+      return;
+    }
+
+    const isMocking = process.env.NEXT_PUBLIC_API_MOCKING === 'enabled';
+
+    const getKakaoPayload = async () => {
+      if (isMocking) {
+        return {
+          kakaoId: 'mock-kakao-123456',
+          nickname: '카카오사용자',
+          profileImage: null as string | null,
+          email: 'kakao@user.com' as string | null,
+        };
+      }
+
+      const tokenRes = await fetch('https://kauth.kakao.com/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID!,
+          redirect_uri: `${window.location.origin}/auth/kakao/callback`,
+          code,
+        }),
+      });
+      const { access_token } = await tokenRes.json();
+
+      const userRes = await fetch('https://kapi.kakao.com/v2/user/me', {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+      const kakaoUser = await userRes.json();
+
+      return {
+        kakaoId: String(kakaoUser.id),
+        nickname: kakaoUser.kakao_account?.profile?.nickname ?? '사용자',
+        profileImage: kakaoUser.kakao_account?.profile?.profile_image_url ?? null,
+        email: kakaoUser.kakao_account?.email ?? null,
+      };
+    };
+
+    getKakaoPayload()
+      .then((payload) =>
+        api.post<{ data: { user: { id: string; name: string; email: string; role: string }; accessToken: string; refreshToken?: string } }>(
+          '/api/v1/auth/oauth/kakao',
+          payload,
+        ),
       )
       .then((res) => {
-        const { user, token } = res.data.data;
-        login(user, token);
+        const { user, accessToken, refreshToken } = res.data.data;
+        login({ ...user, role: user.role.toLowerCase() as 'buyer' | 'seller' }, accessToken, refreshToken);
         router.replace('/');
       })
       .catch(() => {
+        showToast('카카오 로그인에 실패했습니다. 다시 시도해주세요.');
         router.replace('/');
       });
-  }, [searchParams, login, router]);
+  }, [searchParams, login, router, showToast]);
 
   return <LoadingUI />;
 }
