@@ -24,10 +24,34 @@ const ADMIN_ORDERS = [
   { id: 'order-501', userId: 'user-5', userName: '박지현', productId: '77777777-7777-7777-7777-777777777777', productTitle: '유튜브 썸네일 카피 생성기', amount: 3900, status: 'CANCELED', createdAt: '2026-06-15T00:00:00.000Z' },
 ];
 
-// 어드민 판매자 신청 목록
+// 어드민 판매자 신청 목록 (기존 핸들러용)
 const SELLER_APPLIES: Record<string, { userId: string; userName: string; email: string; categories: string[]; introduction: string; portfolioLink: string; appliedAt: string; status: 'pending' | 'approved' | 'rejected' }> = {
   'apply-1': { userId: 'user-1', userName: '김민서', email: 'kms12782@nangman.cloud', categories: ['writing', 'marketing'], introduction: '전문 카피라이터입니다.', portfolioLink: 'https://portfolio.example.com', appliedAt: '2026-06-10T00:00:00.000Z', status: 'pending' },
 };
+
+// GET /admin/sellers/register 용 데이터
+type SellerRegister = {
+  registerId: string;
+  userId: string;
+  name: string;
+  email: string;
+  introduction: string | null;
+  categories: string[];
+  portfolioUrl: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+  reviewedAt: string | null;
+  rejectReason: string | null;
+};
+
+let sellerRegisters: SellerRegister[] = [
+  { registerId: 'reg-1', userId: 'user-1', name: '김민서', email: 'kms12782@nangman.cloud', introduction: '전문 카피라이터입니다. 마케팅 문구와 SNS 콘텐츠를 전문으로 합니다.', categories: ['writing', 'marketing'], portfolioUrl: 'https://portfolio.example.com', status: 'pending', submittedAt: '2026-06-10T00:00:00.000Z', reviewedAt: null, rejectReason: null },
+  { registerId: 'reg-2', userId: 'user-4', name: '이서아', email: 'seoah@example.com', introduction: '미드저니·DALL·E 기반 제품 목업과 광고 컷 프롬프트를 전문으로 제작합니다.', categories: ['이미지 생성'], portfolioUrl: 'https://blog.example.com', status: 'pending', submittedAt: '2026-06-14T00:00:00.000Z', reviewedAt: null, rejectReason: null },
+  { registerId: 'reg-3', userId: 'user-5', name: '박지현', email: 'jihyun@example.com', introduction: 'ChatGPT를 활용한 업무 자동화 및 데이터 분석 프롬프트를 만듭니다.', categories: ['data', 'chatbot'], portfolioUrl: null, status: 'pending', submittedAt: '2026-06-16T00:00:00.000Z', reviewedAt: null, rejectReason: null },
+  { registerId: 'reg-4', userId: 'user-6', name: '최준혁', email: 'junhyuk@example.com', introduction: '리액트·Next.js 컴포넌트 리팩터링 및 코드 리뷰 프롬프트 전문입니다.', categories: ['coding'], portfolioUrl: 'https://github.com/junhyuk', status: 'approved', submittedAt: '2026-06-01T00:00:00.000Z', reviewedAt: '2026-06-02T10:00:00.000Z', rejectReason: null },
+  { registerId: 'reg-5', userId: 'user-7', name: '오하늘', email: 'haneul@example.com', introduction: '유튜브·인스타그램 숏폼 스크립트 작성 전문 크리에이터입니다.', categories: ['writing'], portfolioUrl: 'https://youtube.com/@haneul', status: 'approved', submittedAt: '2026-06-03T00:00:00.000Z', reviewedAt: '2026-06-04T09:30:00.000Z', rejectReason: null },
+  { registerId: 'reg-6', userId: 'user-8', name: '임수빈', email: 'subin@example.com', introduction: null, categories: ['image'], portfolioUrl: null, status: 'rejected', submittedAt: '2026-05-28T00:00:00.000Z', reviewedAt: '2026-05-30T14:00:00.000Z', rejectReason: '포트폴리오가 확인되지 않습니다. 샘플을 보완 후 재신청해 주세요.' },
+];
 
 let ordersStore = [...ADMIN_ORDERS];
 
@@ -151,7 +175,51 @@ export const adminHandlers = [
     return ok(product);
   }),
 
-  // 판매자 신청 목록
+  // 판매자 신청 목록 (GET /admin/sellers/register)
+  http.get(`${BASE}/sellers/register`, ({ request }) => {
+    if (!isAdmin(request)) return ERR.forbidden();
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') ?? 1);
+    const size = Number(url.searchParams.get('size') ?? 20);
+    const statusFilter = (url.searchParams.get('status') ?? 'ALL').toUpperCase();
+
+    let list = [...sellerRegisters];
+    if (statusFilter !== 'ALL') {
+      list = list.filter((r) => r.status.toUpperCase() === statusFilter);
+    }
+    return okList(list, page, size);
+  }),
+
+  // 판매자 승인 (PATCH /admin/sellers/register/:registerId/approve)
+  http.patch(`${BASE}/sellers/register/:registerId/approve`, ({ request, params }) => {
+    if (!isAdmin(request)) return ERR.forbidden();
+    const { registerId } = params as { registerId: string };
+    const idx = sellerRegisters.findIndex((r) => r.registerId === registerId);
+    if (idx === -1) return ERR.notFound('판매자 신청');
+    const reviewedAt = new Date().toISOString();
+    sellerRegisters[idx].status = 'approved';
+    sellerRegisters[idx].reviewedAt = reviewedAt;
+    const userIdx = MOCK_USERS.findIndex((u) => u.id === sellerRegisters[idx].userId);
+    if (userIdx !== -1) MOCK_USERS[userIdx].role = 'seller';
+    return ok({ registerId, userId: sellerRegisters[idx].userId, status: 'APPROVED', reviewedAt });
+  }),
+
+  // 판매자 거절 (PATCH /admin/sellers/register/:registerId/reject)
+  http.patch(`${BASE}/sellers/register/:registerId/reject`, async ({ request, params }) => {
+    if (!isAdmin(request)) return ERR.forbidden();
+    const { registerId } = params as { registerId: string };
+    const body = await request.json() as { rejectReason?: string };
+    if (!body.rejectReason) return ERR.validation('rejectReason은 필수입니다.');
+    const idx = sellerRegisters.findIndex((r) => r.registerId === registerId);
+    if (idx === -1) return ERR.notFound('판매자 신청');
+    const reviewedAt = new Date().toISOString();
+    sellerRegisters[idx].status = 'rejected';
+    sellerRegisters[idx].reviewedAt = reviewedAt;
+    sellerRegisters[idx].rejectReason = body.rejectReason;
+    return ok({ registerId, userId: sellerRegisters[idx].userId, status: 'REJECTED', rejectReason: body.rejectReason, reviewedAt });
+  }),
+
+  // 판매자 신청 목록 (기존 경로 — 하위 호환)
   http.get(`${BASE}/sellers/applies`, ({ request }) => {
     if (!isAdmin(request)) return ERR.forbidden();
     const applies = Object.entries(SELLER_APPLIES).map(([id, apply]) => ({ id, ...apply }));
