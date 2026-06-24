@@ -30,11 +30,14 @@ export type NotificationItem = {
 };
 
 export const MOCK_USERS: MockUser[] = [
-  { id: 'user-1', name: '김민서', email: 'kms12782@nangman.cloud', role: 'buyer' },
-  { id: 'user-4', name: '구매자', email: 'buyer@prompthub.kr', role: 'buyer' },
-  { id: 'user-2', name: '프롬트랩', email: 'promptlab@prompthub.kr', role: 'seller' },
-  { id: 'user-3', name: '판매자', email: 'seller@prompthub.kr', role: 'seller' },
-  { id: 'admin-1', name: '관리자', email: 'admin@prompthub.kr', role: 'admin' },
+  { id: 'user-1', name: '김민서', email: 'kms12782@nangman.cloud', role: 'buyer', status: 'active' },
+  { id: 'user-4', name: '구매자', email: 'buyer@prompthub.kr', role: 'buyer', status: 'active' },
+  { id: 'user-2', name: '프롬트랩', email: 'promptlab@prompthub.kr', role: 'seller', status: 'active' },
+  { id: 'user-3', name: '판매자', email: 'seller@prompthub.kr', role: 'seller', status: 'active' },
+  { id: 'user-5', name: '이준혁', email: 'junhyuk.lee@example.com', role: 'buyer', status: 'suspended' },
+  { id: 'user-6', name: '박지현', email: 'jihyun.park@example.com', role: 'buyer', status: 'withdrawn' },
+  { id: 'user-7', name: '최수연', email: 'suyeon.choi@example.com', role: 'seller', status: 'suspended' },
+  { id: 'admin-1', name: '관리자', email: 'admin@prompthub.kr', role: 'admin', status: 'active' },
 ];
 
 // 이메일로 역할 결정 — MOCK_USERS 우선, 없으면 이름 기반 추측

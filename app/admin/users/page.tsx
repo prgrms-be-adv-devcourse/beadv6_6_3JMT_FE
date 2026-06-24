@@ -1,22 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuthStore } from '@/store/useAuthStore'
-import api from '@/lib/auth'
 import { SectionCard } from '@/components/admin/SectionCard'
 import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { StatusBadge } from '@/components/admin/Badge'
 import { CircleCheck, CirclePause, CircleX } from 'lucide-react'
+import { type AdminUser, getAdminUsers, updateAdminUser } from '@/lib/adminUsers'
 
-type UserStatus = 'active' | 'suspended' | 'withdrawn'
-
-interface AdminUser {
-  id: string
-  name: string
-  email: string
-  role: 'buyer' | 'seller'
-  status?: UserStatus
-}
+type UserStatus = AdminUser['status']
 
 const ROLE_LABEL: Record<string, string> = {
   buyer: '구매자',
@@ -30,20 +21,18 @@ const STATUS_OPTS: { id: UserStatus; label: string; icon: typeof CircleCheck; da
 ]
 
 export default function AdminUsersPage() {
-  const { token } = useAuthStore()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
   const [changing, setChanging] = useState<string | null>(null)
 
   useEffect(() => {
     fetchUsers()
-  }, [token])
+  }, [])
 
   async function fetchUsers() {
-    if (!token) return
     try {
-      const res = await api.get('/api/v1/admin/users', { headers: { Authorization: `Bearer ${token}` } })
-      setUsers(res.data.data ?? [])
+      const { data } = await getAdminUsers()
+      setUsers(data)
     } finally {
       setLoading(false)
     }
@@ -52,7 +41,7 @@ export default function AdminUsersPage() {
   async function handleRoleChange(userId: string, newRole: 'buyer' | 'seller') {
     setChanging(userId)
     try {
-      await api.put(`/api/v1/admin/users/${userId}`, { role: newRole }, { headers: { Authorization: `Bearer ${token}` } })
+      await updateAdminUser(userId, { role: newRole })
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)))
     } finally {
       setChanging(null)
@@ -62,7 +51,7 @@ export default function AdminUsersPage() {
   async function handleStatusChange(userId: string, newStatus: UserStatus) {
     setChanging(userId)
     try {
-      await api.put(`/api/v1/admin/users/${userId}`, { status: newStatus }, { headers: { Authorization: `Bearer ${token}` } })
+      await updateAdminUser(userId, { status: newStatus })
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, status: newStatus } : u)))
     } finally {
       setChanging(null)
@@ -97,7 +86,7 @@ export default function AdminUsersPage() {
             </thead>
             <tbody>
               {users.map((u) => {
-                const status = u.status ?? 'active'
+                const status = u.status
                 return (
                   <Tr key={u.id}>
                     <Td>

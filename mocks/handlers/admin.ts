@@ -64,7 +64,30 @@ export const adminHandlers = [
     const url = new URL(request.url);
     const page = Number(url.searchParams.get('page') ?? 1);
     const size = Number(url.searchParams.get('size') ?? 20);
-    const users = MOCK_USERS.filter((u) => u.role !== 'admin');
+    const statusFilter = url.searchParams.get('status') ?? 'ALL';
+    const roleFilter = url.searchParams.get('role') ?? 'ALL';
+    const keyword = url.searchParams.get('keyword')?.toLowerCase() ?? '';
+
+    let users = MOCK_USERS.filter((u) => u.role !== 'admin').map((u) => ({
+      ...u,
+      status: u.status ?? 'active',
+    }));
+
+    if (statusFilter !== 'ALL') {
+      users = users.filter((u) => u.status === statusFilter);
+    }
+    if (roleFilter !== 'ALL') {
+      users = users.filter((u) => u.role === roleFilter);
+    }
+    if (keyword) {
+      users = users.filter(
+        (u) =>
+          u.name.toLowerCase().includes(keyword) ||
+          u.email.toLowerCase().includes(keyword) ||
+          u.id.toLowerCase().includes(keyword),
+      );
+    }
+
     return okList(users, page, size);
   }),
 
