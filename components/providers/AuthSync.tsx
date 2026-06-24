@@ -45,7 +45,7 @@ export default function AuthSync() {
     const prevId = prevUserIdRef.current;
     prevUserIdRef.current = user?.id ?? null;
 
-    const isAdminOnNonAdminPage = user?.role === 'admin' && !pathname.startsWith('/admin');
+    const isAdminOnNonAdminPage = user?.role === 'admin' && !pathname.startsWith('/admin') && !pathname.startsWith('/auth/');
     if (!isAdminOnNonAdminPage) return;
 
     // prevId === null: 비로그인 상태에서 admin으로 로그인한 직후 → 로그아웃 안 함

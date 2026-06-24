@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Sparkles, ShieldCheck, Mail, Lock, Info, LockKeyhole } from 'lucide-react'
+import { Sparkles, ShieldCheck, Mail, Lock, Info, LockKeyhole, MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/auth'
 
@@ -13,6 +13,21 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const isMocking = process.env.NEXT_PUBLIC_API_MOCKING === 'enabled'
+
+  const kakaoAdminLogin = () => {
+    if (isMocking) {
+      window.location.href = '/auth/kakao/callback?code=mock-kakao-admin-code&state=admin'
+    } else {
+      const params = new URLSearchParams({
+        client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID ?? '',
+        redirect_uri: `${window.location.origin}/auth/kakao/callback`,
+        response_type: 'code',
+        state: 'admin',
+      })
+      window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`
+    }
+  }
 
   // 이미 로그인된 admin이 /admin/login 재방문 시 자동 이동
   // deps 빈 배열: mount 시 1회만 실행 → handleSubmit의 router.push와 충돌 없음
@@ -81,6 +96,24 @@ export default function AdminLoginPage() {
           <p className="mb-[26px] text-[15px] leading-[1.5] text-ph-text-secondary">
             운영팀 전용 페이지예요. 관리자 계정으로 로그인하세요.
           </p>
+
+          {/* 카카오 로그인 */}
+          <button
+            type="button"
+            onClick={kakaoAdminLogin}
+            className="flex h-[52px] w-full items-center justify-center gap-[9px] rounded-ph-md text-[16px] font-bold"
+            style={{ background: '#FEE500', color: '#191600', border: 'none', cursor: 'pointer' }}
+          >
+            <MessageCircle style={{ width: 19, height: 19 }} />
+            카카오로 관리자 로그인
+          </button>
+
+          {/* 구분선 */}
+          <div className="flex items-center gap-3 my-1">
+            <div className="flex-1 h-px bg-ph-border" />
+            <span className="text-[13px] text-ph-text-muted">또는 이메일로</span>
+            <div className="flex-1 h-px bg-ph-border" />
+          </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-[14px]">
             {/* 이메일 */}
