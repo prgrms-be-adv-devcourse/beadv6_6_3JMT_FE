@@ -26,7 +26,11 @@ function SuccessContent() {
       return;
     }
 
-    confirmPayment({ paymentKey, orderId, amount })
+    const saved = sessionStorage.getItem('_mock_pending_order');
+    const _productIds: string[] | undefined = saved ? JSON.parse(saved).productIds : undefined;
+    sessionStorage.removeItem('_mock_pending_order');
+
+    confirmPayment({ paymentKey, orderId, amount, _productIds })
       .then(() => setState({ status: 'success' }))
       .catch((e: unknown) => {
         const data = (e as { response?: { data?: { code?: string; message?: string } } })?.response?.data;

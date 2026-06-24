@@ -12,8 +12,8 @@ export const paymentHandlers = [
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const body = await request.json() as { paymentKey?: string; orderId?: string; amount?: number };
-    const { paymentKey, orderId, amount } = body ?? {};
+    const body = await request.json() as { paymentKey?: string; orderId?: string; amount?: number; _productIds?: string[] };
+    const { paymentKey, orderId, amount, _productIds } = body ?? {};
 
     if (!paymentKey || !orderId || amount == null) {
       return err('V001', 'paymentKey, orderId, amount는 필수입니다.', 422);
@@ -31,9 +31,16 @@ export const paymentHandlers = [
     const now = new Date().toISOString();
 
     if (!MOCK_PAYMENTS[userId]) MOCK_PAYMENTS[userId] = [];
-    MOCK_PAYMENTS[userId].push({ paymentId, orderId, productIds: [], totalAmount: amount, status: 'paid', paidAt: now });
+    MOCK_PAYMENTS[userId].push({ paymentId, orderId, productIds: _productIds ?? [], totalAmount: amount, status: 'paid', paidAt: now });
 
+    // SW 재시작으로 MOCK_ORDERS가 초기화된 경우 복원
     if (!MOCK_ORDERS[userId]) MOCK_ORDERS[userId] = [];
+    const alreadyExists = MOCK_ORDERS[userId].some((o) => o.orderId === orderId);
+    if (!alreadyExists && _productIds?.length) {
+      _productIds.forEach((productId) => {
+        MOCK_ORDERS[userId].push({ orderId, productId, purchasedAt: now });
+      });
+    }
 
     return ok({ paymentId }, 201);
   }),

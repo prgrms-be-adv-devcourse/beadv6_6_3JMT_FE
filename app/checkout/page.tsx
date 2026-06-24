@@ -60,6 +60,12 @@ function CheckoutContent() {
         : { productIds: items.map((i) => i.id) };
       const { orderId } = await createOrder(orderParams);
 
+      // SW 재시작으로 MOCK_ORDERS가 초기화될 경우를 대비해 리다이렉트 전에 보존
+      sessionStorage.setItem(
+        '_mock_pending_order',
+        JSON.stringify({ orderId, productIds: items.map((i) => i.id) })
+      );
+
       if (!isSingle) clearCart();
 
       const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!);
