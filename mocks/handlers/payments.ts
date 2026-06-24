@@ -1,39 +1,40 @@
 import { http } from 'msw';
-import { MOCK_ORDERS, MOCK_PAYMENTS } from '../data/users';
-import { PRODUCTS } from '../data/products';
-import { ok, ERR, extractToken, getUserIdFromToken } from '../utils';
+import { MOCK_PAYMENTS, MOCK_ORDERS } from '../data/users';
+import { ok, err, ERR, extractToken, getUserIdFromToken } from '../utils';
 
 const BASE = '*/api/v1/payments';
 
 export const paymentHandlers = [
   // POST /api/v1/payments/confirm
+  // 에러 시뮬레이션: orderId가 'sim-pay002'로 시작하면 PAY002, 'sim-pay003'으로 시작하면 PAY003 반환
   http.post(`${BASE}/confirm`, async ({ request }) => {
     const token  = extractToken(request);
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const body = await request.json() as { productIds?: string[] };
-    if (!body?.productIds?.length) return ERR.validation('결제할 상품을 선택해주세요.');
+    const body = await request.json() as { paymentKey?: string; orderId?: string; amount?: number };
+    const { paymentKey, orderId, amount } = body ?? {};
 
-    const products = body.productIds
-      .map((id) => PRODUCTS.find((p) => p.id === id))
-      .filter(Boolean);
+    if (!paymentKey || !orderId || amount == null) {
+      return err('V001', 'paymentKey, orderId, amount는 필수입니다.', 422);
+    }
 
-    if (products.length !== body.productIds.length) return ERR.notFound('일부 상품');
+    if (orderId.startsWith('sim-pay002')) {
+      return err('PAY002', '이미 결제된 주문입니다.', 400);
+    }
 
-    const totalAmount = products.reduce((sum, p) => sum + (p?.amount ?? 0), 0);
-    const now       = new Date().toISOString();
+    if (orderId.startsWith('sim-pay003')) {
+      return err('PAY003', 'PG사 처리 중 오류가 발생했습니다.', 400);
+    }
+
     const paymentId = `pay-${Date.now()}`;
-    const orderId   = `order-${Date.now()}`;
+    const now = new Date().toISOString();
 
     if (!MOCK_PAYMENTS[userId]) MOCK_PAYMENTS[userId] = [];
-    MOCK_PAYMENTS[userId].push({ paymentId, orderId, productIds: body.productIds, totalAmount, status: 'paid', paidAt: now });
+    MOCK_PAYMENTS[userId].push({ paymentId, orderId, productIds: [], totalAmount: amount, status: 'paid', paidAt: now });
 
     if (!MOCK_ORDERS[userId]) MOCK_ORDERS[userId] = [];
-    body.productIds.forEach((productId) => {
-      MOCK_ORDERS[userId].push({ orderId, productId, purchasedAt: now });
-    });
 
-    return ok({ paymentId, orderId, totalAmount, status: 'paid' }, 201);
+    return ok({ paymentId }, 201);
   }),
 ];
