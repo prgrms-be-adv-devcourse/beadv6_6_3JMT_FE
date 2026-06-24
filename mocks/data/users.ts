@@ -4,6 +4,7 @@ export type MockUser = {
   email: string;
   role: 'buyer' | 'seller' | 'admin';
   status?: 'active' | 'suspended' | 'withdrawn';
+  createdAt?: string;
 };
 
 export type OrderItem = {
@@ -30,14 +31,14 @@ export type NotificationItem = {
 };
 
 export const MOCK_USERS: MockUser[] = [
-  { id: 'user-1', name: '김민서', email: 'kms12782@nangman.cloud', role: 'buyer', status: 'active' },
-  { id: 'user-4', name: '구매자', email: 'buyer@prompthub.kr', role: 'buyer', status: 'active' },
-  { id: 'user-2', name: '프롬트랩', email: 'promptlab@prompthub.kr', role: 'seller', status: 'active' },
-  { id: 'user-3', name: '판매자', email: 'seller@prompthub.kr', role: 'seller', status: 'active' },
-  { id: 'user-5', name: '이준혁', email: 'junhyuk.lee@example.com', role: 'buyer', status: 'suspended' },
-  { id: 'user-6', name: '박지현', email: 'jihyun.park@example.com', role: 'buyer', status: 'withdrawn' },
-  { id: 'user-7', name: '최수연', email: 'suyeon.choi@example.com', role: 'seller', status: 'suspended' },
-  { id: 'admin-1', name: '관리자', email: 'admin@prompthub.kr', role: 'admin', status: 'active' },
+  { id: 'user-1', name: '김민서', email: 'kms12782@nangman.cloud', role: 'buyer', status: 'active', createdAt: '2026-06-24T08:00:00.000Z' },
+  { id: 'user-4', name: '구매자', email: 'buyer@prompthub.kr', role: 'buyer', status: 'active', createdAt: '2026-06-24T09:30:00.000Z' },
+  { id: 'user-2', name: '프롬트랩', email: 'promptlab@prompthub.kr', role: 'seller', status: 'active', createdAt: '2026-06-20T10:00:00.000Z' },
+  { id: 'user-3', name: '판매자', email: 'seller@prompthub.kr', role: 'seller', status: 'active', createdAt: '2026-06-18T11:00:00.000Z' },
+  { id: 'user-5', name: '이준혁', email: 'junhyuk.lee@example.com', role: 'buyer', status: 'suspended', createdAt: '2026-06-15T12:00:00.000Z' },
+  { id: 'user-6', name: '박지현', email: 'jihyun.park@example.com', role: 'buyer', status: 'withdrawn', createdAt: '2026-06-10T13:00:00.000Z' },
+  { id: 'user-7', name: '최수연', email: 'suyeon.choi@example.com', role: 'seller', status: 'suspended', createdAt: '2026-06-05T14:00:00.000Z' },
+  { id: 'admin-1', name: '관리자', email: 'admin@prompthub.kr', role: 'admin', status: 'active', createdAt: '2026-01-01T00:00:00.000Z' },
 ];
 
 // 이메일로 역할 결정 — MOCK_USERS 우선, 없으면 이름 기반 추측

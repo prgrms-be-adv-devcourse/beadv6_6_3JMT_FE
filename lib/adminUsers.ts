@@ -1,5 +1,10 @@
 import api from '@/lib/auth'
 
+export interface AdminUserStats {
+  totalUsers: number
+  todayNewUsers: number
+}
+
 export type AdminUser = {
   id: string
   name: string
@@ -58,6 +63,13 @@ export async function updateAdminUserStatus(
   const res = await api.patch<{ success: boolean; data: UpdateAdminUserStatusResponse; message: string }>(
     `/api/v1/admin/users/${userId}/status`,
     { status },
+  )
+  return res.data.data
+}
+
+export async function getAdminUserStats(): Promise<AdminUserStats> {
+  const res = await api.get<{ success: boolean; data: AdminUserStats; message: string }>(
+    '/api/v1/admin/stats/users',
   )
   return res.data.data
 }

@@ -82,6 +82,18 @@ export const adminHandlers = [
     });
   }),
 
+  // 회원 통계
+  http.get(`${BASE}/stats/users`, ({ request }) => {
+    if (!isAdmin(request)) return ERR.forbidden();
+    const nonAdminUsers = MOCK_USERS.filter((u) => u.role !== 'admin');
+    const today = new Date().toISOString().slice(0, 10);
+    const todayNewUsers = nonAdminUsers.filter((u) => u.createdAt?.startsWith(today)).length;
+    return ok({
+      totalUsers: nonAdminUsers.length,
+      todayNewUsers,
+    });
+  }),
+
   // 유저 목록
   http.get(`${BASE}/users`, ({ request }) => {
     if (!isAdmin(request)) return ERR.forbidden();
