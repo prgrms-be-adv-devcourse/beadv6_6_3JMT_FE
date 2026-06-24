@@ -35,10 +35,11 @@ interface AdminProduct {
   createdAt: string
 }
 
-// 상품 status → StatusBadge 키 매핑 (mock: review / active)
+// 상품 status → StatusBadge 키 매핑
 const STATUS_KEY: Record<string, string> = {
-  review: 'review', // 검토중
-  active: 'active_product', // 게시중
+  review: 'review',
+  active: 'active_product',
+  rejected: 'rejected',
 }
 
 type FilterId = 'review' | 'active' | 'all'
@@ -67,6 +68,14 @@ const ICON_MAP: Record<string, typeof ImageIcon> = {
   data: BarChart3,
 }
 
+function toLocalStatus(status: string): string {
+  if (status === 'PENDING_REVIEW') return 'review'
+  if (status === 'ON_SALE') return 'active'
+  if (status === 'REJECTED') return 'rejected'
+  if (status === 'STOPPED') return 'stopped'
+  return status
+}
+
 function CategoryIcon({ product, size }: { product: AdminProduct; size: number }) {
   const Icon = ICON_MAP[product.icon ?? ''] ?? ICON_MAP[product.category] ?? Box
   return <Icon size={size} />
@@ -83,6 +92,8 @@ export default function AdminProductsPage() {
   const [selId, setSelId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)
+  const [rejectMode, setRejectMode] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
 
   useEffect(() => {
     fetchProducts()
@@ -96,7 +107,28 @@ export default function AdminProductsPage() {
       const res = await api.get('/api/v1/admin/products', {
         headers: { Authorization: `Bearer ${token}` },
       })
-      setProducts(res.data.data ?? [])
+      const raw: {
+        productId: string
+        title: string
+        category: string
+        sellerId: string
+        model?: string
+        amount: number
+        status: string
+        createdAt: string
+      }[] = res.data.data ?? []
+      setProducts(
+        raw.map((p) => ({
+          id: p.productId,
+          title: p.title,
+          category: p.category,
+          seller: p.sellerId,
+          model: p.model,
+          amount: p.amount,
+          status: toLocalStatus(p.status),
+          createdAt: p.createdAt,
+        })),
+      )
     } finally {
       setLoading(false)
     }
@@ -131,19 +163,41 @@ export default function AdminProductsPage() {
     setSelId((prev) => (prev && list.some((p) => p.id === prev) ? prev : list[0].id))
   }, [list])
 
+  // 선택 변경 시 반려 모드 초기화
+  useEffect(() => {
+    setRejectMode(false)
+    setRejectReason('')
+  }, [selId])
+
   const sel = products.find((p) => p.id === selId)
 
-  async function act(next: 'active' | 'review') {
+  async function approve() {
     if (!sel || acting) return
-    const endpoint = next === 'active' ? 'approve' : 'reject'
     setActing(true)
     try {
-      await api.put(
-        `/api/v1/admin/products/${sel.id}/${endpoint}`,
+      await api.patch(
+        `/api/v1/admin/products/${sel.id}/approve`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       )
-      setProducts((prev) => prev.map((p) => (p.id === sel.id ? { ...p, status: next } : p)))
+      setProducts((prev) => prev.map((p) => (p.id === sel.id ? { ...p, status: 'active' } : p)))
+    } finally {
+      setActing(false)
+    }
+  }
+
+  async function reject() {
+    if (!sel || acting || !rejectReason.trim()) return
+    setActing(true)
+    try {
+      await api.patch(
+        `/api/v1/admin/products/${sel.id}/reject`,
+        { reason: rejectReason },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      setProducts((prev) => prev.map((p) => (p.id === sel.id ? { ...p, status: 'rejected' } : p)))
+      setRejectMode(false)
+      setRejectReason('')
     } finally {
       setActing(false)
     }
@@ -311,41 +365,68 @@ export default function AdminProductsPage() {
           </div>
 
           {/* action bar */}
-          <div className="flex items-center gap-[10px] rounded-b-ph-lg border-t border-ph-border bg-ph-gray-50 px-[26px] py-[16px]">
+          <div className="rounded-b-ph-lg border-t border-ph-border bg-ph-gray-50 px-[26px] py-[16px]">
             {(sel.status ?? 'active') === 'review' ? (
-              <>
-                <span className="flex-1 text-[13.5px] text-ph-text-muted">
-                  가이드라인을 확인한 뒤 승인 또는 반려하세요.
-                </span>
-                <button
-                  onClick={() => act('review')}
-                  disabled={acting}
-                  className="inline-flex h-[40px] items-center gap-[6px] rounded-ph-md border border-ph-border bg-ph-white px-[16px] text-[15px] font-semibold text-ph-error transition-colors hover:bg-[#fdeceb] disabled:opacity-50"
-                >
-                  <X size={17} /> 반려
-                </button>
-                <button
-                  onClick={() => act('active')}
-                  disabled={acting}
-                  className="inline-flex h-[40px] items-center gap-[6px] rounded-ph-md border-none bg-ph-primary px-[20px] text-[15px] font-semibold text-white transition-colors hover:bg-ph-blue-hover disabled:opacity-50"
-                >
-                  <Check size={17} /> 승인하기
-                </button>
-              </>
+              rejectMode ? (
+                <div className="flex flex-col gap-[10px]">
+                  <textarea
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="반려 사유를 입력하세요"
+                    rows={2}
+                    className="w-full resize-none rounded-ph-md border border-ph-border bg-ph-white px-[12px] py-[8px] text-[13.5px] text-ph-text outline-none focus:border-ph-primary"
+                  />
+                  <div className="flex justify-end gap-[8px]">
+                    <button
+                      onClick={() => { setRejectMode(false); setRejectReason('') }}
+                      className="inline-flex h-[36px] items-center rounded-ph-md border border-ph-border bg-ph-white px-[14px] text-[13.5px] font-semibold text-ph-text-secondary transition-colors hover:bg-ph-gray-50"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={reject}
+                      disabled={acting || !rejectReason.trim()}
+                      className="inline-flex h-[36px] items-center gap-[6px] rounded-ph-md border-none bg-ph-error px-[16px] text-[13.5px] font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                    >
+                      <X size={15} /> 반려 확정
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-[10px]">
+                  <span className="flex-1 text-[13.5px] text-ph-text-muted">
+                    가이드라인을 확인한 뒤 승인 또는 반려하세요.
+                  </span>
+                  <button
+                    onClick={() => setRejectMode(true)}
+                    disabled={acting}
+                    className="inline-flex h-[40px] items-center gap-[6px] rounded-ph-md border border-ph-border bg-ph-white px-[16px] text-[15px] font-semibold text-ph-error transition-colors hover:bg-[#fdeceb] disabled:opacity-50"
+                  >
+                    <X size={17} /> 반려
+                  </button>
+                  <button
+                    onClick={approve}
+                    disabled={acting}
+                    className="inline-flex h-[40px] items-center gap-[6px] rounded-ph-md border-none bg-ph-primary px-[20px] text-[15px] font-semibold text-white transition-colors hover:bg-ph-blue-hover disabled:opacity-50"
+                  >
+                    <Check size={17} /> 승인하기
+                  </button>
+                </div>
+              )
             ) : (
-              <>
+              <div className="flex items-center gap-[10px]">
                 <span className="flex flex-1 items-center gap-[8px] text-[13.5px] text-ph-text-secondary">
                   <StatusBadge status={STATUS_KEY[sel.status ?? 'active'] ?? (sel.status ?? 'active')} />{' '}
                   처리된 상품입니다.
                 </span>
                 <button
-                  onClick={() => act('review')}
+                  onClick={() => { setRejectMode(false); setRejectReason('') }}
                   disabled={acting}
                   className="inline-flex h-[40px] items-center gap-[6px] rounded-ph-md border border-ph-border bg-ph-white px-[16px] text-[14px] font-semibold text-ph-text-secondary transition-colors hover:bg-ph-gray-50 disabled:opacity-50"
                 >
                   <RotateCcw size={15} /> 검수 대기로 되돌리기
                 </button>
-              </>
+              </div>
             )}
           </div>
         </SectionCard>
