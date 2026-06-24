@@ -3,10 +3,12 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
 import { useCartStore } from '@/store/useCartStore';
-import { useToast } from '@/store/useToastStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import api from '@/lib/auth';
-import { ShoppingCart, Trash2, ArrowLeft, CreditCard, CheckCircle2 } from 'lucide-react';
+import { createOrder } from '@/lib/payments';
+import { ShoppingCart, Trash2, ArrowLeft, CreditCard } from 'lucide-react';
 import { won } from '@/lib/utils';
 
 type LineItem = { id: string; title: string; amount: number; thumbnailUrl: string | null };
@@ -20,12 +22,11 @@ function CheckoutContent() {
   const isSingle = !!productId;
 
   const { items: cartItems, removeItem, clearCart } = useCartStore();
-  const showToast = useToast();
+  const user = useAuthStore((s) => s.user);
 
   const [singleItem, setSingleItem] = useState<LineItem | null>(null);
   const [fetchErr, setFetchErr] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,21 +51,37 @@ function CheckoutContent() {
   const total = items.reduce((s, i) => s + i.amount, 0);
 
   const handleOrder = async () => {
-    if (loading || done || items.length === 0) return;
+    if (loading || items.length === 0 || !user) return;
     setError(null);
     setLoading(true);
     try {
-      await api.post('/api/v1/payments/confirm', { productIds: items.map((i) => i.id) });
+      const orderParams = isSingle
+        ? { productId: items[0].id }
+        : { productIds: items.map((i) => i.id) };
+      const { orderId } = await createOrder(orderParams);
+
       if (!isSingle) clearCart();
-      setDone(true);
-      showToast('결제가 완료됐어요');
-      setTimeout(() => router.push(isSingle ? `/reader/${productId}` : '/mypage'), 1200);
+
+      const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!);
+      const payment = tossPayments.payment({ customerKey: user.id });
+
+      const orderName = isSingle
+        ? items[0].title
+        : `${items[0].title} 외 ${items.length - 1}건`;
+
+      await payment.requestPayment({
+        method: 'CARD',
+        amount: { currency: 'KRW', value: total },
+        orderId,
+        orderName,
+        successUrl: `${window.location.origin}/checkout/success`,
+        failUrl: `${window.location.origin}/checkout/fail`,
+      });
     } catch (e: unknown) {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         '주문 처리 중 오류가 발생했습니다.';
       setError(msg);
-    } finally {
       setLoading(false);
     }
   };
@@ -119,25 +136,9 @@ function CheckoutContent() {
             뒤로
           </button>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ph-text)', margin: 0 }}>
-            {done ? '결제 완료' : '주문 확인'}
+            주문 확인
           </h1>
         </div>
-
-        {/* 결제 완료 배너 */}
-        {done && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '14px 18px',
-            background: 'var(--ph-secondary)',
-            border: '1px solid color-mix(in srgb, var(--ph-primary) 25%, transparent)',
-            borderRadius: 'var(--ph-radius-md)',
-            marginBottom: 20,
-            fontSize: 15, fontWeight: 600, color: 'var(--ph-primary)',
-          }}>
-            <CheckCircle2 style={{ width: 20, height: 20, flexShrink: 0 }} />
-            결제가 완료됐어요. 잠시 후 이동합니다…
-          </div>
-        )}
 
         {/* 상품 목록 */}
         <div style={{
@@ -182,7 +183,7 @@ function CheckoutContent() {
                 {item.amount === 0 ? '무료' : won(item.amount)}
               </div>
               {/* 카트 모드에서만 삭제 버튼 표시 */}
-              {!isSingle && !done && (
+              {!isSingle && (
                 <button
                   onClick={() => removeItem(item.id)}
                   aria-label="삭제"
@@ -238,35 +239,31 @@ function CheckoutContent() {
         )}
 
         {/* 결제 버튼 */}
-        {!done && (
-          <button
-            onClick={handleOrder}
-            disabled={loading || items.length === 0}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              width: '100%', height: 52, border: 'none',
-              borderRadius: 'var(--ph-radius-lg)',
-              background: (loading || items.length === 0) ? 'var(--ph-text-muted)' : 'var(--ph-primary)',
-              color: '#fff',
-              fontFamily: 'var(--ph-font-family)',
-              fontSize: 16, fontWeight: 700,
-              cursor: (loading || items.length === 0) ? 'not-allowed' : 'pointer',
-              transition: 'background 0.2s',
-            }}
-          >
-            <CreditCard style={{ width: 20, height: 20 }} />
-            {loading
-              ? '처리 중...'
-              : total === 0
-              ? '무료로 받기'
-              : `${won(total)} 결제하기`}
-          </button>
-        )}
+        <button
+          onClick={handleOrder}
+          disabled={loading || items.length === 0}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            width: '100%', height: 52, border: 'none',
+            borderRadius: 'var(--ph-radius-lg)',
+            background: (loading || items.length === 0) ? 'var(--ph-text-muted)' : 'var(--ph-primary)',
+            color: '#fff',
+            fontFamily: 'var(--ph-font-family)',
+            fontSize: 16, fontWeight: 700,
+            cursor: (loading || items.length === 0) ? 'not-allowed' : 'pointer',
+            transition: 'background 0.2s',
+          }}
+        >
+          <CreditCard style={{ width: 20, height: 20 }} />
+          {loading
+            ? '처리 중...'
+            : total === 0
+            ? '무료로 받기'
+            : `${won(total)} 결제하기`}
+        </button>
 
         <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--ph-text-muted)', marginTop: 12 }}>
-          {isSingle
-            ? '결제 완료 후 리더 페이지에서 바로 사용할 수 있어요.'
-            : '주문 완료 후 구매 내역은 마이페이지에서 확인할 수 있습니다.'}
+          결제 완료 후 구매 내역은 마이페이지에서 확인할 수 있습니다.
         </p>
 
       </div>
