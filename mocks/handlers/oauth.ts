@@ -21,19 +21,19 @@ export const oauthHandlers = [
 
   http.post(`${BASE}/kakao`, async ({ request }) => {
     const body = await request.json() as {
-      kakaoId?: string;
+      oauthId?: string;
       nickname?: string;
       profileImage?: string | null;
       email?: string | null;
     };
-    const { kakaoId, nickname, email } = body ?? {};
+    const { oauthId, nickname, email } = body ?? {};
 
-    if (!kakaoId) return ERR.validation('kakaoId가 없습니다.');
+    if (!oauthId) return ERR.validation('oauthId가 없습니다.');
 
     const user = {
-      id: `user-kakao-${kakaoId}`,
+      id: `user-kakao-${oauthId}`,
       name: nickname ?? '카카오사용자',
-      email: email ?? `kakao_${kakaoId}@oauth.local`,
+      email: email ?? `kakao_${oauthId}@oauth.local`,
       role: 'BUYER' as const,
     };
 

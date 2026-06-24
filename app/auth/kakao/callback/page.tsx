@@ -75,7 +75,7 @@ function KakaoCallbackContent() {
     const getKakaoPayload = async () => {
       if (isMocking) {
         return {
-          kakaoId: 'mock-kakao-123456',
+          oauthId: 'mock-kakao-123456',
           nickname: '카카오사용자',
           profileImage: null as string | null,
           email: 'kakao@user.com' as string | null,
@@ -100,7 +100,7 @@ function KakaoCallbackContent() {
       const kakaoUser = await userRes.json();
 
       return {
-        kakaoId: String(kakaoUser.id),
+        oauthId: String(kakaoUser.id),
         nickname: kakaoUser.kakao_account?.profile?.nickname ?? '사용자',
         profileImage: kakaoUser.kakao_account?.profile?.profile_image_url ?? null,
         email: kakaoUser.kakao_account?.email ?? null,
