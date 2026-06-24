@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/auth';
+import { getWishlistIdForProduct, addWishlist, removeWishlist } from '@/lib/wishlists';
 import Image from 'next/image';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
@@ -230,20 +231,8 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
         if (orders.some((o) => o.product.id === p.id)) setPurchased(true);
       })
       .catch(() => {});
-    // 이미 찜한 경우 wishlistId를 가져옴
-    api.get('/api/v1/wishlists/exists', { params: { productId: p.id } })
-      .then((res) => {
-        if (res.data.data?.wished) {
-          api.get('/api/v1/wishlists')
-            .then((r) => {
-              const item = (r.data.data ?? []).find(
-                (w: { productId: string; wishlistId: string }) => w.productId === p.id
-              );
-              if (item) setWishlistId(item.wishlistId);
-            })
-            .catch(() => {});
-        }
-      })
+    getWishlistIdForProduct(p.id)
+      .then((id) => { if (id) setWishlistId(id); })
       .catch(() => {});
   }, [isLoggedIn, p.id]);
 
@@ -265,11 +254,11 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
     toggle(item); // 낙관적 업데이트
     try {
       if (wasInWish && wishlistId) {
-        await api.delete(`/api/v1/wishlists/${wishlistId}`);
+        await removeWishlist(wishlistId);
         setWishlistId(null);
       } else if (!wasInWish) {
-        const res = await api.post('/api/v1/wishlists', { productId: p.id });
-        setWishlistId(res.data.data?.wishlistId ?? null);
+        const data = await addWishlist(p.id);
+        setWishlistId(data.wishlistId ?? null);
       }
     } catch {
       toggle(item); // 실패 시 롤백

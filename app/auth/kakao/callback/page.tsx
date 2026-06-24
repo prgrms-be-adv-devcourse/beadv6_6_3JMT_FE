@@ -71,15 +71,24 @@ function KakaoCallbackContent() {
     }
 
     const isMocking = process.env.NEXT_PUBLIC_API_MOCKING === 'enabled';
+    const state = searchParams.get('state');
+    const isAdminFlow = state === 'admin';
 
     const getKakaoPayload = async () => {
       if (isMocking) {
-        return {
-          oauthId: 'mock-kakao-123456',
-          nickname: '카카오사용자',
-          profileImage: null as string | null,
-          email: 'kakao@user.com' as string | null,
-        };
+        return isAdminFlow
+          ? {
+              oauthId: 'mock-admin-kakao-id',
+              nickname: '관리자',
+              profileImage: null as string | null,
+              email: 'admin@prompthub.kr' as string | null,
+            }
+          : {
+              oauthId: 'mock-kakao-123456',
+              nickname: '카카오사용자',
+              profileImage: null as string | null,
+              email: 'kakao@user.com' as string | null,
+            };
       }
 
       const tokenRes = await fetch('https://kauth.kakao.com/oauth/token', {
@@ -116,12 +125,20 @@ function KakaoCallbackContent() {
       )
       .then((res) => {
         const { user, accessToken, refreshToken } = res.data.data;
-        login({ ...user, role: user.role.toLowerCase() as 'buyer' | 'seller' }, accessToken, refreshToken);
-        router.replace('/');
+        const role = user.role.toLowerCase() as 'buyer' | 'seller' | 'admin';
+
+        if (isAdminFlow && role !== 'admin') {
+          showToast('관리자 계정이 아닙니다.');
+          router.replace('/admin/login');
+          return;
+        }
+
+        login({ ...user, role }, accessToken, refreshToken);
+        router.replace(role === 'admin' ? '/admin' : '/');
       })
       .catch(() => {
         showToast('카카오 로그인에 실패했습니다. 다시 시도해주세요.');
-        router.replace('/');
+        router.replace(isAdminFlow ? '/admin/login' : '/');
       });
   }, [searchParams, login, router, showToast]);
 

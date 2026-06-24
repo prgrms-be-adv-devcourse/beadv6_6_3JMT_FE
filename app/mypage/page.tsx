@@ -7,6 +7,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useToast } from '@/store/useToastStore';
 import api from '@/lib/auth';
 import { deleteUserMe, updateUserMe } from '@/lib/users';
+import { getWishlists, type WishlistItem } from '@/lib/wishlists';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';
 import {
@@ -444,10 +445,20 @@ function MyPageContent() {
       })
       .catch(() => {})
       .finally(() => { setLoadingPurchased(false); setLoadingPayments(false); });
-    api.get('/api/v1/wishlists')
-      .then((res) => {
-        const items: { product: Prompt | null }[] = res.data.data ?? [];
-        setWishlist(items.map((item) => item.product).filter(Boolean) as Prompt[]);
+    getWishlists()
+      .then((items: WishlistItem[]) => {
+        setWishlist(items.map((item) => ({
+          id:            item.productId,
+          title:         item.title,
+          thumbnail_url: item.thumbnailUrl,
+          amount:        item.price,
+          seller:        item.sellerNickname,
+          rating:        item.averageRating,
+          salesCount:    item.salesCount,
+          category:      item.category,
+          model:         item.model,
+          desc:          '',
+        })));
       })
       .catch(() => {})
       .finally(() => setLoadingWishlist(false));

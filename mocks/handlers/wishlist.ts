@@ -1,4 +1,4 @@
-import { http } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { MOCK_WISHLISTS, WishlistItem } from '../data/users';
 import { PRODUCTS } from '../data/products';
 import { ok, okList, ERR, extractToken, getUserIdFromToken } from '../utils';
@@ -49,7 +49,7 @@ export const wishlistHandlers = [
     if (!item) return ERR.notFound('찜 항목');
 
     MOCK_WISHLISTS[userId] = items.filter((w) => w.wishlistId !== wishlistId);
-    return ok(null);
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // GET /api/v1/wishlists?page=0&size=20
@@ -62,10 +62,22 @@ export const wishlistHandlers = [
     const page     = Number(url.searchParams.get('page') ?? 0);
     const size     = Number(url.searchParams.get('size') ?? 20);
     const allItems = MOCK_WISHLISTS[userId] ?? [];
-    const mapped   = allItems.map((item) => ({
-      ...item,
-      product: PRODUCTS.find((p) => p.id === item.productId) ?? null,
-    }));
+    const mapped   = allItems.map((item) => {
+      const p = PRODUCTS.find((prod) => prod.id === item.productId);
+      return {
+        wishlistId:     item.wishlistId,
+        productId:      item.productId,
+        title:          p?.title          ?? '',
+        thumbnailUrl:   p?.thumbnail_url  ?? null,
+        price:          p?.amount         ?? 0,
+        sellerNickname: p?.seller         ?? '',
+        averageRating:  p?.rating         ?? 0,
+        salesCount:     p?.salesCount     ?? 0,
+        category:       p?.category       ?? '',
+        model:          p?.model          ?? '',
+        addedAt:        item.createdAt,
+      };
+    });
 
     // okList는 1-based page 사용, URL params는 0-based이므로 +1 변환
     return okList(mapped, page + 1, size);

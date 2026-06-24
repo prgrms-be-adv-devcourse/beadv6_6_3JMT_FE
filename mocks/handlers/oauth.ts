@@ -30,12 +30,16 @@ export const oauthHandlers = [
 
     if (!oauthId) return ERR.validation('oauthId가 없습니다.');
 
-    const user = {
-      id: `user-kakao-${oauthId}`,
-      name: nickname ?? '카카오사용자',
-      email: email ?? `kakao_${oauthId}@oauth.local`,
-      role: 'BUYER' as const,
-    };
+    const isAdminMock = oauthId === 'mock-admin-kakao-id';
+
+    const user = isAdminMock
+      ? { id: 'admin-1', name: '관리자', email: 'admin@prompthub.kr', role: 'ADMIN' as const }
+      : {
+          id: `user-kakao-${oauthId}`,
+          name: nickname ?? '카카오사용자',
+          email: email ?? `kakao_${oauthId}@oauth.local`,
+          role: 'BUYER' as const,
+        };
 
     const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
 
