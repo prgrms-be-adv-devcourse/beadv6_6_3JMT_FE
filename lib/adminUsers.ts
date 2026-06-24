@@ -36,11 +36,28 @@ export async function getAdminUsers(params?: GetAdminUsersParams): Promise<GetAd
 
 export async function updateAdminUser(
   userId: string,
-  body: { role?: 'buyer' | 'seller'; status?: 'active' | 'suspended' | 'withdrawn' },
+  body: { role?: 'buyer' | 'seller' },
 ): Promise<AdminUser> {
   const res = await api.put<{ success: boolean; data: AdminUser; message: string }>(
     `/api/v1/admin/users/${userId}`,
     body,
+  )
+  return res.data.data
+}
+
+export interface UpdateAdminUserStatusResponse {
+  id: string
+  status: AdminUser['status']
+  updatedAt: string
+}
+
+export async function updateAdminUserStatus(
+  userId: string,
+  status: AdminUser['status'],
+): Promise<UpdateAdminUserStatusResponse> {
+  const res = await api.patch<{ success: boolean; data: UpdateAdminUserStatusResponse; message: string }>(
+    `/api/v1/admin/users/${userId}/status`,
+    { status },
   )
   return res.data.data
 }

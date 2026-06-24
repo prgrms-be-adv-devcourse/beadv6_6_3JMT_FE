@@ -91,20 +91,31 @@ export const adminHandlers = [
     return okList(users, page, size);
   }),
 
-  // 유저 역할/상태 변경
+  // 유저 역할 변경
   http.put(`${BASE}/users/:id`, async ({ request, params }) => {
     if (!isAdmin(request)) return ERR.forbidden();
     const { id } = params;
-    const body = await request.json() as { role?: string; status?: string };
+    const body = await request.json() as { role?: string };
     const idx = MOCK_USERS.findIndex((u) => u.id === id);
     if (idx === -1) return ERR.notFound('유저');
     if (body.role === 'buyer' || body.role === 'seller') {
       MOCK_USERS[idx].role = body.role;
     }
-    if (body.status === 'active' || body.status === 'suspended' || body.status === 'withdrawn') {
-      MOCK_USERS[idx].status = body.status;
-    }
     return ok(MOCK_USERS[idx]);
+  }),
+
+  // 유저 상태 변경
+  http.patch(`${BASE}/users/:userId/status`, async ({ request, params }) => {
+    if (!isAdmin(request)) return ERR.forbidden();
+    const { userId } = params;
+    const body = await request.json() as { status?: string };
+    const idx = MOCK_USERS.findIndex((u) => u.id === userId);
+    if (idx === -1) return ERR.notFound('유저');
+    if (body.status !== 'active' && body.status !== 'suspended' && body.status !== 'withdrawn') {
+      return ERR.validation('status는 active, suspended, withdrawn 중 하나여야 합니다.');
+    }
+    MOCK_USERS[idx].status = body.status;
+    return ok({ id: userId, status: body.status, updatedAt: new Date().toISOString() });
   }),
 
   // 상품 목록 (전체)
