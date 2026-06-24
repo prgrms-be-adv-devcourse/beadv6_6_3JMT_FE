@@ -89,11 +89,28 @@ export function StatusBadge({ status, stopped }: { status?: string; stopped?: bo
       </span>
     );
   }
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 11px', borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-primary)', color: '#fff', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
-      판매중
-    </span>
-  );
+  if (status === 'draft') {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 11px', borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-gray-100)', color: 'var(--ph-gray-600)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
+        미등록
+      </span>
+    );
+  }
+  if (status === 'rejected') {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 11px', borderRadius: 'var(--ph-radius-full)', background: '#fef2f2', color: 'var(--ph-error)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
+        반려
+      </span>
+    );
+  }
+  if (status === 'active') {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 11px', borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-primary)', color: '#fff', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
+        판매중
+      </span>
+    );
+  }
+  return null;
 }
 
 /* ── PromptCard ──────────────────────────────────────────────────── */
@@ -221,24 +238,29 @@ export default function PromptCard({
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
         <span style={{
-          display: 'inline-flex', alignItems: 'center', padding: '3px 8px',
+          display: 'inline-block', padding: '3px 8px',
           borderRadius: 'var(--ph-radius-sm)', background: modelBg,
           border: '1px solid var(--ph-border)', fontSize: 12, fontWeight: 600,
           color: 'var(--ph-text-secondary)', whiteSpace: 'nowrap',
+          overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
         }}>
           {p.model}
         </span>
       </div>
 
-      <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.35, color: 'var(--ph-text)' }}>{p.title}</div>
+      <div style={{
+        fontSize: 16, fontWeight: 700, lineHeight: 1.35, color: 'var(--ph-text)',
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+        overflow: 'hidden', height: 44,
+      }}>{p.title}</div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ph-text-muted)', fontSize: 13 }}>
-        <Star style={{ width: 14, height: 14, color: 'var(--ph-primary)', fill: 'var(--ph-primary)' } as React.CSSProperties} />
-        <span style={{ color: 'var(--ph-text)', fontWeight: 600 }}>{p.rating}</span>
-        <span>·</span>
-        <span>{p.seller}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ph-text-muted)', fontSize: 13, minWidth: 0 }}>
+        <Star style={{ width: 14, height: 14, flexShrink: 0, color: 'var(--ph-primary)', fill: 'var(--ph-primary)' } as React.CSSProperties} />
+        <span style={{ color: 'var(--ph-text)', fontWeight: 600, flexShrink: 0 }}>{p.rating}</span>
+        <span style={{ flexShrink: 0 }}>·</span>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.seller}</span>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 2 }}>
