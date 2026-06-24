@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
-import api from '@/lib/auth';
+import { kakaoLogin } from '@/lib/oauth';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToast } from '@/store/useToastStore';
 
@@ -79,13 +79,13 @@ function KakaoCallbackContent() {
         return isAdminFlow
           ? {
               oauthId: 'mock-admin-kakao-id',
-              nickname: '관리자',
+              name: '관리자',
               profileImage: null as string | null,
               email: 'admin@prompthub.kr' as string | null,
             }
           : {
               oauthId: 'mock-kakao-123456',
-              nickname: '카카오사용자',
+              name: '카카오사용자',
               profileImage: null as string | null,
               email: 'kakao@user.com' as string | null,
             };
@@ -110,21 +110,15 @@ function KakaoCallbackContent() {
 
       return {
         oauthId: String(kakaoUser.id),
-        nickname: kakaoUser.kakao_account?.profile?.nickname ?? '사용자',
+        name: kakaoUser.kakao_account?.profile?.nickname ?? '사용자',
         profileImage: kakaoUser.kakao_account?.profile?.profile_image_url ?? null,
         email: kakaoUser.kakao_account?.email ?? null,
       };
     };
 
     getKakaoPayload()
-      .then((payload) =>
-        api.post<{ data: { user: { id: string; name: string; email: string; role: string }; accessToken: string; refreshToken?: string } }>(
-          '/api/v1/auth/oauth/kakao',
-          payload,
-        ),
-      )
-      .then((res) => {
-        const { user, accessToken, refreshToken } = res.data.data;
+      .then((payload) => kakaoLogin(payload))
+      .then(({ user, accessToken, refreshToken }) => {
         const role = user.role.toLowerCase() as 'buyer' | 'seller' | 'admin';
 
         if (isAdminFlow && role !== 'admin') {

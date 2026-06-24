@@ -22,11 +22,11 @@ export const oauthHandlers = [
   http.post(`${BASE}/kakao`, async ({ request }) => {
     const body = await request.json() as {
       oauthId?: string;
-      nickname?: string;
+      name?: string;
       profileImage?: string | null;
       email?: string | null;
     };
-    const { oauthId, nickname, email } = body ?? {};
+    const { oauthId, name, email } = body ?? {};
 
     if (!oauthId) return ERR.validation('oauthId가 없습니다.');
 
@@ -36,7 +36,7 @@ export const oauthHandlers = [
       ? { id: 'admin-1', name: '관리자', email: 'admin@prompthub.kr', role: 'ADMIN' as const }
       : {
           id: `user-kakao-${oauthId}`,
-          name: nickname ?? '카카오사용자',
+          name: name ?? '카카오사용자',
           email: email ?? `kakao_${oauthId}@oauth.local`,
           role: 'BUYER' as const,
         };
