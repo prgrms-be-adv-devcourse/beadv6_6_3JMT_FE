@@ -12,7 +12,7 @@ import Image from 'next/image';
 import {
   User, ShoppingBag, Heart, Receipt, Settings, LogOut, Store,
   AlertCircle, ArrowLeft, Lock, AlertTriangle, Star, Check, Mail,
-  ShieldCheck, Info,
+  ShieldCheck, Info, Clock, XCircle,
 } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
 import PaymentTable from '@/components/ui/PaymentTable';
@@ -586,6 +586,51 @@ function MyPageContent() {
                   </Button>
                 </div>
               </Card>
+
+              {/* 판매자 신청 상태 배너 */}
+              {user.sellerStatus === 'PENDING' && (
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 14, marginTop: 14,
+                  padding: '16px 20px', borderRadius: 'var(--ph-radius-lg)',
+                  background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.3)',
+                }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 'var(--ph-radius-full)', flexShrink: 0,
+                    background: 'rgba(234,179,8,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Clock style={{ width: 18, height: 18, color: '#d97706' }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#92400e' }}>판매자 심사가 진행 중이에요</div>
+                    <div style={{ fontSize: 13, color: '#b45309', marginTop: 3, lineHeight: 1.5 }}>
+                      보통 1–3 영업일 내로 결과를 알려드려요. 심사 완료 후 판매자 기능이 활성화됩니다.
+                    </div>
+                  </div>
+                </div>
+              )}
+              {user.sellerStatus === 'REJECTED' && (
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 14, marginTop: 14,
+                  padding: '16px 20px', borderRadius: 'var(--ph-radius-lg)',
+                  background: 'rgba(217,45,32,0.06)', border: '1px solid rgba(217,45,32,0.15)',
+                }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 'var(--ph-radius-full)', flexShrink: 0,
+                    background: 'rgba(217,45,32,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <XCircle style={{ width: 18, height: 18, color: 'var(--ph-error)' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ph-error)' }}>판매자 신청이 반려됐어요</div>
+                    <div style={{ fontSize: 13, color: 'var(--ph-text-secondary)', marginTop: 3, lineHeight: 1.5 }}>
+                      신청 조건을 다시 확인하고 재신청해보세요.
+                    </div>
+                  </div>
+                  <Button variant="secondary" size="sm" onClick={() => router.push('/apply')} style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    재신청
+                  </Button>
+                </div>
+              )}
 
               {/* 통계 카드 3개 */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 16 }}>
