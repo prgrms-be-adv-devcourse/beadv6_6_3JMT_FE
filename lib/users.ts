@@ -6,6 +6,7 @@ export type UserProfile = {
   email: string
   profileImageUrl: string | null
   role: 'BUYER' | 'SELLER'
+  provider: 'local' | 'kakao'
 }
 
 export async function getUserMe(): Promise<UserProfile> {

@@ -45,6 +45,7 @@ type UserInfo = {
   name: string;
   email: string;
   role: 'buyer' | 'seller';
+  provider: 'local' | 'kakao';
 };
 
 type NotifState = { email: boolean; marketing: boolean; newPrompt: boolean };
@@ -392,7 +393,7 @@ function MyPageContent() {
     setUserLoadError(false);
     try {
       const res = await api.get('/api/v1/users/me');
-      const u: UserInfo = res.data.data;
+      const u: UserInfo = { provider: 'local', ...res.data.data };
       setUser(u);
       setNick(u.name);
     } catch {
@@ -461,9 +462,9 @@ function MyPageContent() {
 
   const updateNickname = async (n: string) => {
     try {
-      const res = await api.put('/api/v1/users/me', { name: n });
+      const res = await api.put('/api/v1/users/me', { nickname: n });
       const updated = res.data.data;
-      setUser((u) => u ? { ...u, name: updated.name } : u);
+      setUser((u) => u ? { ...u, name: updated.nickname ?? updated.name } : u);
       if (authToken) authLogin(updated, authToken);
       setSavedNick(true);
     } catch {
@@ -773,12 +774,26 @@ function MyPageContent() {
                 <Row last>
                   <div style={{ minWidth: 120 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>비밀번호</div>
-                    <div style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 2 }}>로그인 시 사용하는 비밀번호</div>
+                    <div style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 2 }}>
+                      {user.provider === 'kakao'
+                        ? '소셜 로그인 계정은 카카오에서 비밀번호를 관리해요'
+                        : '로그인 시 사용하는 비밀번호'}
+                    </div>
                   </div>
                   <div style={{ flex: 1 }} />
-                  <Button variant="secondary" onClick={() => setPwModal(true)} style={{ whiteSpace: 'nowrap' }}>
-                    비밀번호 변경
-                  </Button>
+                  {user.provider === 'kakao' ? (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
+                      padding: '3px 10px', borderRadius: 'var(--ph-radius-full)',
+                      background: 'var(--ph-secondary)', color: 'var(--ph-primary)', fontSize: 12, fontWeight: 600,
+                    }}>
+                      카카오 계정
+                    </span>
+                  ) : (
+                    <Button variant="secondary" onClick={() => setPwModal(true)} style={{ whiteSpace: 'nowrap' }}>
+                      비밀번호 변경
+                    </Button>
+                  )}
                 </Row>
               </Card>
 
