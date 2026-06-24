@@ -18,7 +18,7 @@ import ConfirmDialog from '@/components/modals/ConfirmDialog';
 /* ── Types ─────────────────────────────────────────────────────────── */
 
 type Prompt = {
-  id: number | string;
+  id: string;
   title: string;
   category: string;
   icon: string;

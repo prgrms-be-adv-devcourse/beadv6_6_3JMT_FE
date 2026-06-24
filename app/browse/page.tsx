@@ -11,7 +11,7 @@ import Tag from '@/components/ui/Tag';
 
 type Category = { id: string; label: string; icon?: string; desc?: string };
 type Prompt = {
-  id: number; title: string; category: string; icon: string; model: string;
+  id: string; title: string; category: string; icon: string; model: string;
   amount: number; originalAmount?: number; rating: number; salesCount: number;
   seller: string; badge?: string; desc: string;
 };

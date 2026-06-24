@@ -19,7 +19,7 @@ import Button from '@/components/ui/Button';
 /* ── Types ─────────────────────────────────────────────────────────── */
 
 type Prompt = {
-  id: number | string;
+  id: string;
   title: string;
   category: string;
   icon: string;
@@ -66,8 +66,8 @@ export default function ShopPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<ActiveTab>('listings');
-  const [stopped, setStopped] = useState<Record<string | number, boolean>>({});
-  const [confirmId, setConfirmId] = useState<string | number | null>(null);
+  const [stopped, setStopped] = useState<Record<string, boolean>>({});
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const [myListings, setMyListings] = useState<Prompt[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [settlementFilter, setSettlementFilter] = useState<SettlementFilter>('all');

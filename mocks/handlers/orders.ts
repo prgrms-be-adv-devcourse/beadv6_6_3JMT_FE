@@ -28,7 +28,7 @@ export const orderHandlers = [
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const body = await request.json() as { productIds?: number[] };
+    const body = await request.json() as { productIds?: string[] };
     if (!body?.productIds?.length) return ERR.validation('주문할 상품을 선택해주세요.');
 
     const products = body.productIds

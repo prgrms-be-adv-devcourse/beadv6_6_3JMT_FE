@@ -14,7 +14,7 @@ import { won } from '@/lib/utils';
 /* ── 공유 Prompt 타입 ────────────────────────────────────────────── */
 
 export interface PromptItem {
-  id: number | string;
+  id: string;
   title: string;
   category: string;
   icon: string;

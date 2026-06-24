@@ -31,7 +31,7 @@ const TAGS = [
 ];
 
 type Prompt = {
-  id: number; title: string; category: string; icon: string; model: string;
+  id: string; title: string; category: string; icon: string; model: string;
   amount: number; originalAmount?: number; rating: number; salesCount: number;
   seller: string; badge?: string; desc: string;
 };

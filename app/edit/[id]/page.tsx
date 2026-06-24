@@ -22,7 +22,7 @@ type Category = { id: string; label: string };
 type Version = { ver: string; date: string; note: string };
 
 type Prompt = {
-  id: number;
+  id: string;
   title: string;
   category: string;
   model: string;
@@ -107,7 +107,7 @@ function Badge({
 
 /* ── EditScreen ──────────────────────────────────────────────────────── */
 
-function EditScreen({ id, prompt, versions }: { id: number; prompt: Prompt; versions: Version[] }) {
+function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; versions: Version[] }) {
   const router = useRouter();
 
   const [title, setTitle] = useState(prompt.title);
@@ -334,7 +334,7 @@ function EditScreen({ id, prompt, versions }: { id: number; prompt: Prompt; vers
 export default function EditPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const id = Number(params?.id);
+  const id = params?.id ?? '';
 
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [versions, setVersions] = useState<Version[]>([]);

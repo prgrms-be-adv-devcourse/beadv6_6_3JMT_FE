@@ -51,7 +51,7 @@ interface SellerApply {
 }
 
 interface ReviewProduct {
-  id: number
+  id: string
   title: string
   seller: string
   model: string

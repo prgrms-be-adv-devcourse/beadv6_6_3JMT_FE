@@ -26,7 +26,7 @@ type TabId = 'profile' | 'purchased' | 'wishlist' | 'payments' | 'settings';
 type PaymentStatus = 'paid' | 'requested' | 'refunded';
 
 type Prompt = {
-  id: number | string;
+  id: string;
   title: string;
   category: string;
   icon: string;

@@ -19,7 +19,7 @@ export default function AuthSync() {
     }
     api.get('/api/v1/wishlists')
       .then((res) => {
-        const items: { productId: number; product: { id: number; title: string; amount: number; thumbnail_url?: string | null } | null }[] =
+        const items: { productId: string; product: { id: string; title: string; amount: number; thumbnail_url?: string | null } | null }[] =
           res.data.data ?? [];
         setItems(
           items

@@ -54,7 +54,7 @@ function CheckoutContent() {
     setError(null);
     setLoading(true);
     try {
-      await api.post('/api/v1/payments/confirm', { productIds: items.map((i) => Number(i.id)) });
+      await api.post('/api/v1/payments/confirm', { productIds: items.map((i) => i.id) });
       if (!isSingle) clearCart();
       setDone(true);
       showToast('결제가 완료됐어요');

@@ -12,8 +12,8 @@ export const wishlistHandlers = [
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const body      = await request.json() as { productId?: string | number };
-    const productId = Number(body?.productId);
+    const body      = await request.json() as { productId?: string };
+    const productId = body?.productId;
     if (!productId) return ERR.validation('productId가 필요합니다.');
 
     const product = PRODUCTS.find((p) => p.id === productId);
@@ -78,7 +78,7 @@ export const wishlistHandlers = [
     if (!userId) return ERR.unauthorized();
 
     const url       = new URL(request.url);
-    const productId = Number(url.searchParams.get('productId'));
+    const productId = url.searchParams.get('productId') ?? '';
     const items     = MOCK_WISHLISTS[userId] ?? [];
     const wished    = items.some((w) => w.productId === productId);
 

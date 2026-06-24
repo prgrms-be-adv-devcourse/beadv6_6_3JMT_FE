@@ -12,15 +12,14 @@ export const paymentHandlers = [
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const body = await request.json() as { productIds?: (number | string)[] };
+    const body = await request.json() as { productIds?: string[] };
     if (!body?.productIds?.length) return ERR.validation('결제할 상품을 선택해주세요.');
 
-    const numericIds = body.productIds.map((id) => Number(id));
-    const products = numericIds
+    const products = body.productIds
       .map((id) => PRODUCTS.find((p) => p.id === id))
       .filter(Boolean);
 
-    if (products.length !== numericIds.length) return ERR.notFound('일부 상품');
+    if (products.length !== body.productIds.length) return ERR.notFound('일부 상품');
 
     const totalAmount = products.reduce((sum, p) => sum + (p?.amount ?? 0), 0);
     const now       = new Date().toISOString();
@@ -28,10 +27,10 @@ export const paymentHandlers = [
     const orderId   = `order-${Date.now()}`;
 
     if (!MOCK_PAYMENTS[userId]) MOCK_PAYMENTS[userId] = [];
-    MOCK_PAYMENTS[userId].push({ paymentId, orderId, productIds: numericIds, totalAmount, status: 'paid', paidAt: now });
+    MOCK_PAYMENTS[userId].push({ paymentId, orderId, productIds: body.productIds, totalAmount, status: 'paid', paidAt: now });
 
     if (!MOCK_ORDERS[userId]) MOCK_ORDERS[userId] = [];
-    numericIds.forEach((productId) => {
+    body.productIds.forEach((productId) => {
       MOCK_ORDERS[userId].push({ orderId, productId, purchasedAt: now });
     });
 

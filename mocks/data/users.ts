@@ -8,14 +8,14 @@ export type MockUser = {
 
 export type OrderItem = {
   orderId: string;
-  productId: number;
+  productId: string;
   purchasedAt: string;
 };
 
 export type PaymentItem = {
   paymentId: string;
   orderId: string;
-  productIds: number[];
+  productIds: string[];
   totalAmount: number;
   status: 'paid';
   paidAt: string;
@@ -48,16 +48,16 @@ export function getRoleByEmail(email: string): 'buyer' | 'seller' | 'admin' {
 
 export const MOCK_ORDERS: Record<string, OrderItem[]> = {
   'user-1': [
-    { orderId: 'order-101', productId: 1, purchasedAt: '2026-06-01T00:00:00.000Z' },
-    { orderId: 'order-102', productId: 2, purchasedAt: '2026-05-20T00:00:00.000Z' },
-    { orderId: 'order-103', productId: 4, purchasedAt: '2026-04-10T00:00:00.000Z' },
+    { orderId: 'order-101', productId: '11111111-1111-1111-1111-111111111111', purchasedAt: '2026-06-01T00:00:00.000Z' },
+    { orderId: 'order-102', productId: '22222222-2222-2222-2222-222222222222', purchasedAt: '2026-05-20T00:00:00.000Z' },
+    { orderId: 'order-103', productId: '44444444-4444-4444-4444-444444444444', purchasedAt: '2026-04-10T00:00:00.000Z' },
   ],
   'user-4': [
-    { orderId: 'order-401', productId: 1, purchasedAt: '2026-06-10T00:00:00.000Z' },
-    { orderId: 'order-402', productId: 3, purchasedAt: '2026-06-05T00:00:00.000Z' },
+    { orderId: 'order-401', productId: '11111111-1111-1111-1111-111111111111', purchasedAt: '2026-06-10T00:00:00.000Z' },
+    { orderId: 'order-402', productId: '33333333-3333-3333-3333-333333333333', purchasedAt: '2026-06-05T00:00:00.000Z' },
   ],
   'user-2': [
-    { orderId: 'order-201', productId: 6, purchasedAt: '2026-06-10T00:00:00.000Z' },
+    { orderId: 'order-201', productId: '66666666-6666-6666-6666-666666666666', purchasedAt: '2026-06-10T00:00:00.000Z' },
   ],
 };
 
@@ -65,21 +65,21 @@ export const MOCK_PAYMENTS: Record<string, PaymentItem[]> = {};
 
 export type WishlistItem = {
   wishlistId: string;
-  productId: number;
+  productId: string;
   createdAt: string;
 };
 
 export const MOCK_WISHLISTS: Record<string, WishlistItem[]> = {
   'user-1': [
-    { wishlistId: 'wl-1', productId: 3, createdAt: '2026-06-01T00:00:00.000Z' },
-    { wishlistId: 'wl-2', productId: 5, createdAt: '2026-06-05T00:00:00.000Z' },
+    { wishlistId: 'wl-1', productId: '33333333-3333-3333-3333-333333333333', createdAt: '2026-06-01T00:00:00.000Z' },
+    { wishlistId: 'wl-2', productId: '55555555-5555-5555-5555-555555555555', createdAt: '2026-06-05T00:00:00.000Z' },
   ],
   'user-4': [
-    { wishlistId: 'wl-5', productId: 2, createdAt: '2026-06-10T00:00:00.000Z' },
+    { wishlistId: 'wl-5', productId: '22222222-2222-2222-2222-222222222222', createdAt: '2026-06-10T00:00:00.000Z' },
   ],
   'user-2': [
-    { wishlistId: 'wl-3', productId: 1, createdAt: '2026-06-10T00:00:00.000Z' },
-    { wishlistId: 'wl-4', productId: 7, createdAt: '2026-06-12T00:00:00.000Z' },
+    { wishlistId: 'wl-3', productId: '11111111-1111-1111-1111-111111111111', createdAt: '2026-06-10T00:00:00.000Z' },
+    { wishlistId: 'wl-4', productId: '77777777-7777-7777-7777-777777777777', createdAt: '2026-06-12T00:00:00.000Z' },
   ],
 };
 

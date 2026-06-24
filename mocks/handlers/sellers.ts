@@ -81,10 +81,10 @@ export const sellerHandlers = [
     const status = url.searchParams.get('status');
 
     const payments = [
-      { id: 'pay-1', productId: 1, amount: 5900, status: 'paid',      paidAt: '2026-06-10T00:00:00.000Z' },
-      { id: 'pay-2', productId: 1, amount: 5900, status: 'paid',      paidAt: '2026-06-08T00:00:00.000Z' },
-      { id: 'pay-3', productId: 7, amount: 4500, status: 'requested', paidAt: '2026-06-05T00:00:00.000Z' },
-      { id: 'pay-4', productId: 7, amount: 4500, status: 'refunded',  paidAt: '2026-06-01T00:00:00.000Z' },
+      { id: 'pay-1', productId: '11111111-1111-1111-1111-111111111111', amount: 5900, status: 'paid',      paidAt: '2026-06-10T00:00:00.000Z' },
+      { id: 'pay-2', productId: '11111111-1111-1111-1111-111111111111', amount: 5900, status: 'paid',      paidAt: '2026-06-08T00:00:00.000Z' },
+      { id: 'pay-3', productId: '77777777-7777-7777-7777-777777777777', amount: 4500, status: 'requested', paidAt: '2026-06-05T00:00:00.000Z' },
+      { id: 'pay-4', productId: '77777777-7777-7777-7777-777777777777', amount: 4500, status: 'refunded',  paidAt: '2026-06-01T00:00:00.000Z' },
     ];
 
     const filtered = status ? payments.filter((p) => p.status === status) : payments;

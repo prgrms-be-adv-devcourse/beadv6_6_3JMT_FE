@@ -6,7 +6,7 @@ import { MOCK_USERS } from '../data/users';
 const BASE = '*/api/v1/products';
 
 // userId → productId → rating (MSW 세션 동안 유지)
-const RATINGS: Record<string, Record<number, number>> = {};
+const RATINGS: Record<string, Record<string, number>> = {};
 
 export const productHandlers = [
   // GET /api/v1/products
@@ -39,7 +39,7 @@ export const productHandlers = [
 
   // GET /api/v1/products/:id
   http.get(`${BASE}/:id`, ({ params }) => {
-    const product = PRODUCTS.find((p) => p.id === Number(params.id));
+    const product = PRODUCTS.find((p) => p.id === String(params.id));
     if (!product) return ERR.notFound('프로덕트');
 
     const { category, ...productWithoutCategory } = product;
@@ -59,7 +59,7 @@ export const productHandlers = [
 
   // GET /api/v1/products/:id/related
   http.get(`${BASE}/:id/related`, ({ params, request }) => {
-    const product = PRODUCTS.find((p) => p.id === Number(params.id));
+    const product = PRODUCTS.find((p) => p.id === String(params.id));
     if (!product) return ERR.notFound('프로덕트');
 
     const url    = new URL(request.url);
@@ -90,7 +90,7 @@ export const productHandlers = [
     }
 
     const newProduct = {
-      id: PRODUCTS.length + 1,
+      id: crypto.randomUUID(),
       ...body,
       icon: 'sparkles',
       rating: 0,
@@ -112,7 +112,7 @@ export const productHandlers = [
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const idx = PRODUCTS.findIndex((p) => p.id === Number(params.id));
+    const idx = PRODUCTS.findIndex((p) => p.id === String(params.id));
     if (idx === -1) return ERR.notFound('프로덕트');
     if (PRODUCTS[idx].sellerId !== userId) return ERR.forbidden();
 
@@ -163,7 +163,7 @@ export const productHandlers = [
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const productId = Number(params.id);
+    const productId = String(params.id);
     const rating = RATINGS[userId]?.[productId] ?? 0;
     return ok({ rating });
   }),
@@ -174,7 +174,7 @@ export const productHandlers = [
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const productId = Number(params.id);
+    const productId = String(params.id);
     const product   = PRODUCTS.find((p) => p.id === productId);
     if (!product) return ERR.notFound('프로덕트');
 
@@ -201,7 +201,7 @@ export const productHandlers = [
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const product = PRODUCTS.find((p) => p.id === Number(params.id));
+    const product = PRODUCTS.find((p) => p.id === String(params.id));
     if (!product) return ERR.notFound('프로덕트');
     if (product.sellerId !== userId) return ERR.forbidden();
 

@@ -11,7 +11,7 @@ interface AdminOrder {
   id: string
   userId: string
   userName: string
-  productId: number
+  productId: string
   productTitle: string
   amount: number
   status: string

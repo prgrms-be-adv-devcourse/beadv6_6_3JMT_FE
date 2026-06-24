@@ -22,7 +22,7 @@ import { SectionCard } from '@/components/admin/SectionCard'
 import { Badge, StatusBadge } from '@/components/admin/Badge'
 
 interface AdminProduct {
-  id: number
+  id: string
   title: string
   category: string
   icon?: string
@@ -80,7 +80,7 @@ export default function AdminProductsPage() {
   const { token } = useAuthStore()
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [filter, setFilter] = useState<FilterId>('review')
-  const [selId, setSelId] = useState<number | null>(null)
+  const [selId, setSelId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)
 

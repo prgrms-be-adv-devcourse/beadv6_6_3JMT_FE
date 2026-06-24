@@ -22,7 +22,7 @@ import Card from '@/components/ui/Card';
 /* ── Types ─────────────────────────────────────────────────────────── */
 
 type Prompt = {
-  id: number;
+  id: string;
   title: string;
   category: string;
   icon: string;
@@ -226,7 +226,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
     if (!isLoggedIn) return;
     api.get('/api/v1/orders')
       .then((res) => {
-        const orders = res.data.data as { product: { id: number } }[];
+        const orders = res.data.data as { product: { id: string } }[];
         if (orders.some((o) => o.product.id === p.id)) setPurchased(true);
       })
       .catch(() => {});
@@ -237,7 +237,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
           api.get('/api/v1/wishlists')
             .then((r) => {
               const item = (r.data.data ?? []).find(
-                (w: { productId: number; wishlistId: string }) => w.productId === p.id
+                (w: { productId: string; wishlistId: string }) => w.productId === p.id
               );
               if (item) setWishlistId(item.wishlistId);
             })
