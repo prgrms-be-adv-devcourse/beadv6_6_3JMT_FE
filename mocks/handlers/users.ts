@@ -1,5 +1,5 @@
 import { http } from 'msw';
-import { MOCK_USERS } from '../data/users';
+import { MOCK_USERS, MOCK_PASSWORDS, SELLER_APPLICATIONS } from '../data/users';
 import { ok, ERR, extractToken, getUserIdFromToken } from '../utils';
 
 const BASE = '*/api/v1/users/me';
@@ -14,11 +14,12 @@ export const userHandlers = [
     const user = MOCK_USERS.find((u) => u.id === userId);
     if (!user) return ERR.notFound('유저');
 
-    return ok(user);
+    const sellerStatus = SELLER_APPLICATIONS[userId]?.status ?? null;
+    return ok({ ...user, sellerStatus });
   }),
 
-  // PUT /api/v1/users/me
-  http.put(BASE, async ({ request }) => {
+  // PATCH /api/v1/users/me
+  http.patch(BASE, async ({ request }) => {
     const token  = extractToken(request);
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
@@ -26,11 +27,14 @@ export const userHandlers = [
     const idx = MOCK_USERS.findIndex((u) => u.id === userId);
     if (idx === -1) return ERR.notFound('유저');
 
-    const body = await request.json() as { name?: string; email?: string };
-    if (body.name  !== undefined) MOCK_USERS[idx].name  = body.name;
-    if (body.email !== undefined) MOCK_USERS[idx].email = body.email;
+    const body = await request.json() as { name?: string; email?: string; password?: string };
+    const changed: Record<string, string> = { id: MOCK_USERS[idx].id };
 
-    return ok(MOCK_USERS[idx]);
+    if (body.name     !== undefined) { MOCK_USERS[idx].name  = body.name;     changed.name  = body.name; }
+    if (body.email    !== undefined) { MOCK_USERS[idx].email = body.email;     changed.email = body.email; }
+    if (body.password !== undefined) { MOCK_PASSWORDS[userId] = body.password; }
+
+    return ok(changed);
   }),
 
   // DELETE /api/v1/users/me

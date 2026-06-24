@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useToast } from '@/store/useToastStore';
 import api from '@/lib/auth';
-import { deleteUserMe } from '@/lib/users';
+import { deleteUserMe, updateUserMe } from '@/lib/users';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';
 import {
@@ -47,6 +47,7 @@ type UserInfo = {
   email: string;
   role: 'buyer' | 'seller';
   provider: 'local' | 'kakao';
+  sellerStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
 };
 
 type NotifState = { email: boolean; marketing: boolean; newPrompt: boolean };
@@ -364,7 +365,7 @@ const NOTIF_ROWS: { k: keyof NotifState; t: string; d: string }[] = [
 function MyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isLoggedIn, openLoginModal, login: authLogin, token: authToken, logout } = useAuthStore();
+  const { isLoggedIn, openLoginModal, login: authLogin, token: authToken, logout, user: authUser } = useAuthStore();
   const { items: cartItems } = useCartStore();
   const showToast = useToast();
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -464,10 +465,9 @@ function MyPageContent() {
 
   const updateNickname = async (n: string) => {
     try {
-      const res = await api.put('/api/v1/users/me', { nickname: n });
-      const updated = res.data.data;
-      setUser((u) => u ? { ...u, name: updated.nickname ?? updated.name } : u);
-      if (authToken) authLogin(updated, authToken);
+      const updated = await updateUserMe({ name: n });
+      setUser((u) => u ? { ...u, name: updated.name ?? u.name } : u);
+      if (authToken && authUser) authLogin({ ...authUser, ...updated }, authToken);
       setSavedNick(true);
     } catch {
       setSavedNick(false);
@@ -475,10 +475,9 @@ function MyPageContent() {
   };
   const updateEmail = async (e: string) => {
     try {
-      const res = await api.put('/api/v1/users/me', { email: e });
-      const updated = res.data.data;
-      setUser((u) => u ? { ...u, email: updated.email } : u);
-      if (authToken) authLogin(updated, authToken);
+      const updated = await updateUserMe({ email: e });
+      setUser((u) => u ? { ...u, email: updated.email ?? u.email } : u);
+      if (authToken && authUser) authLogin({ ...authUser, ...updated }, authToken);
       showToast('이메일이 변경됐어요');
     } catch {
       setUser((u) => u ? { ...u, email: e } : u);

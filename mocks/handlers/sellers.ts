@@ -1,5 +1,5 @@
 import { http } from 'msw';
-import { MOCK_USERS, SELLER_APPLY_STATUS } from '../data/users';
+import { MOCK_USERS, SELLER_APPLICATIONS } from '../data/users';
 import { PRODUCTS } from '../data/products';
 import { ok, ERR, extractToken, getUserIdFromToken } from '../utils';
 import { SETTLEMENTS, nextSettlementStatus } from '../data/settlements';
@@ -22,21 +22,32 @@ export const sellerHandlers = [
     if (!body?.agreedToTerms) return ERR.validation('이용약관에 동의해야 합니다.');
     if (!body?.categories?.length) return ERR.validation('카테고리를 1개 이상 선택해주세요.');
 
-    SELLER_APPLY_STATUS[userId] = 'PENDING';
-    return ok({
+    const application = {
       sellerRequestId: crypto.randomUUID(),
-      status: 'PENDING',
+      status: 'PENDING' as const,
+      categories: body.categories ?? [],
+      introduction: body.introduction ?? null,
+      portfolioUrl: body.portfolioUrl ?? null,
       submittedAt: new Date().toISOString(),
+      reviewedAt: null,
+      rejectReason: null,
+    };
+    SELLER_APPLICATIONS[userId] = application;
+    return ok({
+      sellerRequestId: application.sellerRequestId,
+      status: application.status,
+      submittedAt: application.submittedAt,
     }, 201);
   }),
 
-  // GET /api/v1/sellers/apply-status
+  // GET /api/v1/sellers/apply-status (레거시 — apply/page.tsx 호환용)
   http.get(`${BASE}/apply-status`, ({ request }) => {
     const token  = extractToken(request);
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const status = SELLER_APPLY_STATUS[userId] ?? 'NOT_APPLIED';
+    const application = SELLER_APPLICATIONS[userId];
+    const status = application?.status ?? 'NOT_APPLIED';
     return ok({ status });
   }),
 

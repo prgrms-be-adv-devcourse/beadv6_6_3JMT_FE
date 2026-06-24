@@ -5,12 +5,30 @@ export type UserProfile = {
   name: string
   email: string
   profileImageUrl: string | null
-  role: 'BUYER' | 'SELLER'
+  role: 'buyer' | 'seller' | 'admin'
   provider: 'local' | 'kakao'
+  sellerStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | null
 }
 
 export async function getUserMe(): Promise<UserProfile> {
   const res = await api.get<{ success: boolean; data: UserProfile; message: string }>('/api/v1/users/me')
+  return res.data.data
+}
+
+export interface UpdateUserMeRequest {
+  name?: string
+  email?: string
+  password?: string
+}
+
+export interface UpdateUserMeResponse {
+  id: string
+  name?: string
+  email?: string
+}
+
+export async function updateUserMe(params: UpdateUserMeRequest): Promise<UpdateUserMeResponse> {
+  const res = await api.patch<{ success: boolean; data: UpdateUserMeResponse; message: string }>('/api/v1/users/me', params)
   return res.data.data
 }
 

@@ -1,8 +1,7 @@
 import { http } from 'msw';
-import { MOCK_USERS } from '../data/users';
+import { MOCK_USERS, SELLER_APPLICATIONS } from '../data/users';
 import { PRODUCTS } from '../data/products';
 import { ok, okList, ERR, extractToken, getUserIdFromToken } from '../utils';
-import { SELLER_APPLY_STATUS } from '../data/users';
 import { SETTLEMENTS, nextSettlementStatus } from '../data/settlements';
 
 const BASE = '*/api/v1/admin';
@@ -122,12 +121,11 @@ export const adminHandlers = [
   http.get(`${BASE}/sellers/applies`, ({ request }) => {
     if (!isAdmin(request)) return ERR.forbidden();
     const applies = Object.entries(SELLER_APPLIES).map(([id, apply]) => ({ id, ...apply }));
-    // SELLER_APPLY_STATUS에 있는 pending 신청자도 포함
-    const extra = Object.entries(SELLER_APPLY_STATUS)
+    const extra = Object.entries(SELLER_APPLICATIONS)
       .filter(([uid]) => !applies.find((a) => a.userId === uid))
-      .map(([uid, status]) => {
+      .map(([uid, app]) => {
         const user = MOCK_USERS.find((u) => u.id === uid);
-        return { id: `apply-${uid}`, userId: uid, userName: user?.name ?? uid, email: user?.email ?? '', categories: [], introduction: '', portfolioLink: '', appliedAt: new Date().toISOString(), status };
+        return { id: `apply-${uid}`, userId: uid, userName: user?.name ?? uid, email: user?.email ?? '', categories: app.categories, introduction: app.introduction ?? '', portfolioLink: app.portfolioUrl ?? '', appliedAt: app.submittedAt, status: app.status };
       });
     return ok([...applies, ...extra]);
   }),

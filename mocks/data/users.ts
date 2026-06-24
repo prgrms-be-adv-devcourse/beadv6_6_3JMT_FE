@@ -89,7 +89,18 @@ export const MOCK_NOTIFICATIONS: NotificationItem[] = [
   { id: 'notif-3', icon: '📢', text: '판매자 신청이 승인되었습니다.', timestamp: '2026-06-14T10:00:00.000Z', read: true },
 ];
 
-export const SELLER_APPLY_STATUS: Record<string, 'PENDING' | 'APPROVED' | 'REJECTED'> = {};
+export type SellerApplicationData = {
+  sellerRequestId: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  categories: string[];
+  introduction: string | null;
+  portfolioUrl: string | null;
+  submittedAt: string;
+  reviewedAt: string | null;
+  rejectReason: string | null;
+};
+
+export const SELLER_APPLICATIONS: Record<string, SellerApplicationData> = {};
 
 export const MOCK_PASSWORDS: Record<string, string> = {
   'user-1': 'password123',
