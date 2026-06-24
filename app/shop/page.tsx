@@ -8,7 +8,7 @@ import Image from 'next/image';
 import {
   Plus, Layers, ShoppingBag, Wallet,
   Info, SearchCheck, Pencil, CirclePause, Lock,
-  AlertTriangle, Receipt, Banknote,
+  AlertTriangle, Receipt, Banknote, Send,
 } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
 import { StatusBadge } from '@/components/admin/Badge';
@@ -31,8 +31,9 @@ type Prompt = {
   seller: string;
   badge?: string;
   desc: string;
-  status?: 'review' | 'active';
+  status?: 'review' | 'active' | 'draft' | 'rejected' | 'stopped';
   thumbnail_url?: string | null;
+  rejectionReason?: string | null;
 };
 
 type SettlementStatus =
@@ -66,7 +67,9 @@ export default function ShopPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<ActiveTab>('listings');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'review' | 'rejected' | 'draft' | 'stopped'>('all');
   const [stopped, setStopped] = useState<Record<string, boolean>>({});
+  const [expandedReason, setExpandedReason] = useState<Record<string, boolean>>({});
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [myListings, setMyListings] = useState<Prompt[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
@@ -89,7 +92,20 @@ export default function ShopPage() {
       api.get('/api/v1/sellers/me/products').catch(() => ({ data: { data: [] } })),
       api.get('/api/v1/sellers/me/stats').catch(() => ({ data: { data: {} } })),
     ]).then(([productsRes, statsRes]) => {
-      const products = productsRes.data.data ?? [];
+      const raw = productsRes.data.data ?? [];
+      const toStatus = (s: string) => {
+        if (s === 'PENDING_REVIEW') return 'review'
+        if (s === 'ON_SALE') return 'active'
+        if (s === 'REJECTED') return 'rejected'
+        if (s === 'STOPPED') return 'stopped'
+        return 'draft'
+      }
+      const products = raw.map((p: { productId: string; status: string; rejectionReason?: string; [key: string]: unknown }) => ({
+        ...p,
+        id: p.productId,
+        status: toStatus(p.status),
+        rejectionReason: p.rejectionReason ?? null,
+      }));
       const d = statsRes.data.data ?? {};
       setMyListings(products);
       setStats([
@@ -112,6 +128,15 @@ export default function ShopPage() {
     }
   };
 
+  const submitForReview = async (id: string) => {
+    try {
+      await api.patch(`/api/v1/products/${id}/submit`)
+      setMyListings((prev) => prev.map((p) => p.id === id ? { ...p, status: 'review' as const } : p))
+    } catch {
+      // 실패 무시
+    }
+  }
+
   const isStopped = (id: string | number) => !!stopped[id];
   const stopSelling = async (id: string | number) => {
     try {
@@ -124,8 +149,23 @@ export default function ShopPage() {
     }
   };
 
-  const activeCount = myListings.filter((p) => !isStopped(p.id) && p.status !== 'review').length;
+  const activeCount = myListings.filter((p) => !isStopped(p.id) && p.status === 'active').length;
   const reviewCount = myListings.filter((p) => p.status === 'review').length;
+
+  const filteredListings = statusFilter === 'all'
+    ? myListings
+    : statusFilter === 'stopped'
+      ? myListings.filter((p) => p.status === 'stopped' || isStopped(p.id))
+      : myListings.filter((p) => p.status === statusFilter && !isStopped(p.id));
+
+  const statusFilterTabs: { id: typeof statusFilter; label: string }[] = [
+    { id: 'all',      label: `전체 ${myListings.length}` },
+    { id: 'active',   label: `판매중 ${myListings.filter((p) => p.status === 'active' && !isStopped(p.id)).length}` },
+    { id: 'review',   label: `검수중 ${myListings.filter((p) => p.status === 'review').length}` },
+    { id: 'rejected', label: `반려 ${myListings.filter((p) => p.status === 'rejected').length}` },
+    { id: 'draft',    label: `미등록 ${myListings.filter((p) => p.status === 'draft').length}` },
+    { id: 'stopped',  label: `판매중단 ${myListings.filter((p) => p.status === 'stopped' || isStopped(p.id)).length}` },
+  ];
 
   // 누적 정산 수익 = 지급 완료(PAID) 정산 건의 지급액 합계
   const settledRevenue = settlements
@@ -220,16 +260,25 @@ export default function ShopPage() {
       {/* ── 내 프롬프트 탭 ── */}
       {activeTab === 'listings' && (
         <section style={{ marginTop: 28, paddingBottom: 80 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>내 프롬프트</h2>
-            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 9px', borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-gray-100)', color: 'var(--ph-gray-600)', fontSize: 13, fontWeight: 600 }}>
-              판매 중 {activeCount}
-            </span>
-            {reviewCount > 0 && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 9px', borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', fontSize: 13, fontWeight: 600 }}>
-                검수중 {reviewCount}
-              </span>
-            )}
+          <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 16px' }}>내 프롬프트</h2>
+
+          {/* 상태 필터 탭 */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
+            {statusFilterTabs.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setStatusFilter(id)}
+                style={{
+                  padding: '7px 14px', border: `1.5px solid ${statusFilter === id ? 'var(--ph-primary)' : 'var(--ph-border)'}`,
+                  borderRadius: 'var(--ph-radius-full)', background: statusFilter === id ? 'var(--ph-secondary)' : 'var(--ph-surface)',
+                  color: statusFilter === id ? 'var(--ph-primary)' : 'var(--ph-text-secondary)',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--ph-font-family)',
+                  transition: 'all .15s ease',
+                }}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -238,9 +287,9 @@ export default function ShopPage() {
           </p>
 
           <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
-            {myListings.map((p) => {
+            {filteredListings.map((p) => {
               const review = p.status === 'review';
-              const off = isStopped(p.id);
+              const off = p.status === 'stopped' || isStopped(p.id);
               const dim = review || off;
 
               return (
@@ -251,15 +300,49 @@ export default function ShopPage() {
                   </div>
 
                   {/* 카드 아래 액션 */}
-                  {review ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ph-text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <SearchCheck style={{ width: 14, height: 14, color: 'var(--ph-primary)' }} /> 관리자 검수 대기 중이에요
-                      </span>
+                  {p.status === 'draft' ? (
+                    <div style={{ display: 'flex', gap: 8 }}>
                       <Button variant="secondary" size="sm" fullWidth onClick={() => router.push(`/edit/${p.id}`)}>
                         <Pencil style={{ width: 15, height: 15 }} /> 수정
                       </Button>
+                      <Button variant="solid" size="sm" fullWidth onClick={() => submitForReview(p.id)}>
+                        <Send style={{ width: 15, height: 15 }} /> 검수 요청
+                      </Button>
                     </div>
+                  ) : p.status === 'rejected' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {p.rejectionReason && (
+                        <div style={{ fontSize: 12.5, color: 'var(--ph-error)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5 }}>
+                            <AlertTriangle style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1 }} />
+                            <span style={{
+                              overflow: expandedReason[p.id] ? 'visible' : 'hidden',
+                              display: expandedReason[p.id] ? 'block' : '-webkit-box',
+                              WebkitLineClamp: expandedReason[p.id] ? undefined : 2,
+                              WebkitBoxOrient: 'vertical' as const,
+                            }}>{p.rejectionReason}</span>
+                          </div>
+                          <button
+                            onClick={() => setExpandedReason((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ph-error)', fontSize: 12, fontWeight: 600, padding: 0, textAlign: 'left', textDecoration: 'underline', fontFamily: 'var(--ph-font-family)' }}
+                          >
+                            {expandedReason[p.id] ? '접기' : '전체보기'}
+                          </button>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <Button variant="secondary" size="sm" fullWidth onClick={() => router.push(`/edit/${p.id}`)}>
+                          <Pencil style={{ width: 15, height: 15 }} /> 수정
+                        </Button>
+                        <Button variant="solid" size="sm" fullWidth onClick={() => submitForReview(p.id)}>
+                          <Send style={{ width: 15, height: 15 }} /> 재요청
+                        </Button>
+                      </div>
+                    </div>
+                  ) : review ? (
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ph-text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <SearchCheck style={{ width: 14, height: 14, color: 'var(--ph-primary)' }} /> 관리자 검수 대기 중이에요
+                    </span>
                   ) : off ? (
                     <Button variant="secondary" size="sm" fullWidth disabled>
                       <Lock style={{ width: 15, height: 15 }} /> 재등록 불가
@@ -267,11 +350,14 @@ export default function ShopPage() {
                   ) : confirmId === p.id ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ph-error)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <AlertTriangle style={{ width: 14, height: 14 }} /> 중단하면 다시 등록할 수 없어요
+                        <AlertTriangle style={{ width: 14, height: 14 }} />
+                        {p.status === 'draft' ? '삭제하면 복구할 수 없어요' : '중단하면 다시 등록할 수 없어요'}
                       </span>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <Button variant="secondary" size="sm" fullWidth onClick={() => setConfirmId(null)}>취소</Button>
-                        <Button variant="solid" size="sm" fullWidth onClick={() => stopSelling(p.id)}>중단</Button>
+                        <Button variant="solid" size="sm" fullWidth onClick={() => stopSelling(p.id)}>
+                          {p.status === 'draft' ? '삭제' : '중단'}
+                        </Button>
                       </div>
                     </div>
                   ) : (
@@ -280,7 +366,8 @@ export default function ShopPage() {
                         <Pencil style={{ width: 15, height: 15 }} /> 수정
                       </Button>
                       <Button variant="secondary" size="sm" fullWidth onClick={() => setConfirmId(p.id)}>
-                        <CirclePause style={{ width: 15, height: 15 }} /> 판매 중단
+                        <CirclePause style={{ width: 15, height: 15 }} />
+                        {p.status === 'draft' ? '삭제' : '판매 중단'}
                       </Button>
                     </div>
                   )}

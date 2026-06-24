@@ -5,9 +5,10 @@ import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/auth';
 import {
   ArrowLeft, Pencil, ArrowRight, History,
-  AlertCircle,
+  AlertCircle, Eye, Images, X, Store,
 } from 'lucide-react';
 import FormField from '@/components/ui/FormField';
+import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
 import ImageUpload from '@/components/ui/ImageUpload';
 import { useToast } from '@/store/useToastStore';
 import Label from '@/components/ui/Label';
@@ -17,7 +18,7 @@ import Tag from '@/components/ui/Tag';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
-type Category = { id: string; label: string };
+type Category = { id: string; label: string; icon: string };
 
 type Version = { ver: string; date: string; note: string };
 
@@ -28,30 +29,21 @@ type Prompt = {
   model: string;
   amount: number;
   desc: string;
+  status?: string;
+  thumbnailUrl?: string | null;
+  tags?: string[];
   versions?: Version[];
 };
-
-type ProductDetailResponse = Omit<Prompt, 'category'> & {
-  category?: string;
-  cat?: string;
-};
-
-function normalizeProductDetail(product: ProductDetailResponse): Prompt {
-  return {
-    ...product,
-    category: product.category ?? product.cat ?? '',
-  };
-}
 
 /* ── Data ───────────────────────────────────────────────────────────── */
 
 const CATEGORIES: Category[] = [
-  { id: 'image',     label: '이미지 생성' },
-  { id: 'writing',   label: '글쓰기'      },
-  { id: 'coding',    label: '코딩'        },
-  { id: 'marketing', label: '마케팅'      },
-  { id: 'chatbot',   label: '챗봇'        },
-  { id: 'data',      label: '데이터 분석' },
+  { id: 'image',     label: '이미지 생성', icon: 'image'          },
+  { id: 'writing',   label: '글쓰기',      icon: 'pen-line'       },
+  { id: 'coding',    label: '코딩',        icon: 'code-xml'       },
+  { id: 'marketing', label: '마케팅',      icon: 'megaphone'      },
+  { id: 'chatbot',   label: '챗봇',        icon: 'message-circle' },
+  { id: 'data',      label: '데이터 분석', icon: 'bar-chart-3'    },
 ];
 
 function nextVer(latest: string, type: 'MAJOR' | 'PATCH'): string {
@@ -84,24 +76,28 @@ function Badge({
     : tone === 'blue' ? 'var(--ph-primary)'
     : 'var(--ph-gray-600)';
   return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        background: bg,
-        color: fg,
-        fontFamily: 'var(--ph-font-family)',
-        fontSize: 13,
-        fontWeight: 600,
-        lineHeight: 1,
-        padding: '5px 9px',
-        borderRadius: 'var(--ph-radius-full)',
-        whiteSpace: 'nowrap',
-        ...style,
-      }}
-    >
+    <span style={{ display: 'inline-flex', alignItems: 'center', background: bg, color: fg, fontFamily: 'var(--ph-font-family)', fontSize: 13, fontWeight: 600, lineHeight: 1, padding: '5px 9px', borderRadius: 'var(--ph-radius-full)', whiteSpace: 'nowrap', ...style }}>
       {children}
     </span>
+  );
+}
+
+/* ── TagInput ────────────────────────────────────────────────────────── */
+
+function TagInput({ value, onChange, placeholder }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; placeholder?: string }) {
+  const [focus, setFocus] = useState(false);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, border: `1px solid ${focus ? 'var(--ph-primary)' : 'var(--ph-border)'}`, borderRadius: 'var(--ph-radius-md)', padding: '0 12px', background: 'var(--ph-surface)', transition: 'border-color .15s' }}>
+      <span style={{ fontWeight: 700, color: 'var(--ph-text-muted)' }}>#</span>
+      <input
+        value={value}
+        onChange={onChange}
+        onFocus={() => setFocus(true)}
+        onBlur={() => setFocus(false)}
+        placeholder={placeholder}
+        style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: 'var(--ph-font-family)', fontSize: 15, color: 'var(--ph-text)', padding: '11px 0', minWidth: 0 }}
+      />
+    </div>
   );
 }
 
@@ -109,38 +105,37 @@ function Badge({
 
 function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; versions: Version[] }) {
   const router = useRouter();
+  const isDraft = prompt.status === 'DRAFT';
 
   const [title, setTitle] = useState(prompt.title);
   const [category, setCategory] = useState(prompt.category);
   const [model, setModel] = useState(prompt.model);
   const [price, setPrice] = useState(prompt.amount === 0 ? '0' : String(prompt.amount));
   const [body, setBody] = useState(prompt.desc);
+  const [tags, setTags] = useState<string[]>(prompt.tags ?? []);
+  const [tagInput, setTagInput] = useState('');
+  const [thumbUrl, setThumbUrl] = useState<string | null>(prompt.thumbnailUrl ?? null);
+  const [galleryUrls, setGalleryUrls] = useState<(string | null)[]>(Array(5).fill(null));
   const [versionType, setVersionType] = useState<'PATCH' | 'MAJOR'>('PATCH');
   const [changeReason, setChangeReason] = useState('');
   const [noteErr, setNoteErr] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const showToast = useToast();
 
-  const curVer = (versions[0]?.ver ?? 'v1.0').replace(/^v/, '');
+  const curVer = (versions[0]?.ver ?? '1.0').replace(/^v/, '');
   const nxtVer = nextVer(curVer, versionType);
+  const catObj = CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
 
-  const taStyle: React.CSSProperties = {
-    width: '100%',
-    boxSizing: 'border-box',
-    border: '1px solid var(--ph-border)',
-    borderRadius: 'var(--ph-radius-md)',
-    padding: '12px 14px',
-    fontFamily: 'var(--ph-font-family)',
-    fontSize: 15,
-    lineHeight: 1.6,
-    resize: 'vertical',
-    outline: 'none',
-    color: 'var(--ph-text)',
+  const addTag = (e: React.FormEvent) => {
+    e.preventDefault();
+    const v = tagInput.trim().replace(/^#/, '');
+    if (v && !tags.includes(v) && tags.length < 8) setTags([...tags, v]);
+    setTagInput('');
   };
+  const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
 
   const save = async () => {
-    if (!changeReason.trim()) {
+    if (!isDraft && !changeReason.trim()) {
       setNoteErr(true);
       showToast('변경 내용을 입력해 주세요');
       return;
@@ -152,12 +147,15 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
         title, category, model,
         amount: Number(price),
         desc: body, content: body,
-        versionType,
-        changeReason,
+        thumbnailUrl: thumbUrl,
+        tags,
+        ...(isDraft ? {} : { versionType, changeReason }),
       });
-      const successMsg = versionType === 'MAJOR'
-        ? '검수 대기 상태로 전환됐어요'
-        : '수정사항이 바로 적용됐어요';
+      const successMsg = isDraft
+        ? '저장됐어요'
+        : versionType === 'MAJOR'
+          ? '검수 대기 상태로 전환됐어요'
+          : '수정사항이 바로 적용됐어요';
       showToast(successMsg);
       setTimeout(() => router.push('/shop'), 1200);
     } catch (e: unknown) {
@@ -175,8 +173,22 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     }
   };
 
+  const previewItem: PromptItem = {
+    id: 'preview',
+    title: title.trim() || '프롬프트 제목이 여기에 표시돼요',
+    category,
+    icon: catObj.icon,
+    model: model.trim() || '모델 미정',
+    amount: price ? Number(price) : 0,
+    rating: '신규',
+    salesCount: 0,
+    seller: '내 상점',
+    desc: body || '',
+    thumbnail_url: thumbUrl ?? undefined,
+  };
+
   return (
-    <div style={{ maxWidth: 920, margin: '0 auto', padding: '40px 32px 0' }}>
+    <div style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 32px 0' }}>
       {/* 뒤로가기 */}
       <button
         onClick={() => router.push('/shop')}
@@ -192,139 +204,203 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
             <Pencil style={{ width: 14, height: 14 }} /> 상품 수정
           </div>
           <h1 style={{ fontSize: 33, fontWeight: 700, letterSpacing: '-0.015em', margin: 0 }}>프롬프트 수정</h1>
-          <p style={{ fontSize: 16, color: 'var(--ph-text-secondary)', margin: '8px 0 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            저장하면{' '}
-            <Badge tone="neutral">현재 v{curVer}</Badge>
-            <ArrowRight style={{ width: 15, height: 15, color: 'var(--ph-text-muted)' }} />
-            <Badge tone="blue" soft={false}>v{nxtVer}</Badge>
-            {' '}로 업데이트돼요.{' '}
-            <span style={{ color: versionType === 'PATCH' ? 'var(--ph-primary)' : '#f59e0b', fontWeight: 600 }}>
-              {versionType === 'PATCH' ? '✓ 바로 적용됩니다.' : '⏱ 검수 후 적용됩니다.'}
-            </span>
-          </p>
+          {!isDraft && (
+            <p style={{ fontSize: 16, color: 'var(--ph-text-secondary)', margin: '8px 0 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              저장하면{' '}
+              <Badge tone="neutral">현재 v{curVer}</Badge>
+              <ArrowRight style={{ width: 15, height: 15, color: 'var(--ph-text-muted)' }} />
+              <Badge tone="blue" soft={false}>v{nxtVer}</Badge>
+              {' '}로 업데이트돼요.{' '}
+              <span style={{ color: versionType === 'PATCH' ? 'var(--ph-primary)' : '#f59e0b', fontWeight: 600 }}>
+                {versionType === 'PATCH' ? '✓ 바로 적용됩니다.' : '⏱ 검수 후 적용됩니다.'}
+              </span>
+            </p>
+          )}
         </div>
       </div>
 
-      {/* 폼 — 단일 컬럼 */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 40, alignItems: 'start' }}>
 
-        {/* 기본 정보 카드 */}
-        <Card padding="28px">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-            <FormField label="프롬프트 제목" hint={`${title.length}/60`} value={title} maxLength={60} onChange={(v) => setTitle(v)} placeholder="예: 전환율 높이는 랜딩 카피 작성" />
-            <div>
-              <Label>카테고리</Label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {CATEGORIES.map((c) => (
-                  <Tag key={c.id} selected={category === c.id} onClick={() => setCategory(c.id)}>{c.label}</Tag>
-                ))}
+        {/* ── 폼 ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+          {/* 기본 정보 카드 */}
+          <Card padding="28px">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+              <FormField label="프롬프트 제목" hint={`${title.length}/60`} value={title} maxLength={60} onChange={(v) => setTitle(v)} placeholder="예: 전환율 높이는 랜딩 카피 작성" />
+              <div>
+                <Label>카테고리</Label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {CATEGORIES.map((c) => (
+                    <Tag key={c.id} selected={category === c.id} onClick={() => setCategory(c.id)}>{c.label}</Tag>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <FormField label="대상 모델" value={model} onChange={(v) => setModel(v)} placeholder="예: GPT-4o" />
+                <FormField label="가격" value={price} onChange={(v) => setPrice(v.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="4900" leading={<span style={{ fontWeight: 700 }}>₩</span>} />
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <FormField label="대상 모델" value={model} onChange={(v) => setModel(v)} placeholder="예: GPT-4o" />
-              <FormField label="가격" value={price} onChange={(v) => setPrice(v.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="4900" leading={<span style={{ fontWeight: 700 }}>₩</span>} />
+          </Card>
+
+          {/* 프롬프트 내용 카드 */}
+          <Card padding="28px">
+            <FormField
+              label="프롬프트 내용"
+              hint={`${body.length}자`}
+              type="textarea"
+              value={body}
+              onChange={(v) => setBody(v)}
+              rows={9}
+              placeholder={'실제 판매할 프롬프트 본문을 입력하세요.\n\n예) 당신은 전문 카피라이터입니다...'}
+            />
+            <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Eye style={{ width: 14, height: 14 }} /> 입력한 내용은 오른쪽 미리보기에 실시간으로 반영돼요.
+            </p>
+          </Card>
+
+          {/* 태그 & 이미지 카드 */}
+          <Card padding="28px">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+              {/* 태그 */}
+              <div>
+                <Label hint={`${tags.length}/8`}>태그</Label>
+                <form onSubmit={addTag} style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <TagInput
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      placeholder="태그를 입력하고 Enter (예: 카피라이팅)"
+                    />
+                  </div>
+                  <Button variant="secondary" size="sm" type="submit">추가</Button>
+                </form>
+                {tags.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                    {tags.map((t) => (
+                      <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 8px 6px 12px', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-full)', fontSize: 13, fontWeight: 600 }}>
+                        #{t}
+                        <button type="button" onClick={() => removeTag(t)} style={{ display: 'inline-flex', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ph-primary)', padding: 0 }}>
+                          <X style={{ width: 14, height: 14 }} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 대표 썸네일 */}
+              <div>
+                <Label hint="권장 4:3 · 최대 5MB">대표 썸네일</Label>
+                <ImageUpload value={thumbUrl} onChange={setThumbUrl} height={220} placeholder="썸네일을 클릭하거나 드래그해 업로드" />
+              </div>
+
+              {/* 소개 이미지 */}
+              <div>
+                <Label hint="최대 5장">소개 이미지</Label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+                  {galleryUrls.map((url, i) => (
+                    <ImageUpload
+                      key={i}
+                      value={url}
+                      onChange={(v) => setGalleryUrls((prev) => { const next = [...prev]; next[i] = v; return next; })}
+                      height={96}
+                      placeholder="+ 추가"
+                    />
+                  ))}
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Images style={{ width: 14, height: 14 }} /> 예시 결과·사용법 이미지를 추가하면 구매자가 상세 페이지에서 확인할 수 있어요.
+                </p>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        {/* 프롬프트 내용 카드 */}
-        <Card padding="28px">
-          <FormField label="프롬프트 내용" hint={`${body.length}자`} type="textarea" value={body} onChange={(v) => setBody(v)} rows={8} placeholder="판매할 프롬프트 본문을 입력하세요." />
-        </Card>
+          {/* 버전 유형 + 변경 내용 — DRAFT 제외 */}
+          {!isDraft && (
+            <Card padding="28px" style={{ border: `1px solid ${noteErr ? 'var(--ph-error)' : 'var(--ph-border)'}` }}>
+              <div style={{ marginBottom: 20 }}>
+                <Label>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                    <History style={{ width: 16, height: 16, color: 'var(--ph-primary)' }} /> 버전 유형
+                  </span>
+                </Label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {(['PATCH', 'MAJOR'] as const).map((type) => {
+                    const sel = versionType === type;
+                    const isPatch = type === 'PATCH';
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setVersionType(type)}
+                        style={{ textAlign: 'left', padding: '14px 16px', border: `1.5px solid ${sel ? 'var(--ph-primary)' : 'var(--ph-border)'}`, borderRadius: 'var(--ph-radius-md)', background: sel ? 'var(--ph-secondary)' : 'var(--ph-surface)', cursor: 'pointer', transition: 'border-color .15s, background .15s', fontFamily: 'var(--ph-font-family)' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${sel ? 'var(--ph-primary)' : 'var(--ph-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {sel && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ph-primary)' }} />}
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ph-text)' }}>{type}</span>
+                          <span style={{ fontSize: 12, color: 'var(--ph-text-muted)' }}>v{curVer} → v{nextVer(curVer, type)}</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--ph-text-secondary)', lineHeight: 1.4, paddingLeft: 24 }}>
+                          {isPatch ? '교정·오타·내용 보강 등 작은 변경' : '프롬프트 구조·목적이 크게 바뀔 때'}
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 600, paddingLeft: 24, marginTop: 5, color: isPatch ? 'var(--ph-primary)' : '#f59e0b' }}>
+                          {isPatch ? '✓ 바로 적용돼요' : '⏱ 검수 후 적용돼요'}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-        {/* 대표 썸네일 */}
-        <Card padding="28px">
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text)', marginBottom: 4 }}>대표 썸네일</div>
-          <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '0 0 12px' }}>권장 비율 4:3 · JPG/PNG · 최대 5MB</p>
-          <ImageUpload
-            value={thumbUrl}
-            onChange={setThumbUrl}
-            height={220}
-            placeholder="썸네일을 클릭하거나 드래그해 업로드"
-          />
-        </Card>
-
-        {/* 버전 유형 + 변경 내용 — 필수 */}
-        <Card padding="28px" style={{ border: `1px solid ${noteErr ? 'var(--ph-error)' : 'var(--ph-border)'}` }}>
-          {/* 버전 유형 선택 */}
-          <div style={{ marginBottom: 20 }}>
-            <Label>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                <History style={{ width: 16, height: 16, color: 'var(--ph-primary)' }} /> 버전 유형
-              </span>
-            </Label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {(['PATCH', 'MAJOR'] as const).map((type) => {
-                const sel = versionType === type;
-                const isPatch = type === 'PATCH';
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setVersionType(type)}
-                    style={{
-                      textAlign: 'left',
-                      padding: '14px 16px',
-                      border: `1.5px solid ${sel ? 'var(--ph-primary)' : 'var(--ph-border)'}`,
-                      borderRadius: 'var(--ph-radius-md)',
-                      background: sel ? 'var(--ph-secondary)' : 'var(--ph-surface)',
-                      cursor: 'pointer',
-                      transition: 'border-color .15s, background .15s',
-                      fontFamily: 'var(--ph-font-family)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${sel ? 'var(--ph-primary)' : 'var(--ph-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {sel && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ph-primary)' }} />}
-                      </div>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ph-text)' }}>{type}</span>
-                      <span style={{ fontSize: 12, color: 'var(--ph-text-muted)' }}>v{curVer} → v{nextVer(curVer, type)}</span>
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--ph-text-secondary)', lineHeight: 1.4, paddingLeft: 24 }}>
-                      {isPatch ? '교정·오타·내용 보강 등 작은 변경' : '프롬프트 구조·목적이 크게 바뀔 때'}
-                    </div>
-                    <div style={{ fontSize: 12, fontWeight: 600, paddingLeft: 24, marginTop: 5, color: isPatch ? 'var(--ph-primary)' : '#f59e0b' }}>
-                      {isPatch ? '✓ 바로 적용돼요' : '⏱ 검수 후 적용돼요'}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 변경 내용 */}
-          <Label hint={`${changeReason.length}/500 · 필수`}>변경 내용</Label>
-          <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '0 0 12px' }}>
-            이번 수정에서 무엇이 바뀌었는지 적어 주세요. 구매자에게 버전 기록으로 표시돼요.
-          </p>
-          <textarea
-            value={changeReason}
-            onChange={(e) => { setChangeReason(e.target.value); setNoteErr(false); }}
-            maxLength={500}
-            rows={3}
-            placeholder="예: 프롬프트 지시문 개선, 예시 3개 추가"
-            style={{ ...taStyle, borderColor: noteErr ? 'var(--ph-error)' : 'var(--ph-border)' }}
-          />
-          {noteErr && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 13, fontWeight: 600, color: 'var(--ph-error)' }}>
-              <AlertCircle style={{ width: 15, height: 15 }} /> 변경 내용은 필수예요
-            </div>
+              <Label hint={`${changeReason.length}/500 · 필수`}>변경 내용</Label>
+              <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '0 0 12px' }}>
+                이번 수정에서 무엇이 바뀌었는지 적어 주세요. 구매자에게 버전 기록으로 표시돼요.
+              </p>
+              <textarea
+                value={changeReason}
+                onChange={(e) => { setChangeReason(e.target.value); setNoteErr(false); }}
+                maxLength={500}
+                rows={3}
+                placeholder="예: 프롬프트 지시문 개선, 예시 3개 추가"
+                style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${noteErr ? 'var(--ph-error)' : 'var(--ph-border)'}`, borderRadius: 'var(--ph-radius-md)', padding: '12px 14px', fontFamily: 'var(--ph-font-family)', fontSize: 15, lineHeight: 1.6, resize: 'vertical', outline: 'none', color: 'var(--ph-text)' }}
+              />
+              {noteErr && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 13, fontWeight: 600, color: 'var(--ph-error)' }}>
+                  <AlertCircle style={{ width: 15, height: 15 }} /> 변경 내용은 필수예요
+                </div>
+              )}
+            </Card>
           )}
-        </Card>
 
-        {/* 버튼 영역 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 8 }}>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-            <Button variant="secondary" size="lg" onClick={() => router.push('/shop')}>취소</Button>
-            <Button variant="solid" size="lg" disabled={saving || !title.trim()} onClick={save}>
-              {saving ? '저장 중...' : '새 버전으로 저장'}
-            </Button>
+          {/* 버튼 영역 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 8 }}>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
+              <Button variant="secondary" size="lg" onClick={() => router.push('/shop')}>취소</Button>
+              <Button variant="solid" size="lg" disabled={saving || !title.trim()} onClick={save}>
+                {saving ? '저장 중...' : isDraft ? '저장' : '새 버전으로 저장'}
+              </Button>
+            </div>
           </div>
         </div>
+
+        {/* ── 미리보기 ── */}
+        <div style={{ position: 'sticky', top: 24 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-full)', fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
+            <Store style={{ width: 14, height: 14 }} /> 카드 미리보기
+          </div>
+          <PromptCard p={previewItem} />
+          <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Eye style={{ width: 14, height: 14 }} /> 실제 마켓에 표시될 카드 형태예요.
+          </p>
+        </div>
+
       </div>
 
       <div style={{ height: 80 }} />
-
     </div>
   );
 }
@@ -343,11 +419,21 @@ export default function EditPage() {
 
   useEffect(() => {
     if (!id) return;
-    api.get(`/api/v1/products/${id}`)
+    api.get(`/api/v1/sellers/me/products/${id}`)
       .then((res) => {
         const d = res.data.data;
-        setPrompt(normalizeProductDetail(d));
-        setVersions(d.versions ?? []);
+        setPrompt({
+          id: d.productId,
+          title: d.title,
+          category: d.category ?? '',
+          model: d.model,
+          amount: d.amount,
+          desc: d.desc,
+          status: d.status,
+          thumbnailUrl: d.thumbnailUrl ?? null,
+          tags: d.tags ?? [],
+        });
+        setVersions(d.version ? [{ ver: d.version, date: '', note: '' }] : []);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));

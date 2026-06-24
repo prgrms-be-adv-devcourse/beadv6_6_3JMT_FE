@@ -112,7 +112,7 @@ export default function SellPage() {
   };
   const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
 
-  const submit = async () => {
+  const saveProduct = async (navigate: boolean) => {
     if (!title.trim()) { showToast('프롬프트 제목을 입력해 주세요'); return; }
     if (loading) return;
     setLoading(true);
@@ -124,17 +124,25 @@ export default function SellPage() {
         amount: Number(price),
         desc: body,
         content: body,
+        thumbnailUrl: thumbUrl,
+        tags,
       });
-      setStatus('submitted');
-      showToast('검수 요청이 접수됐어요 · 관리자 승인 후 판매가 시작돼요');
-      router.push('/shop');
+      if (navigate) {
+        showToast('등록됐어요 · 내 상점에서 검수 요청을 해주세요');
+        router.push('/shop');
+      } else {
+        setStatus('saved');
+        showToast('임시저장됐어요');
+      }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      showToast(msg ?? '등록에 실패했어요. 다시 시도해 주세요');
+      showToast(msg ?? '저장에 실패했어요. 다시 시도해 주세요');
     } finally {
       setLoading(false);
     }
   };
+
+  const submit = () => saveProduct(true);
 
   const previewItem: PromptItem = {
     id: 'preview',
@@ -297,7 +305,7 @@ export default function SellPage() {
               </span>
             )}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-              <Button variant="secondary" size="lg" onClick={() => setStatus('saved')}>임시저장</Button>
+              <Button variant="secondary" size="lg" disabled={loading} onClick={() => saveProduct(false)}>임시저장</Button>
               <Button variant="solid" size="lg" disabled={loading} onClick={submit}>{loading ? '등록 중...' : '등록하기'}</Button>
             </div>
           </div>
