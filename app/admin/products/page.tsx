@@ -15,9 +15,10 @@ import {
   X,
   RotateCcw,
   Info,
+  Search,
 } from 'lucide-react'
-import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/auth'
+import { useAuthStore } from '@/store/useAuthStore'
 import { SectionCard } from '@/components/admin/SectionCard'
 import { Badge, StatusBadge } from '@/components/admin/Badge'
 
@@ -42,7 +43,7 @@ const STATUS_KEY: Record<string, string> = {
   rejected: 'rejected',
 }
 
-type FilterId = 'review' | 'active' | 'all'
+type FilterId = 'review' | 'active' | 'rejected' | 'all'
 
 const CATEGORY_LABEL: Record<string, string> = {
   image: '이미지',
@@ -89,6 +90,7 @@ export default function AdminProductsPage() {
   const { token } = useAuthStore()
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [filter, setFilter] = useState<FilterId>('review')
+  const [search, setSearch] = useState('')
   const [selId, setSelId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)
@@ -104,9 +106,7 @@ export default function AdminProductsPage() {
     if (!token) return
     setLoading(true)
     try {
-      const res = await api.get('/api/v1/admin/products', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await api.get('/api/v1/admin/products')
       const raw: {
         productId: string
         title: string
@@ -138,6 +138,7 @@ export default function AdminProductsPage() {
     () => ({
       review: products.filter((p) => (p.status ?? 'active') === 'review').length,
       active: products.filter((p) => (p.status ?? 'active') === 'active').length,
+      rejected: products.filter((p) => (p.status ?? 'active') === 'rejected').length,
       all: products.length,
     }),
     [products],
@@ -146,13 +147,18 @@ export default function AdminProductsPage() {
   const tabs: { id: FilterId; label: string; count: number }[] = [
     { id: 'review', label: '검수 대기', count: counts.review },
     { id: 'active', label: '게시중', count: counts.active },
+    { id: 'rejected', label: '반려', count: counts.rejected },
     { id: 'all', label: '전체', count: counts.all },
   ]
 
-  const list = useMemo(
-    () => (filter === 'all' ? products : products.filter((p) => (p.status ?? 'active') === filter)),
-    [products, filter],
-  )
+  const list = useMemo(() => {
+    const byStatus = filter === 'all' ? products : products.filter((p) => (p.status ?? 'active') === filter)
+    if (!search.trim()) return byStatus
+    const q = search.trim().toLowerCase()
+    return byStatus.filter(
+      (p) => p.title.toLowerCase().includes(q) || p.seller.toLowerCase().includes(q),
+    )
+  }, [products, filter, search])
 
   // 현재 목록 내에서 유효한 선택 유지
   useEffect(() => {
@@ -175,12 +181,19 @@ export default function AdminProductsPage() {
     if (!sel || acting) return
     setActing(true)
     try {
-      await api.patch(
-        `/api/v1/admin/products/${sel.id}/approve`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
+      await api.patch(`/api/v1/admin/products/${sel.id}/approve`, {})
       setProducts((prev) => prev.map((p) => (p.id === sel.id ? { ...p, status: 'active' } : p)))
+    } finally {
+      setActing(false)
+    }
+  }
+
+  async function revert() {
+    if (!sel || acting) return
+    setActing(true)
+    try {
+      await api.patch(`/api/v1/admin/products/${sel.id}/revert`, {})
+      setProducts((prev) => prev.map((p) => (p.id === sel.id ? { ...p, status: 'review' } : p)))
     } finally {
       setActing(false)
     }
@@ -190,11 +203,7 @@ export default function AdminProductsPage() {
     if (!sel || acting || !rejectReason.trim()) return
     setActing(true)
     try {
-      await api.patch(
-        `/api/v1/admin/products/${sel.id}/reject`,
-        { reason: rejectReason },
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
+      await api.patch(`/api/v1/admin/products/${sel.id}/reject`, { reason: rejectReason })
       setProducts((prev) => prev.map((p) => (p.id === sel.id ? { ...p, status: 'rejected' } : p)))
       setRejectMode(false)
       setRejectReason('')
@@ -208,6 +217,21 @@ export default function AdminProductsPage() {
       {/* ── 목록 ─────────────────────────────────────── */}
       <SectionCard title="검수 대기 상품" sub={`${counts.review}건 대기`} bodyStyle={{ padding: 0 }}>
         <div className="border-b border-ph-border px-[18px] py-[14px]">
+          <div className="mb-[12px] flex items-center gap-[8px] rounded-ph-md border border-ph-border bg-ph-white px-[12px] py-[8px]">
+            <Search size={14} className="flex-shrink-0 text-ph-text-muted" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="상품명 또는 판매자 검색"
+              className="flex-1 bg-transparent text-[13.5px] text-ph-text outline-none placeholder:text-ph-text-muted"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="flex-shrink-0 text-ph-text-muted hover:text-ph-text">
+                <X size={13} />
+              </button>
+            )}
+          </div>
           <div className="inline-flex gap-[6px] rounded-ph-md bg-ph-gray-50 p-[4px]">
             {tabs.map((t) => {
               const on = t.id === filter
@@ -420,7 +444,7 @@ export default function AdminProductsPage() {
                   처리된 상품입니다.
                 </span>
                 <button
-                  onClick={() => { setRejectMode(false); setRejectReason('') }}
+                  onClick={revert}
                   disabled={acting}
                   className="inline-flex h-[40px] items-center gap-[6px] rounded-ph-md border border-ph-border bg-ph-white px-[16px] text-[14px] font-semibold text-ph-text-secondary transition-colors hover:bg-ph-gray-50 disabled:opacity-50"
                 >
