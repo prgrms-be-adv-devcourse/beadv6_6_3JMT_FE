@@ -22,29 +22,30 @@ export const orderHandlers = [
     return ok(result);
   }),
 
-  // POST /api/v1/orders
+  // POST /api/v1/orders — 단건({ productId }) 또는 장바구니({ productIds })
   http.post(BASE, async ({ request }) => {
     const token  = extractToken(request);
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const body = await request.json() as { productIds?: string[] };
-    if (!body?.productIds?.length) return ERR.validation('주문할 상품을 선택해주세요.');
+    const body = await request.json() as { productId?: string; productIds?: string[] };
 
-    const products = body.productIds
-      .map((id) => PRODUCTS.find((p) => p.id === id))
-      .filter(Boolean);
+    const ids: string[] = body.productId
+      ? [body.productId]
+      : (body.productIds ?? []);
 
-    if (products.length !== body.productIds.length) return ERR.notFound('일부 상품');
+    if (!ids.length) return ERR.validation('주문할 상품을 선택해주세요.');
 
-    const totalAmount = products.reduce((sum, p) => sum + (p?.amount ?? 0), 0);
-    const orderId    = `order-${Date.now()}`;
+    const products = ids.map((id) => PRODUCTS.find((p) => p.id === id)).filter(Boolean);
+    if (products.length !== ids.length) return ERR.notFound('일부 상품');
+
+    const orderId = `order-${Date.now()}`;
 
     if (!MOCK_ORDERS[userId]) MOCK_ORDERS[userId] = [];
-    body.productIds.forEach((productId) => {
+    ids.forEach((productId) => {
       MOCK_ORDERS[userId].push({ orderId, productId, purchasedAt: new Date().toISOString() });
     });
 
-    return ok({ orderId, totalAmount, products }, 201);
+    return ok({ orderId }, 201);
   }),
 ];
