@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useToast } from '@/store/useToastStore';
 import api from '@/lib/api';
+import { deleteUserMe } from '@/lib/users';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';
 import {
@@ -416,12 +417,13 @@ function MyPageContent() {
     if (withdrawing) return;
     setWithdrawing(true);
     try {
-      await api.delete('/api/v1/users/me');
+      await deleteUserMe();
       logout();
       showToast('회원 탈퇴가 완료됐어요.');
       router.push('/');
-    } catch {
-      showToast('탈퇴 처리 중 오류가 발생했어요. 다시 시도해 주세요.');
+    } catch (ex: unknown) {
+      const msg = (ex as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showToast(msg ?? '탈퇴 처리 중 오류가 발생했어요. 다시 시도해 주세요.');
       setWithdrawing(false);
       setWithdrawModal(false);
     }
