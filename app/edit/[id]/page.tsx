@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import api from '@/lib/api';
+import api from '@/lib/auth';
 import {
   ArrowLeft, Pencil, ArrowRight, History,
   AlertCircle,

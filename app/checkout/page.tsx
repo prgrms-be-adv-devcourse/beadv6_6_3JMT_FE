@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCartStore } from '@/store/useCartStore';
 import { useToast } from '@/store/useToastStore';
-import api from '@/lib/api';
+import api from '@/lib/auth';
 import { ShoppingCart, Trash2, ArrowLeft, CreditCard, CheckCircle2 } from 'lucide-react';
 import { won } from '@/lib/utils';
 

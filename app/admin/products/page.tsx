@@ -17,7 +17,7 @@ import {
   Info,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
-import api from '@/lib/api'
+import api from '@/lib/auth'
 import { SectionCard } from '@/components/admin/SectionCard'
 import { Badge, StatusBadge } from '@/components/admin/Badge'
 

@@ -19,7 +19,7 @@ import {
   X,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
-import api from '@/lib/api'
+import api from '@/lib/auth'
 
 type BadgeKey = 'sellers' | 'products' | 'settlements'
 

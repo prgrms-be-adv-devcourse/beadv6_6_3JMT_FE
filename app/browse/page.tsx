@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import api from '@/lib/api';
+import api from '@/lib/auth';
 import { X, Check, SearchX } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
 import Tag from '@/components/ui/Tag';

@@ -89,7 +89,7 @@ export const MOCK_NOTIFICATIONS: NotificationItem[] = [
   { id: 'notif-3', icon: '📢', text: '판매자 신청이 승인되었습니다.', timestamp: '2026-06-14T10:00:00.000Z', read: true },
 ];
 
-export const SELLER_APPLY_STATUS: Record<string, 'pending' | 'approved' | 'rejected'> = {};
+export const SELLER_APPLY_STATUS: Record<string, 'PENDING' | 'APPROVED' | 'REJECTED'> = {};
 
 export const MOCK_PASSWORDS: Record<string, string> = {
   'user-1': 'password123',

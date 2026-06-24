@@ -14,16 +14,20 @@ export const sellerHandlers = [
     if (!userId) return ERR.unauthorized();
 
     const body = await request.json() as {
-      selectedCategories?: string[];
+      categories?: string[];
       introduction?: string;
-      portfolioLink?: string;
+      portfolioUrl?: string;
       agreedToTerms?: boolean;
     };
     if (!body?.agreedToTerms) return ERR.validation('이용약관에 동의해야 합니다.');
-    if (!body?.selectedCategories?.length) return ERR.validation('카테고리를 1개 이상 선택해주세요.');
+    if (!body?.categories?.length) return ERR.validation('카테고리를 1개 이상 선택해주세요.');
 
-    SELLER_APPLY_STATUS[userId] = 'pending';
-    return ok({ status: 'pending', message: '신청이 접수되었습니다. 검토 후 승인됩니다.' }, 201);
+    SELLER_APPLY_STATUS[userId] = 'PENDING';
+    return ok({
+      sellerRequestId: crypto.randomUUID(),
+      status: 'PENDING',
+      submittedAt: new Date().toISOString(),
+    }, 201);
   }),
 
   // GET /api/v1/sellers/apply-status
@@ -32,7 +36,7 @@ export const sellerHandlers = [
     const userId = getUserIdFromToken(token);
     if (!userId) return ERR.unauthorized();
 
-    const status = SELLER_APPLY_STATUS[userId] ?? 'not_applied';
+    const status = SELLER_APPLY_STATUS[userId] ?? 'NOT_APPLIED';
     return ok({ status });
   }),
 

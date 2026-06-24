@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Check, X, Store } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
-import api from '@/lib/api'
+import api from '@/lib/auth'
 import { SectionCard } from '@/components/admin/SectionCard'
 import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { Badge, StatusBadge } from '@/components/admin/Badge'

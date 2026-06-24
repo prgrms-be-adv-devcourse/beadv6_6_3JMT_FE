@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Sparkles, X, MessageCircle, Info } from 'lucide-react';
-import api from '@/lib/api';
+import api from '@/lib/auth';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /* ── 타입 ──────────────────────────────────────────────── */

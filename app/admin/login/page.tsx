@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sparkles, ShieldCheck, Mail, Lock, Info, LockKeyhole } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
-import api from '@/lib/api'
+import api from '@/lib/auth'
 
 export default function AdminLoginPage() {
   const router = useRouter()

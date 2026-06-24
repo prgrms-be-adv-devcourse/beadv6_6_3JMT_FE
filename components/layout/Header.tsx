@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishStore } from '@/store/useWishStore';
 import Logo from '@/components/ui/Logo';
-import api from '@/lib/api';
+import api from '@/lib/auth';
 import { won } from '@/lib/utils';
 import {
   Search,

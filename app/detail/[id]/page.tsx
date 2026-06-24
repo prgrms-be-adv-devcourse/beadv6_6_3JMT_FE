@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import api from '@/lib/api';
+import api from '@/lib/auth';
 import Image from 'next/image';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';

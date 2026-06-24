@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useAuthStore } from '@/store/useAuthStore'
-import api from '@/lib/api'
+import api from '@/lib/auth'
 import { SectionCard, LinkAction } from '@/components/admin/SectionCard'
 import { Identity } from '@/components/admin/DataTable'
 import { ICON_MAP } from '@/lib/iconMap'

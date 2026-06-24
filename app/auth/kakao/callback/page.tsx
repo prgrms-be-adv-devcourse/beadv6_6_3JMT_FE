@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
-import api from '@/lib/api';
+import api from '@/lib/auth';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToast } from '@/store/useToastStore';
 

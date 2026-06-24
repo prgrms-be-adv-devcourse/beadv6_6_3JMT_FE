@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
-import api from '@/lib/api';
+import api from '@/lib/auth';
 
 export default function AuthSync() {
   const pathname = usePathname();

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
-import api from '@/lib/api';
+import api from '@/lib/auth';
 import {
   ArrowLeft, CalendarCheck, FileText, Lock, Download,
   AlertTriangle, CheckCircle2, MessageCircle, Sparkles,

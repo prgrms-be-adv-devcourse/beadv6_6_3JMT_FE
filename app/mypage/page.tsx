@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useToast } from '@/store/useToastStore';
-import api from '@/lib/api';
+import api from '@/lib/auth';
 import { deleteUserMe } from '@/lib/users';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
-import api from '@/lib/api';
+import { registerSeller, getSellerApplyStatus } from '@/lib/sellers';
 import {
   ArrowLeft, Store, Send, SearchCheck, Check, Clock,
   Link as LinkIcon, BadgePercent, Lock,
@@ -128,7 +128,7 @@ export default function ApplyPage() {
 
   const [picked, setPicked] = useState<string[]>([]);
   const [intro, setIntro] = useState('');
-  const [link, setLink] = useState('');
+  const [portfolioUrl, setPortfolioUrl] = useState('');
   const [agree, setAgree] = useState(false);
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -139,10 +139,9 @@ export default function ApplyPage() {
 
   useEffect(() => {
     if (!isLoggedIn) return;
-    api.get('/api/v1/sellers/apply-status')
-      .then((res) => {
-        const status: string = res.data.data?.status;
-        if (status && status !== 'not_applied') {
+    getSellerApplyStatus()
+      .then(({ status }) => {
+        if (status && status !== 'NOT_APPLIED') {
           setDone(true);
         }
       })
@@ -161,10 +160,10 @@ export default function ApplyPage() {
     setSubmitting(true);
     setSubmitError('');
     try {
-      await api.post('/api/v1/seller', {
-        selectedCategories: picked,
+      await registerSeller({
+        categories: picked,
         introduction: intro,
-        portfolioLink: link,
+        portfolioUrl,
         agreedToTerms: agree,
       });
       setDone(true);
@@ -363,8 +362,8 @@ export default function ApplyPage() {
           <Card padding="28px">
             <Label hint="선택">포트폴리오 / 링크</Label>
             <Input
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
+              value={portfolioUrl}
+              onChange={(e) => setPortfolioUrl(e.target.value)}
               placeholder="블로그, 포트폴리오, SNS 주소"
               leading={<LinkIcon style={{ width: 16, height: 16, color: 'var(--ph-text-muted)' }} />}
             />

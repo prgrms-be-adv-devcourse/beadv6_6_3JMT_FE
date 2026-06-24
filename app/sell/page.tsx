@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import api from '@/lib/api';
+import api from '@/lib/auth';
 import { ArrowLeft, Store, Eye, Images, Check, CheckCircle2, X } from 'lucide-react';
 import FormField from '@/components/ui/FormField';
 import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';

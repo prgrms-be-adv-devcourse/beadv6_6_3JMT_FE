@@ -93,4 +93,4 @@ Pretendard Variable을 CDN으로 로드한다 (번들 인라인 금지).
 
 @AGENTS.md
 
-api 구현 시 @plan.md 를 보고 없는 기능이면 추가 플랜을 넣고 api를 수정 구현할 때 @docs/api-spec.md 를 계속 동기화한다. 
+api 구현 시 @plan.md 를 보고 없는 기능이면 추가 플랜을 넣는다. 

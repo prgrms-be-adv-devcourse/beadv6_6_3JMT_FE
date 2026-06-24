@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ShaderBackground from '@/components/ui/shader-background';
 import PromptCard from '@/components/ui/PromptCard';
-import api from '@/lib/api';
+import api from '@/lib/auth';
 import { ICON_MAP } from '@/lib/iconMap';
 import { useAuthStore } from '@/store/useAuthStore';
 import Card from '@/components/ui/Card';
