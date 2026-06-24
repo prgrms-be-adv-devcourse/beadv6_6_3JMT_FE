@@ -26,9 +26,9 @@ function SuccessContent() {
       return;
     }
 
-    const saved = sessionStorage.getItem('_mock_pending_order');
+    const saved = localStorage.getItem('_mock_pending_order');
     const _productIds: string[] | undefined = saved ? JSON.parse(saved).productIds : undefined;
-    sessionStorage.removeItem('_mock_pending_order');
+    localStorage.removeItem('_mock_pending_order');
 
     confirmPayment({ paymentKey, orderId, amount, _productIds })
       .then(() => setState({ status: 'success' }))

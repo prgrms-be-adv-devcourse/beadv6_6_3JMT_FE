@@ -60,8 +60,8 @@ function CheckoutContent() {
         : { productIds: items.map((i) => i.id) };
       const { orderId } = await createOrder(orderParams);
 
-      // SW 재시작으로 MOCK_ORDERS가 초기화될 경우를 대비해 리다이렉트 전에 보존
-      sessionStorage.setItem(
+      // MSW용: 결제창이 팝업으로 열려 sessionStorage가 격리될 수 있으므로 localStorage 사용
+      localStorage.setItem(
         '_mock_pending_order',
         JSON.stringify({ orderId, productIds: items.map((i) => i.id) })
       );
