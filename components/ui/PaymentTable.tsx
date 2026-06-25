@@ -4,23 +4,24 @@ import { useState } from 'react';
 import { won } from '@/lib/utils';
 
 export interface Payment {
-  id: string;
+  paymentId: string;
   title: string;
   amount: number;
-  status: 'paid' | 'requested' | 'refunded';
+  paymentStatus: 'PAID' | 'REFUNDING' | 'REFUNDED';
+  isRefund: boolean;
   paidAt: string;
 }
 
 interface PaymentTableProps {
   payments: Payment[];
   showRefundColumn?: boolean;
-  onRefund?: (payment: Payment) => void;
+  onRefund?: (paymentId: string) => void;
 }
 
-const STATUS_MAP: Record<Payment['status'], { label: string; color: string; bg: string }> = {
-  paid:      { label: '결제완료',      color: 'var(--ph-primary)',  bg: 'var(--ph-secondary)' },
-  requested: { label: '환불 신청 중', color: 'var(--ph-red)',      bg: 'rgba(217,45,32,0.10)' },
-  refunded:  { label: '환불 완료',    color: 'var(--ph-gray-600)', bg: 'var(--ph-gray-100)' },
+const STATUS_MAP: Record<Payment['paymentStatus'], { label: string; color: string; bg: string }> = {
+  PAID:      { label: '결제완료',      color: 'var(--ph-primary)',  bg: 'var(--ph-secondary)' },
+  REFUNDING: { label: '환불 신청 중', color: 'var(--ph-red)',      bg: 'rgba(217,45,32,0.10)' },
+  REFUNDED:  { label: '환불 완료',    color: 'var(--ph-gray-600)', bg: 'var(--ph-gray-100)' },
 };
 
 function RefundButton({ onClick }: { onClick: () => void }) {
@@ -67,12 +68,12 @@ export default function PaymentTable({ payments, showRefundColumn, onRefund }: P
       </div>
       {/* 행 */}
       {payments.map((pay, i) => {
-        const meta = STATUS_MAP[pay.status] ?? STATUS_MAP.paid;
-        const isFree = pay.amount === 0;
-        const canRefund = pay.status === 'paid' && !isFree;
+        const meta     = STATUS_MAP[pay.paymentStatus] ?? STATUS_MAP.PAID;
+        const isFree   = pay.amount === 0;
+        const canRefund = pay.paymentStatus === 'PAID' && pay.isRefund;
         return (
           <div
-            key={pay.id}
+            key={pay.paymentId}
             style={{
               display: 'grid', gridTemplateColumns: cols,
               gap: 12, padding: '16px 22px',
@@ -101,20 +102,10 @@ export default function PaymentTable({ payments, showRefundColumn, onRefund }: P
             </div>
             {showRefundColumn && (
               <div style={{ textAlign: 'right' }}>
-                {isFree ? (
-                  <span style={{ fontSize: 13, color: 'var(--ph-text-muted)' }}>—</span>
-                ) : canRefund ? (
-                  <RefundButton onClick={() => onRefund?.(pay)} />
+                {canRefund ? (
+                  <RefundButton onClick={() => onRefund?.(pay.paymentId)} />
                 ) : (
-                  <button disabled style={{
-                    fontFamily: 'var(--ph-font-family)', fontSize: 14, fontWeight: 600,
-                    padding: '7px 12px', minHeight: 34, minWidth: 64,
-                    borderRadius: 'var(--ph-radius-sm)',
-                    border: '1px solid var(--ph-border)', background: 'var(--ph-gray-100)',
-                    color: 'var(--ph-text-muted)', cursor: 'not-allowed',
-                  }}>
-                    환불 신청
-                  </button>
+                  <span style={{ fontSize: 13, color: 'var(--ph-text-muted)' }}>—</span>
                 )}
               </div>
             )}

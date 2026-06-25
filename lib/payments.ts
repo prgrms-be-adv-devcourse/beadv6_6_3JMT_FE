@@ -18,3 +18,36 @@ export async function confirmPayment(params: {
   const res = await api.post('/api/v1/payments/confirm', params)
   return res.data.data as { paymentId: string }
 }
+
+export type PaymentStatus = 'PAID' | 'REFUNDING' | 'REFUNDED'
+
+export interface PaymentItem {
+  orderId: string
+  orderProductId: string
+  paymentId: string
+  paymentStatus: PaymentStatus
+  isRefund: boolean
+  productType: string
+  title: string
+  amount: number
+  paidAt: string
+}
+
+export interface PaymentMeta {
+  page: number
+  size: number
+  total: number
+  hasNext: boolean
+}
+
+export async function getPayments(
+  page = 1,
+  size = 20,
+): Promise<{ data: PaymentItem[]; meta: PaymentMeta }> {
+  const res = await api.get('/api/v1/orders/payments', { params: { page, size } })
+  return { data: res.data.data, meta: res.data.meta }
+}
+
+export async function requestRefund(paymentId: string): Promise<void> {
+  await api.post(`/api/v1/payments/${paymentId}/refund`)
+}
