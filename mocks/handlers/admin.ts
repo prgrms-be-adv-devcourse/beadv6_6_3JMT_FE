@@ -1,8 +1,13 @@
-import { http } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { MOCK_USERS, SELLER_APPLICATIONS } from '../data/users';
 import { PRODUCTS } from '../data/products';
 import { ok, okList, ERR, extractToken, getUserIdFromToken } from '../utils';
-import { SETTLEMENTS, nextSettlementStatus } from '../data/settlements';
+import {
+  SETTLEMENTS,
+  nextSettlementStatus,
+  type Settlement,
+  type SettlementDisplayStatus,
+} from '../data/settlements';
 
 const BASE = '*/api/v1/admin';
 
@@ -12,6 +17,79 @@ function isAdmin(request: Request): boolean {
   const user = MOCK_USERS.find((u) => u.id === userId);
   return user?.role === 'admin';
 }
+
+/* ── 정산 서비스 응답 헬퍼 ──
+   정산 서비스는 공통 { success, data } 봉투 없이 본문을 직접 내려준다.
+   금액(BigDecimal)은 문자열로 직렬화된다. */
+const SETTLEMENT_ORDER: SettlementDisplayStatus[] = [
+  'WAITING', 'APPROVAL_ON_HOLD', 'APPROVED', 'PAYOUT_REQUESTED', 'PAYOUT_ON_HOLD', 'PAID', 'CANCELLED',
+];
+const dec = (n: number) => n.toFixed(2);
+// 정산 서비스 ErrorResponse 형식 { code, message }
+const sErr = (code: string, message: string, status: number) =>
+  HttpResponse.json({ code, message }, { status });
+
+function toAdminSettlementItem(s: Settlement) {
+  return {
+    settlementId: s.id,
+    sellerId: s.sellerId,
+    sellerName: s.sellerName,
+    periodStart: s.periodStart,
+    periodEnd: s.periodEnd,
+    productCount: s.productCount,
+    totalAmount: dec(s.totalAmount),
+    feeTotalAmount: dec(s.feeTotalAmount),
+    settlementTotalAmount: dec(s.settlementTotalAmount),
+    displayStatus: s.status,
+    calculatedAt: s.calculatedAt,
+  };
+}
+
+// displayStatus → 내부 SettlementStatus / PayoutStatus (상태 변경 응답 참고용)
+function toInternalStatus(d: SettlementDisplayStatus): { settlementStatus: string; payoutStatus: string } {
+  switch (d) {
+    case 'WAITING': return { settlementStatus: 'PENDING_APPROVAL', payoutStatus: 'NOT_READY' };
+    case 'APPROVAL_ON_HOLD': return { settlementStatus: 'SETTLEMENT_ON_HOLD', payoutStatus: 'NOT_READY' };
+    case 'APPROVED': return { settlementStatus: 'APPROVED', payoutStatus: 'READY' };
+    case 'PAYOUT_REQUESTED': return { settlementStatus: 'APPROVED', payoutStatus: 'PAYOUT_REQUESTED' };
+    case 'PAYOUT_ON_HOLD': return { settlementStatus: 'APPROVED', payoutStatus: 'PAYOUT_ON_HOLD' };
+    case 'PAID': return { settlementStatus: 'APPROVED', payoutStatus: 'PAID' };
+    case 'CANCELLED': return { settlementStatus: 'CANCELLED', payoutStatus: 'NOT_READY' };
+  }
+}
+
+function statusResponse(s: Settlement) {
+  const { settlementStatus, payoutStatus } = toInternalStatus(s.status);
+  return {
+    settlementId: s.id,
+    settlementStatus,
+    payoutStatus,
+    displayStatus: s.status,
+    confirmedAt: s.confirmedAt,
+    paidAt: s.paidAt,
+    payoutReference: s.status === 'PAID' ? `PR-${s.id}` : null,
+    failureReason: null,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+// 관리자 상태 전이 공통 처리 (action → 상태 변경 후 SettlementStatusResponse 반환)
+function applyAdminAction(request: Request, id: string, action: string) {
+  if (!isAdmin(request)) return sErr('S-006', '접근 권한이 없습니다.', 403);
+  const settlement = SETTLEMENTS.find((s) => s.id === id);
+  if (!settlement) return sErr('S-010', '정산을 찾을 수 없습니다.', 404);
+  const next = nextSettlementStatus(settlement.status, action);
+  if (!next) return sErr('S-013', '현재 상태에서 변경할 수 없는 정산입니다.', 409);
+  settlement.status = next;
+  const now = new Date().toISOString();
+  if (next === 'APPROVED' && !settlement.confirmedAt) settlement.confirmedAt = now;
+  if (next === 'PAID') settlement.paidAt = now;
+  return ok(statusResponse(settlement)); // 실제 백엔드처럼 ApiResult 봉투로 응답
+}
+
+// 정산 배치잡(수동 정산) 모의 — jobExecutionId로 상태 추적. 실행 즉시 COMPLETED 처리
+let settlementJobSeq = 1000;
+const SETTLEMENT_JOBS = new Map<number, { period: string; startTime: string }>();
 
 // 어드민 주문 목록 (전체)
 const ADMIN_ORDERS = [
@@ -283,26 +361,98 @@ export const adminHandlers = [
     return ok(order);
   }),
 
-  // 정산 내역
-  http.get(`${BASE}/payments`, ({ request }) => {
-    if (!isAdmin(request)) return ERR.forbidden();
-    return ok(SETTLEMENTS);
+  // ── 정산 관리 (settlement-service) ──
+
+  // GET /admin/settlements/summary — 상태별 합계·건수
+  http.get(`${BASE}/settlements/summary`, ({ request }) => {
+    if (!isAdmin(request)) return sErr('S-006', '접근 권한이 없습니다.', 403);
+    const cards = SETTLEMENT_ORDER.map((st) => {
+      const group = SETTLEMENTS.filter((s) => s.status === st);
+      return {
+        status: st,
+        totalAmount: dec(group.reduce((acc, s) => acc + s.settlementTotalAmount, 0)),
+        count: group.length,
+      };
+    });
+    return ok({ cards });
   }),
 
-  // 정산 상태 전이 (승인/보류/보류취소/취소/지급)
-  http.put(`${BASE}/payments/:id/transition`, async ({ request, params }) => {
-    if (!isAdmin(request)) return ERR.forbidden();
-    const { id } = params;
-    const body = (await request.json()) as { action?: string };
-    const settlement = SETTLEMENTS.find((p) => p.id === id);
-    if (!settlement) return ERR.notFound('정산');
-    const action = body.action ?? '';
-    const next = nextSettlementStatus(settlement.status, action);
-    if (!next) return ERR.validation(`'${settlement.status}' 상태에서 '${action}' 동작은 허용되지 않습니다.`);
-    settlement.status = next;
-    const now = new Date().toISOString();
-    if (next === 'APPROVED' && !settlement.confirmedAt) settlement.confirmedAt = now;
-    if (next === 'PAID') settlement.paidAt = now;
-    return ok(settlement);
+  // GET /admin/settlements — 정산 목록 (상태 필터·0-base 페이징)
+  http.get(`${BASE}/settlements`, ({ request }) => {
+    if (!isAdmin(request)) return sErr('S-006', '접근 권한이 없습니다.', 403);
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status') as SettlementDisplayStatus | null;
+    const page = Number(url.searchParams.get('page') ?? 0);
+    const size = Number(url.searchParams.get('size') ?? 20);
+    const list = status ? SETTLEMENTS.filter((s) => s.status === status) : SETTLEMENTS;
+    const start = page * size;
+    return ok({
+      items: list.slice(start, start + size).map(toAdminSettlementItem),
+      totalElements: list.length,
+      page,
+      size,
+    });
+  }),
+
+  // PATCH /admin/settlements/{id}/{action} — 상태 전이 (바디 없음)
+  http.patch(`${BASE}/settlements/:id/approve`, ({ request, params }) => applyAdminAction(request, String(params.id), 'approve')),
+  http.patch(`${BASE}/settlements/:id/hold`, ({ request, params }) => applyAdminAction(request, String(params.id), 'hold')),
+  http.patch(`${BASE}/settlements/:id/release-hold`, ({ request, params }) => applyAdminAction(request, String(params.id), 'release-hold')),
+  http.patch(`${BASE}/settlements/:id/payout`, ({ request, params }) => applyAdminAction(request, String(params.id), 'payout')),
+  http.patch(`${BASE}/settlements/:id/payout-hold`, ({ request, params }) => applyAdminAction(request, String(params.id), 'payout-hold')),
+  http.patch(`${BASE}/settlements/:id/payout-hold/release`, ({ request, params }) => applyAdminAction(request, String(params.id), 'payout-hold-release')),
+
+  // PATCH /admin/settlements/{id}/cancel — 정산 취소 (SettlementResponse 반환)
+  http.patch(`${BASE}/settlements/:id/cancel`, ({ request, params }) => {
+    if (!isAdmin(request)) return sErr('S-006', '접근 권한이 없습니다.', 403);
+    const settlement = SETTLEMENTS.find((s) => s.id === String(params.id));
+    if (!settlement) return sErr('S-010', '정산을 찾을 수 없습니다.', 404);
+    if (settlement.status === 'PAID') return sErr('S-011', '이미 지급 완료된 정산은 취소할 수 없습니다.', 409);
+    if (settlement.status === 'CANCELLED') return sErr('S-012', '이미 취소된 정산입니다.', 409);
+    settlement.status = 'CANCELLED';
+    return ok({
+      settlementId: settlement.id,
+      sellerId: settlement.sellerId,
+      displayStatus: 'CANCELLED',
+      canceledAt: new Date().toISOString(),
+    });
+  }),
+
+  // POST /admin/settlements/batch — 정산 배치잡(수동 정산) 비동기 실행 접수 (202)
+  http.post(`${BASE}/settlements/batch`, async ({ request }) => {
+    if (!isAdmin(request)) return sErr('S-006', '접근 권한이 없습니다.', 403);
+    const body = (await request.json().catch(() => ({}))) as { period?: string };
+    const period = body.period ?? '';
+    if (!/^\d{4}-\d{2}$/.test(period)) return sErr('S-003', '요청 값이 올바르지 않습니다.', 400);
+    const jobExecutionId = ++settlementJobSeq;
+    const startTime = new Date().toISOString();
+    SETTLEMENT_JOBS.set(jobExecutionId, { period, startTime });
+    // 데모: 해당 월 대기(WAITING) 정산 1건을 새로 생성해 버튼 효과가 보이도록 함
+    SETTLEMENTS.unshift({
+      id: `stl-batch-${jobExecutionId}`,
+      sellerId: 'user-2', sellerName: '프롬트랩', shop: '프롬트랩 스튜디오',
+      periodStart: `${period}-01`, periodEnd: `${period}-28`,
+      productCount: 12, totalAmount: 180000, feeTotalAmount: 27000, refundAmount: 0,
+      settlementTotalAmount: 153000, status: 'WAITING',
+      calculatedAt: startTime, confirmedAt: null, paidAt: null,
+    });
+    return ok({ jobExecutionId, jobName: 'settlementJob', status: 'STARTING', startTime }, 202);
+  }),
+
+  // GET /admin/settlements/batch/{jobExecutionId} — 배치잡 상태 조회 (폴링용). 모의는 즉시 COMPLETED
+  http.get(`${BASE}/settlements/batch/:jobExecutionId`, ({ request, params }) => {
+    if (!isAdmin(request)) return sErr('S-006', '접근 권한이 없습니다.', 403);
+    const id = Number(params.jobExecutionId);
+    const job = SETTLEMENT_JOBS.get(id);
+    if (!job) return sErr('S-008', '정산 배치 잡 실행 이력을 찾을 수 없습니다.', 404);
+    return ok({
+      jobExecutionId: id,
+      jobName: 'settlementJob',
+      status: 'COMPLETED',
+      exitCode: 'COMPLETED',
+      startTime: job.startTime,
+      endTime: new Date().toISOString(),
+      failureMessage: null,
+    });
   }),
 ];

@@ -161,14 +161,18 @@
 | **FAILED** | 실패 | error | ✓ | `#d92d20` |
 | **CANCELED** | 취소 | neutral | ✓ | `#8b95a1` |
 | **REFUNDED** | 환불 | error | ✓ | `#d92d20` |
-| **PENDING_APPROVAL** | 대기 | neutral | ✓ | `#8b95a1` |
-| **SETTLEMENT_ON_HOLD** | 승인 보류 | error | ✓ | `#d92d20` |
+| **WAITING** | 대기 | neutral | ✓ | `#8b95a1` |
+| **APPROVAL_ON_HOLD** | 승인 보류 | error | ✓ | `#d92d20` |
 | **APPROVED** | 승인 | blue | ✓ | `#1b64da` |
 | **PAYOUT_REQUESTED** | 지급 신청 | blue | ✓ | `#1b64da` |
 | **PAYOUT_ON_HOLD** | 지급 보류 | error | ✓ | `#d92d20` |
 | **CANCELLED** | 취소 | neutral | ✓ | `#8b95a1` |
+| PENDING_APPROVAL | 대기 | neutral | ✓ | `#8b95a1` | (레거시) |
+| SETTLEMENT_ON_HOLD | 승인 보류 | error | ✓ | `#d92d20` | (레거시) |
 
-> 정산 상태머신(`Settlement`) 뱃지. seller(`/shop` 정산 내역)·admin(`/admin/payments`)가 동일 매핑을 공유한다.
+> 정산 표시 상태(`SettlementDisplayStatus`) 뱃지. seller(`/shop` 정산 내역)·admin(`/admin/payments`)가 동일 매핑을 공유한다.
+> 실제 정산 서비스 스펙(`WAITING`/`APPROVAL_ON_HOLD` 등)에 맞춘 코드이며, `PENDING_APPROVAL`/`SETTLEMENT_ON_HOLD`는 레거시 호환용으로 남겨둔다.
+> admin 목록 응답은 `displayStatus`가 코드, seller 목록 응답은 `status`가 코드·`displayStatus`가 한글 라벨이다.
 
 뱃지: `gap 6, padding 5px 10px, 6px dot(원형) + label`
 

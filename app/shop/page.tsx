@@ -15,6 +15,14 @@ import { StatusBadge } from '@/components/admin/Badge';
 import { Table, Th, Td, Tr } from '@/components/admin/DataTable';
 import { won } from '@/lib/utils';
 import Button from '@/components/ui/Button';
+import {
+  getSellerSettlements,
+  getSellerSettlementSummary,
+  requestSettlementPayout,
+  type SellerSettlementItem,
+  type SellerSettlementSummary,
+  type SettlementDisplayStatus,
+} from '@/lib/settlements';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -36,29 +44,10 @@ type Prompt = {
   rejectionReason?: string | null;
 };
 
-type SettlementStatus =
-  | 'PENDING_APPROVAL'
-  | 'SETTLEMENT_ON_HOLD'
-  | 'APPROVED'
-  | 'PAYOUT_REQUESTED'
-  | 'PAYOUT_ON_HOLD'
-  | 'PAID'
-  | 'CANCELLED';
-
-type Settlement = {
-  id: string;
-  periodStart: string;
-  periodEnd: string;
-  productCount: number;
-  totalAmount: number;
-  feeTotalAmount: number;
-  refundAmount: number;
-  settlementTotalAmount: number;
-  status: SettlementStatus;
-};
-
 type ActiveTab = 'listings' | 'settlements';
-type SettlementFilter = 'all' | SettlementStatus;
+type SettlementFilter = 'all' | SettlementDisplayStatus;
+
+const SETTLEMENT_PAGE_SIZE = 10;
 
 
 /* ── ShopPage ───────────────────────────────────────────────────────── */
@@ -72,57 +61,75 @@ export default function ShopPage() {
   const [expandedReason, setExpandedReason] = useState<Record<string, boolean>>({});
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [myListings, setMyListings] = useState<Prompt[]>([]);
-  const [settlements, setSettlements] = useState<Settlement[]>([]);
+  const [settlements, setSettlements] = useState<SellerSettlementItem[]>([]);
   const [settlementFilter, setSettlementFilter] = useState<SettlementFilter>('all');
+  const [settlementHasNext, setSettlementHasNext] = useState(false);
+  const [loadingMoreSettlements, setLoadingMoreSettlements] = useState(false);
+  const [summary, setSummary] = useState<SellerSettlementSummary | null>(null);
   const [requestingId, setRequestingId] = useState<string | null>(null);
-  const [stats, setStats] = useState([
-    { label: '등록 프롬프트', value: '-',  icon: Layers      },
-    { label: '누적 판매',     value: '-',  icon: ShoppingBag },
-    { label: '이번 달 수익',  value: '-',  icon: Wallet      },
-  ]);
 
-  const loadSettlements = () => {
-    api.get('/api/v1/sellers/me/settlements')
-      .then((res) => setSettlements(res.data.data ?? []))
-      .catch(() => setSettlements([]));
+  // 정산 내역 (상태 필터 + 0-base 페이징). append=true면 "더 보기"로 누적
+  const loadSettlements = (filter: SettlementFilter, page: number, append: boolean) => {
+    if (append) setLoadingMoreSettlements(true);
+    getSellerSettlements({
+      status: filter === 'all' ? undefined : filter,
+      page,
+      size: SETTLEMENT_PAGE_SIZE,
+    })
+      .then((res) => {
+        setSettlements((prev) => (append ? [...prev, ...res.items] : res.items));
+        setSettlementHasNext((res.page + 1) * res.size < res.totalElements);
+      })
+      .catch(() => {
+        if (!append) setSettlements([]);
+      })
+      .finally(() => setLoadingMoreSettlements(false));
+  };
+
+  // 상단 통계 카드 = 정산 서비스 요약 엔드포인트(실데이터)
+  const loadSettlementSummary = () => {
+    getSellerSettlementSummary()
+      .then(setSummary)
+      .catch(() => setSummary(null));
   };
 
   useEffect(() => {
-    Promise.all([
-      api.get('/api/v1/sellers/me/products').catch(() => ({ data: { data: [] } })),
-      api.get('/api/v1/sellers/me/stats').catch(() => ({ data: { data: {} } })),
-    ]).then(([productsRes, statsRes]) => {
-      const raw = productsRes.data.data ?? [];
-      const toStatus = (s: string) => {
-        if (s === 'PENDING_REVIEW') return 'review'
-        if (s === 'ON_SALE') return 'active'
-        if (s === 'REJECTED') return 'rejected'
-        if (s === 'STOPPED') return 'stopped'
-        return 'draft'
-      }
-      const products = raw.map((p: { productId: string; status: string; rejectionReason?: string; [key: string]: unknown }) => ({
-        ...p,
-        id: p.productId,
-        status: toStatus(p.status),
-        rejectionReason: p.rejectionReason ?? null,
-      }));
-      const d = statsRes.data.data ?? {};
-      setMyListings(products);
-      setStats([
-        { label: '등록 프롬프트', value: `${products.length}개`,                               icon: Layers      },
-        { label: '누적 판매',     value: `${(d.totalSalesCount ?? 0).toLocaleString('ko-KR')}회`,   icon: ShoppingBag },
-        { label: '누적 수익',     value: `₩${(d.totalRevenue ?? 0).toLocaleString('ko-KR')}`, icon: Wallet      },
-      ]);
-    });
-    loadSettlements();
+    // 프롬프트 목록(그리드)은 상품 서비스에서 그대로 사용
+    api.get('/api/v1/sellers/me/products')
+      .catch(() => ({ data: { data: [] } }))
+      .then((productsRes) => {
+        const raw = productsRes.data.data ?? [];
+        const toStatus = (s: string) => {
+          if (s === 'PENDING_REVIEW') return 'review'
+          if (s === 'ON_SALE') return 'active'
+          if (s === 'REJECTED') return 'rejected'
+          if (s === 'STOPPED') return 'stopped'
+          return 'draft'
+        }
+        const products = raw.map((p: { productId: string; status: string; rejectionReason?: string; [key: string]: unknown }) => ({
+          ...p,
+          id: p.productId,
+          status: toStatus(p.status),
+          rejectionReason: p.rejectionReason ?? null,
+        }));
+        setMyListings(products);
+      });
+    loadSettlements('all', 0, false);
+    loadSettlementSummary();
   }, []);
+
+  const changeSettlementFilter = (filter: SettlementFilter) => {
+    setSettlementFilter(filter);
+    loadSettlements(filter, 0, false);
+  };
 
   // 지급 신청 (승인 건 → 지급 신청)
   const requestPayout = async (id: string) => {
     setRequestingId(id);
     try {
-      await api.put(`/api/v1/sellers/me/settlements/${id}/request-payout`);
-      loadSettlements();
+      await requestSettlementPayout(id);
+      loadSettlements(settlementFilter, 0, false);
+      loadSettlementSummary();
     } finally {
       setRequestingId(null);
     }
@@ -167,29 +174,26 @@ export default function ShopPage() {
     { id: 'stopped',  label: `판매중단 ${myListings.filter((p) => p.status === 'stopped' || isStopped(p.id)).length}` },
   ];
 
-  // 누적 정산 수익 = 지급 완료(PAID) 정산 건의 지급액 합계
-  const settledRevenue = settlements
-    .filter((s) => s.status === 'PAID')
-    .reduce((sum, s) => sum + s.settlementTotalAmount, 0);
-
+  // 통계 카드 4개 — 정산 서비스 요약 엔드포인트(실데이터)
   const cards = [
-    ...stats,
-    { label: '누적 정산 수익', value: won(settledRevenue), icon: Banknote },
+    { label: '등록 프롬프트', value: `${(summary?.registeredPromptCount ?? 0).toLocaleString('ko-KR')}개`, icon: Layers },
+    { label: '누적 판매',     value: `${(summary?.totalSalesCount ?? 0).toLocaleString('ko-KR')}회`,       icon: ShoppingBag },
+    { label: '누적 수익',     value: won(summary?.totalRevenueAmount ?? 0),                                 icon: Wallet },
+    { label: '누적 정산 수익', value: won(summary?.totalSettlementAmount ?? 0),                              icon: Banknote },
   ];
 
-  const filteredSettlements = settlementFilter === 'all'
-    ? settlements
-    : settlements.filter((s) => s.status === settlementFilter);
+  // 정산 목록은 server-side 필터링 → settlements를 그대로 렌더링
+  const filteredSettlements = settlements;
 
   const SETTLEMENT_FILTERS: { value: SettlementFilter; label: string }[] = [
-    { value: 'all',                label: '전체' },
-    { value: 'PENDING_APPROVAL',   label: '대기' },
-    { value: 'SETTLEMENT_ON_HOLD', label: '승인 보류' },
-    { value: 'APPROVED',           label: '승인' },
-    { value: 'PAYOUT_REQUESTED',   label: '지급 신청' },
-    { value: 'PAYOUT_ON_HOLD',     label: '지급 보류' },
-    { value: 'PAID',               label: '지급 완료' },
-    { value: 'CANCELLED',          label: '취소' },
+    { value: 'all',              label: '전체' },
+    { value: 'WAITING',          label: '대기' },
+    { value: 'APPROVAL_ON_HOLD', label: '승인 보류' },
+    { value: 'APPROVED',         label: '승인' },
+    { value: 'PAYOUT_REQUESTED', label: '지급 신청' },
+    { value: 'PAYOUT_ON_HOLD',   label: '지급 보류' },
+    { value: 'PAID',             label: '지급 완료' },
+    { value: 'CANCELLED',        label: '취소' },
   ];
 
   const fmtPeriod = (start: string, end: string) => {
@@ -391,7 +395,7 @@ export default function ShopPage() {
               {SETTLEMENT_FILTERS.map(({ value, label }) => (
                 <button
                   key={value}
-                  onClick={() => setSettlementFilter(value)}
+                  onClick={() => changeSettlementFilter(value)}
                   style={{
                     fontFamily: 'var(--ph-font-family)',
                     fontSize: 13, fontWeight: 600,
@@ -432,7 +436,7 @@ export default function ShopPage() {
                 </thead>
                 <tbody>
                   {filteredSettlements.map((r) => (
-                    <Tr key={r.id}>
+                    <Tr key={r.settlementId}>
                       <Td>
                         <span className="whitespace-nowrap text-ph-text-secondary">
                           {fmtPeriod(r.periodStart, r.periodEnd)}
@@ -440,32 +444,32 @@ export default function ShopPage() {
                       </Td>
                       <Td align="right">
                         <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                          {r.productCount.toLocaleString('ko-KR')}
+                          {r.salesCount.toLocaleString('ko-KR')}
                         </span>
                       </Td>
                       <Td align="right">
                         <span className="text-ph-text-secondary" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                          {won(r.totalAmount)}
+                          {won(r.grossAmount)}
                         </span>
                       </Td>
                       <Td align="right">
                         <span className="text-ph-text-muted" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                          −{won(r.feeTotalAmount)}
+                          −{won(r.feeAmount)}
                         </span>
                       </Td>
                       <Td align="right">
                         <span className="font-bold" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                          {won(r.settlementTotalAmount)}
+                          {won(r.payoutAmount)}
                         </span>
                       </Td>
                       <Td>
-                        <StatusBadge status={r.status} />
+                        <StatusBadge status={r.status} label={r.statusLabel} />
                       </Td>
                       <Td align="right">
-                        {r.status === 'APPROVED' ? (
+                        {r.canRequestPayout ? (
                           <button
-                            onClick={() => requestPayout(r.id)}
-                            disabled={requestingId === r.id}
+                            onClick={() => requestPayout(r.settlementId)}
+                            disabled={requestingId === r.settlementId}
                             className="inline-flex h-[34px] items-center justify-center gap-[5px] whitespace-nowrap rounded-ph-sm border border-transparent bg-ph-primary px-[12px] text-[13.5px] font-semibold text-white transition-colors hover:bg-ph-blue-hover disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             <Banknote size={15} />
@@ -477,6 +481,18 @@ export default function ShopPage() {
                   ))}
                 </tbody>
               </Table>
+
+              {settlementHasNext && (
+                <div style={{ borderTop: '1px solid var(--ph-border)', padding: '16px', textAlign: 'center' }}>
+                  <button
+                    onClick={() => loadSettlements(settlementFilter, Math.ceil(settlements.length / SETTLEMENT_PAGE_SIZE), true)}
+                    disabled={loadingMoreSettlements}
+                    className="inline-flex h-[38px] items-center justify-center rounded-ph-sm border border-ph-border bg-ph-white px-[20px] text-[13.5px] font-semibold text-ph-text-secondary transition-colors hover:bg-ph-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {loadingMoreSettlements ? '불러오는 중…' : '더 보기'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </section>

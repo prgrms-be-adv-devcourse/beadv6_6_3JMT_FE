@@ -1,13 +1,25 @@
 // 정산(Settlement) 상태머신 + Mock 데이터 (admin/seller 핸들러 공유)
+// 실제 정산 서비스 스펙(settlement-api-for-frontend.md)에 맞춘 displayStatus 코드를 사용한다.
 
-export type SettlementStatus =
-  | 'PENDING_APPROVAL'
-  | 'SETTLEMENT_ON_HOLD'
+export type SettlementDisplayStatus =
+  | 'WAITING'
+  | 'APPROVAL_ON_HOLD'
   | 'APPROVED'
   | 'PAYOUT_REQUESTED'
   | 'PAYOUT_ON_HOLD'
   | 'PAID'
   | 'CANCELLED';
+
+// 표시 상태 → 한글 라벨 (판매자 응답의 displayStatus 필드에 사용)
+export const SETTLEMENT_STATUS_LABEL: Record<SettlementDisplayStatus, string> = {
+  WAITING: '대기',
+  APPROVAL_ON_HOLD: '승인 보류',
+  APPROVED: '승인',
+  PAYOUT_REQUESTED: '지급 신청',
+  PAYOUT_ON_HOLD: '지급 보류',
+  PAID: '지급 완료',
+  CANCELLED: '취소',
+};
 
 export interface Settlement {
   id: string;
@@ -21,7 +33,7 @@ export interface Settlement {
   feeTotalAmount: number;
   refundAmount: number;
   settlementTotalAmount: number;
-  status: SettlementStatus;
+  status: SettlementDisplayStatus;
   calculatedAt: string;
   confirmedAt: string | null;
   paidAt: string | null;
@@ -29,12 +41,12 @@ export interface Settlement {
 
 // admin/seller 핸들러가 동일 참조를 공유하므로 한쪽 전이가 다른 쪽에도 반영된다
 export const SETTLEMENTS: Settlement[] = [
-  // ── 대기 (PENDING_APPROVAL) ──
-  { id: 'stl-1', sellerId: 'user-2', sellerName: '프롬트랩', shop: '프롬트랩 스튜디오', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 37, totalAmount: 540000, feeTotalAmount: 81000, refundAmount: 0, settlementTotalAmount: 459000, status: 'PENDING_APPROVAL', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
-  { id: 'stl-2', sellerId: 'user-3', sellerName: '판매자', shop: '판매자샵', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 22, totalAmount: 320000, feeTotalAmount: 48000, refundAmount: 12000, settlementTotalAmount: 260000, status: 'PENDING_APPROVAL', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
-  // ── 승인 보류 (SETTLEMENT_ON_HOLD) ──
-  { id: 'stl-3', sellerId: 'seller-6', sellerName: '데이터핀', shop: '데이터핀', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 15, totalAmount: 210000, feeTotalAmount: 31500, refundAmount: 0, settlementTotalAmount: 178500, status: 'SETTLEMENT_ON_HOLD', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
-  { id: 'stl-4', sellerId: 'seller-12', sellerName: '애널리틱스랩', shop: '애널리틱스랩', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 19, totalAmount: 280000, feeTotalAmount: 42000, refundAmount: 0, settlementTotalAmount: 238000, status: 'SETTLEMENT_ON_HOLD', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
+  // ── 대기 (WAITING) ──
+  { id: 'stl-1', sellerId: 'user-2', sellerName: '프롬트랩', shop: '프롬트랩 스튜디오', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 37, totalAmount: 540000, feeTotalAmount: 81000, refundAmount: 0, settlementTotalAmount: 459000, status: 'WAITING', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
+  { id: 'stl-2', sellerId: 'user-3', sellerName: '판매자', shop: '판매자샵', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 22, totalAmount: 320000, feeTotalAmount: 48000, refundAmount: 12000, settlementTotalAmount: 260000, status: 'WAITING', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
+  // ── 승인 보류 (APPROVAL_ON_HOLD) ──
+  { id: 'stl-3', sellerId: 'seller-6', sellerName: '데이터핀', shop: '데이터핀', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 15, totalAmount: 210000, feeTotalAmount: 31500, refundAmount: 0, settlementTotalAmount: 178500, status: 'APPROVAL_ON_HOLD', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
+  { id: 'stl-4', sellerId: 'seller-12', sellerName: '애널리틱스랩', shop: '애널리틱스랩', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 19, totalAmount: 280000, feeTotalAmount: 42000, refundAmount: 0, settlementTotalAmount: 238000, status: 'APPROVAL_ON_HOLD', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: null, paidAt: null },
   // ── 승인 (APPROVED) ── seller가 지급 신청할 수 있는 상태
   { id: 'stl-5', sellerId: 'seller-5', sellerName: '토크봇', shop: '토크봇 랩', periodStart: '2026-05-01', periodEnd: '2026-05-31', productCount: 41, totalAmount: 610000, feeTotalAmount: 91500, refundAmount: 0, settlementTotalAmount: 518500, status: 'APPROVED', calculatedAt: '2026-06-01T02:00:00.000Z', confirmedAt: '2026-06-02T09:00:00.000Z', paidAt: null },
   { id: 'stl-6', sellerId: 'seller-11', sellerName: '챗플로우', shop: '챗플로우', periodStart: '2026-06-01', periodEnd: '2026-06-30', productCount: 26, totalAmount: 390000, feeTotalAmount: 58500, refundAmount: 5000, settlementTotalAmount: 326500, status: 'APPROVED', calculatedAt: '2026-07-01T02:00:00.000Z', confirmedAt: '2026-07-02T09:00:00.000Z', paidAt: null },
@@ -56,32 +68,32 @@ export const SETTLEMENTS: Settlement[] = [
 ];
 
 // 정산 상태 전이 규칙 (action → 다음 상태). 허용되지 않으면 null
-// requestPayout: seller가 승인(APPROVED) 건에 대해 지급을 신청 → PAYOUT_REQUESTED
-export function nextSettlementStatus(current: SettlementStatus, action: string): SettlementStatus | null {
+// action 키는 실제 백엔드 PATCH 엔드포인트와 1:1 대응 (+ seller의 requestPayout)
+export function nextSettlementStatus(
+  current: SettlementDisplayStatus,
+  action: string,
+): SettlementDisplayStatus | null {
   switch (current) {
-    case 'PENDING_APPROVAL':
+    case 'WAITING':
       if (action === 'approve') return 'APPROVED';
-      if (action === 'hold') return 'SETTLEMENT_ON_HOLD';
-      return null;
-    case 'SETTLEMENT_ON_HOLD':
-      if (action === 'approve') return 'APPROVED';
-      if (action === 'unhold') return 'PENDING_APPROVAL';
+      if (action === 'hold') return 'APPROVAL_ON_HOLD';
       if (action === 'cancel') return 'CANCELLED';
       return null;
-    case 'APPROVED':
+    case 'APPROVAL_ON_HOLD':
+      if (action === 'release-hold') return 'WAITING';
+      if (action === 'cancel') return 'CANCELLED';
+      return null;
+    case 'APPROVED': // 지급 준비(READY) — 판매자 지급 신청 전. 관리자는 지급/지급보류 불가
       if (action === 'requestPayout') return 'PAYOUT_REQUESTED';
-      if (action === 'pay') return 'PAID';
-      if (action === 'hold') return 'PAYOUT_ON_HOLD';
       if (action === 'cancel') return 'CANCELLED';
       return null;
     case 'PAYOUT_REQUESTED':
-      if (action === 'pay') return 'PAID';
-      if (action === 'hold') return 'PAYOUT_ON_HOLD';
+      if (action === 'payout') return 'PAID';
+      if (action === 'payout-hold') return 'PAYOUT_ON_HOLD';
       if (action === 'cancel') return 'CANCELLED';
       return null;
     case 'PAYOUT_ON_HOLD':
-      if (action === 'pay') return 'PAID';
-      if (action === 'unhold') return 'APPROVED';
+      if (action === 'payout-hold-release') return 'PAYOUT_REQUESTED'; // 보류 해제 → 지급 신청 상태로 복귀(READY 아님)
       if (action === 'cancel') return 'CANCELLED';
       return null;
     default:

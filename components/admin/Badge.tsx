@@ -58,13 +58,15 @@ const STATUS: Record<string, { label: string; tone: Tone; soft: boolean; dot: st
   FAILED: { label: '실패', tone: 'error', soft: true, dot: '#d92d20' },
   CANCELED: { label: '취소', tone: 'neutral', soft: true, dot: '#8b95a1' },
   REFUNDED: { label: '환불', tone: 'error', soft: true, dot: '#d92d20' },
-  // 정산 상태머신 (Settlement)
-  PENDING_APPROVAL: { label: '대기', tone: 'neutral', soft: true, dot: '#8b95a1' },
-  SETTLEMENT_ON_HOLD: { label: '승인 보류', tone: 'error', soft: true, dot: '#d92d20' },
+  // 정산 표시 상태 (SettlementDisplayStatus)
+  WAITING: { label: '대기', tone: 'neutral', soft: true, dot: '#8b95a1' },
+  APPROVAL_ON_HOLD: { label: '승인 보류', tone: 'error', soft: true, dot: '#d92d20' },
   APPROVED: { label: '승인', tone: 'blue', soft: true, dot: '#1b64da' },
   PAYOUT_REQUESTED: { label: '지급 신청', tone: 'blue', soft: true, dot: '#1b64da' },
   PAYOUT_ON_HOLD: { label: '지급 보류', tone: 'error', soft: true, dot: '#d92d20' },
-  CANCELLED: { label: '취소', tone: 'neutral', soft: true, dot: '#8b95a1' },
+  // 레거시 정산 상태 코드 (호환용)
+  PENDING_APPROVAL: { label: '대기', tone: 'neutral', soft: true, dot: '#8b95a1' },
+  SETTLEMENT_ON_HOLD: { label: '승인 보류', tone: 'error', soft: true, dot: '#d92d20' },
 }
 
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
