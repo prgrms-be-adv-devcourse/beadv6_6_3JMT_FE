@@ -22,6 +22,18 @@ export type PaymentItem = {
   paidAt: string;
 };
 
+export type MockPaymentHistoryItem = {
+  orderId: string;
+  orderProductId: string;
+  paymentId: string;
+  paymentStatus: 'PAID' | 'REFUNDING' | 'REFUNDED';
+  isRefund: boolean;
+  productType: string;
+  title: string;
+  amount: number;
+  paidAt: string;
+};
+
 export type NotificationItem = {
   id: string;
   icon: string;
@@ -66,6 +78,43 @@ export const MOCK_ORDERS: Record<string, OrderItem[]> = {
 };
 
 export const MOCK_PAYMENTS: Record<string, PaymentItem[]> = {};
+
+export const MOCK_PAYMENT_HISTORY: Record<string, MockPaymentHistoryItem[]> = {
+  'user-1': [
+    {
+      orderId: 'order-101', orderProductId: 'op-101-1', paymentId: 'pay-101',
+      paymentStatus: 'PAID', isRefund: true, productType: 'PROMPT',
+      title: '사진 같은 제품 목업 생성기', amount: 5900, paidAt: '2026-06-01T10:00:00',
+    },
+    {
+      orderId: 'order-102', orderProductId: 'op-102-1', paymentId: 'pay-102',
+      paymentStatus: 'PAID', isRefund: false, productType: 'PROMPT',
+      title: '전환율 높이는 랜딩 카피 작성', amount: 4900, paidAt: '2026-05-20T14:30:00',
+    },
+    {
+      orderId: 'order-103', orderProductId: 'op-103-1', paymentId: 'pay-103',
+      paymentStatus: 'REFUNDING', isRefund: false, productType: 'PROMPT',
+      title: '30일 SNS 콘텐츠 캘린더', amount: 3900, paidAt: '2026-04-10T09:00:00',
+    },
+    {
+      orderId: 'order-104', orderProductId: 'op-104-1', paymentId: 'pay-104',
+      paymentStatus: 'REFUNDED', isRefund: false, productType: 'PROMPT',
+      title: '코드 리뷰 자동화 봇', amount: 8900, paidAt: '2026-03-15T11:00:00',
+    },
+  ],
+  'user-4': [
+    {
+      orderId: 'order-401', orderProductId: 'op-401-1', paymentId: 'pay-401',
+      paymentStatus: 'PAID', isRefund: true, productType: 'PROMPT',
+      title: '사진 같은 제품 목업 생성기', amount: 5900, paidAt: '2026-06-10T08:00:00',
+    },
+    {
+      orderId: 'order-402', orderProductId: 'op-402-1', paymentId: 'pay-402',
+      paymentStatus: 'PAID', isRefund: false, productType: 'PROMPT',
+      title: '리액트 컴포넌트 리팩터링 도우미', amount: 7900, paidAt: '2026-06-05T13:00:00',
+    },
+  ],
+};
 
 export type WishlistItem = {
   wishlistId: string;
