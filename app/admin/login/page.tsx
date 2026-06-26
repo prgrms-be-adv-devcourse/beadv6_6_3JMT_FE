@@ -33,7 +33,7 @@ export default function AdminLoginPage() {
   // 이미 로그인된 admin이 /admin/login 재방문 시 자동 이동
   // deps 빈 배열: mount 시 1회만 실행 → handleSubmit의 router.push와 충돌 없음
   useEffect(() => {
-    if (isLoggedIn && user?.role === 'admin') {
+    if (isLoggedIn && user?.roles?.includes('admin')) {
       router.replace('/admin')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -45,12 +45,13 @@ export default function AdminLoginPage() {
     setLoading(true)
     try {
       const res = await api.post('/api/v1/auth/login', { email, password })
-      const { user: loginUser, token } = res.data.data
-      if (loginUser.role !== 'admin') {
+      const { user: loginUser, accessToken, refreshToken } = res.data.data
+      const loginRoles = ((loginUser.roles ?? (loginUser.role ? [loginUser.role] : [])) as string[]).map((r: string) => r.toLowerCase())
+      if (!loginRoles.includes('admin')) {
         setError('관리자 계정이 아닙니다.')
         return
       }
-      login(loginUser, token)
+      login({ ...loginUser, roles: loginRoles }, accessToken, refreshToken)
       router.push('/admin')
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message

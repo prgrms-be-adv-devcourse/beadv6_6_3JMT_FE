@@ -11,7 +11,7 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
-  attachHybridGatewayHeaders(config, token, user?.role)
+  attachHybridGatewayHeaders(config, token, user?.roles?.find(r => r === 'admin') ?? user?.roles?.[0])
   return config
 })
 

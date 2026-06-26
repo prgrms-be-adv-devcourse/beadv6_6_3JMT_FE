@@ -84,8 +84,9 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       const endpoint = signup ? '/api/v1/auth/signup' : '/api/v1/auth/login';
       const body = signup ? { name, email, password, serviceAgree } : { email, password };
       const res = await api.post(endpoint, body);
-      const { user, token } = res.data.data;
-      login({ ...user, provider: user.provider ?? 'local' }, token);
+      const { user, accessToken, refreshToken } = res.data.data;
+      const roles = ((user.roles ?? (user.role ? [user.role] : [])) as string[]).map((r: string) => r.toLowerCase());
+      login({ ...user, roles, provider: user.provider ?? 'local' }, accessToken, refreshToken);
       onClose();
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;

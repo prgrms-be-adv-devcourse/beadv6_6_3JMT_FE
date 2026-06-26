@@ -120,15 +120,15 @@ function KakaoCallbackContent() {
     getKakaoPayload()
       .then((payload) => kakaoLogin(payload))
       .then(({ user, accessToken, refreshToken }) => {
-        const role = user.role.toLowerCase() as 'buyer' | 'seller' | 'admin';
+        const roles = user.roles.map((r: string) => r.toLowerCase());
 
-        if (isAdminFlow && role !== 'admin') {
+        if (isAdminFlow && !roles.includes('admin')) {
           showToast('관리자 계정이 아닙니다.');
           router.replace('/admin/login');
           return;
         }
 
-        login({ ...user, role, provider: 'kakao' }, accessToken, refreshToken);
+        login({ ...user, roles, provider: 'kakao' }, accessToken, refreshToken);
         router.replace(isAdminFlow ? '/admin' : '/');
       })
       .catch(() => {
