@@ -15,11 +15,13 @@ interface AuthState {
   refreshToken: string | null
   isLoggedIn: boolean
   loginModalOpen: boolean
+  _hasHydrated: boolean
   login: (user: User, token: string, refreshToken?: string) => void
   logout: () => void
   setToken: (token: string) => void
   openLoginModal: () => void
   closeLoginModal: () => void
+  setHasHydrated: (state: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -30,6 +32,8 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isLoggedIn: false,
       loginModalOpen: false,
+      _hasHydrated: false,
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
       login: (user, token, refreshToken) => {
         if (typeof document !== 'undefined') {
           document.cookie = `token=${token}; path=/; max-age=86400`
@@ -56,6 +60,9 @@ export const useAuthStore = create<AuthState>()(
         refreshToken: state.refreshToken,
         isLoggedIn: state.isLoggedIn,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
     }
   )
 )

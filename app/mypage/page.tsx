@@ -369,7 +369,7 @@ const NOTIF_ROWS: { k: keyof NotifState; t: string; d: string }[] = [
 function MyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isLoggedIn, openLoginModal, login: authLogin, token: authToken, logout, user: authUser } = useAuthStore();
+  const { isLoggedIn, _hasHydrated, openLoginModal, login: authLogin, token: authToken, logout, user: authUser } = useAuthStore();
   const { items: cartItems } = useCartStore();
   const showToast = useToast();
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -439,6 +439,7 @@ function MyPageContent() {
   };
 
   useEffect(() => {
+    if (!_hasHydrated) return;
     if (!isLoggedIn) { openLoginModal(); return; }
     fetchUser();
     api.get('/api/v1/orders')
@@ -474,9 +475,11 @@ function MyPageContent() {
       })
       .catch(() => {})
       .finally(() => setLoadingWishlist(false));
-  }, [isLoggedIn, openLoginModal, fetchUser]);
+  }, [isLoggedIn, _hasHydrated, openLoginModal, fetchUser]);
 
   const cart = cartItems;
+
+  if (!_hasHydrated) return null;
 
   if (!isLoggedIn) {
     return (
