@@ -49,7 +49,8 @@ type Prompt = {
 type UserInfo = {
   name: string;
   email: string;
-  role: 'buyer' | 'seller';
+  role?: 'buyer' | 'seller';
+  roles?: string[];
   provider: 'local' | 'kakao';
   sellerStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
 };
@@ -640,7 +641,7 @@ function MyPageContent() {
                       padding: '5px 11px', background: 'var(--ph-secondary)', color: 'var(--ph-primary)',
                       borderRadius: 'var(--ph-radius-full)', fontSize: 13, fontWeight: 600,
                     }}>
-                      {user.role === 'seller'
+                      {(user.roles ? user.roles.includes('seller') : user.role === 'seller')
                         ? <><Store style={{ width: 13, height: 13 }} />판매자 계정</>
                         : <><User style={{ width: 13, height: 13 }} />구매자 계정</>}
                     </div>

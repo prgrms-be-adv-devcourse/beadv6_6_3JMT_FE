@@ -277,7 +277,7 @@ export default function Header() {
 
   const toggle = (m: string) => setMenu((x) => (x === m ? null : m));
   const close = () => setMenu(null);
-  const role = user && user.role;
+  const hasRole = (r: string) => user?.roles?.includes(r) ?? false;
   const openMy = (tab: string) => { close(); router.push(`/mypage?tab=${tab}`); };
 
   const BellDropdown = (
@@ -382,12 +382,12 @@ export default function Header() {
             <Avatar name={user.name} size={40} />
             <div>
               <div style={{ fontWeight: 700, fontSize: 14 }}>{user.name}</div>
-              <div style={{ fontSize: 12, color: 'var(--ph-text-muted)' }}>{role === 'seller' ? '판매자 계정' : role === 'admin' ? '관리자 계정' : '구매자 계정'}</div>
+              <div style={{ fontSize: 12, color: 'var(--ph-text-muted)' }}>{hasRole('admin') ? '관리자 계정' : hasRole('seller') ? '판매자 계정' : '구매자 계정'}</div>
             </div>
           </div>
           <div style={{ borderTop: '1px solid var(--ph-border)', margin: '4px 0' }}></div>
           <MenuItem icon={User} label="마이페이지" onClick={() => openMy('profile')} />
-          {role === 'seller'
+          {hasRole('seller')
             ? <MenuItem icon={Store} label="내 상점" onClick={() => { close(); go('shop'); }} />
             : <MenuItem icon={Receipt} label="구매한 프롬프트" onClick={() => openMy('purchased')} />}
           <MenuItem icon={Settings} label="설정" onClick={() => openMy('settings')} />
@@ -433,7 +433,7 @@ export default function Header() {
               style={{ flexShrink: 0, border: 'none', cursor: 'pointer', fontFamily: 'var(--ph-font-family)', fontWeight: 600, color: '#fff', background: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-md)', height: 36, padding: '0 14px', fontSize: 14 }}
             >로그인</button>
           )}
-          {role === 'seller' && (
+          {hasRole('seller') && (
             <React.Fragment>
               <button
                 onClick={() => go('sell')}
@@ -446,7 +446,7 @@ export default function Header() {
               {UserMenuDropdown}
             </React.Fragment>
           )}
-          {(role === 'buyer' || role === 'admin') && (
+          {!hasRole('seller') && (hasRole('buyer') || hasRole('admin')) && (
             <React.Fragment>
               <IconBtn icon={Heart} label={null} count={wishItems.length || undefined} onClick={() => router.push('/mypage?tab=wish')} />
               {CartDropdown}
