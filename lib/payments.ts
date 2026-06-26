@@ -9,13 +9,17 @@ export async function createOrder(params: CreateOrderParams): Promise<{ orderId:
   return res.data.data as { orderId: string }
 }
 
+// Next.js 프록시(/payment-proxy)를 통해 MSW 우회 및 CORS 해결.
+// 게이트웨이(8080)가 Authorization 헤더의 JWT를 검증하고 X-User-Id 등을 내부적으로 추가한다.
+const PAYMENT_PROXY = '/payment-proxy'
+
 export async function confirmPayment(params: {
   paymentKey: string
   orderId: string
   amount: number
   _productIds?: string[] // MSW 전용: SW 재시작 시 MOCK_ORDERS 복원용. 실제 백엔드는 무시함
 }): Promise<{ paymentId: string }> {
-  const res = await api.post('/api/v1/payments/confirm', params)
+  const res = await api.post(`${PAYMENT_PROXY}/api/v1/payments/confirm`, params)
   return res.data.data as { paymentId: string }
 }
 
@@ -49,5 +53,5 @@ export async function getPayments(
 }
 
 export async function requestRefund(paymentId: string): Promise<void> {
-  await api.post(`/api/v1/payments/${paymentId}/refund`)
+  await api.post(`${PAYMENT_PROXY}/api/v1/payments/${paymentId}/refund`, null)
 }

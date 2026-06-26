@@ -39,7 +39,7 @@ export const orderHandlers = [
     const products = ids.map((id) => PRODUCTS.find((p) => p.id === id)).filter(Boolean);
     if (products.length !== ids.length) return ERR.notFound('일부 상품');
 
-    const orderId = `order-${Date.now()}`;
+    const orderId = crypto.randomUUID();
 
     if (!MOCK_ORDERS[userId]) MOCK_ORDERS[userId] = [];
     ids.forEach((productId) => {

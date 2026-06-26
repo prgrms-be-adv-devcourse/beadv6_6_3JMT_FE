@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { confirmPayment } from '@/lib/payments';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
@@ -19,8 +19,12 @@ function SuccessContent() {
   const amount = Number(searchParams.get('amount') ?? '0');
 
   const [state, setState] = useState<ConfirmState>({ status: 'loading' });
+  const confirmedRef = useRef(false);
 
   useEffect(() => {
+    if (confirmedRef.current) return;
+    confirmedRef.current = true;
+
     if (!paymentKey || !orderId || !amount) {
       setState({ status: 'error', message: '잘못된 결제 정보입니다.' });
       return;
