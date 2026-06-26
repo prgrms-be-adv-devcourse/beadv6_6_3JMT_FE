@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/auth';
+import { hasPurchasedProduct } from '@/lib/orderAdapters';
 import { getWishlistIdForProduct, addWishlist, removeWishlist } from '@/lib/wishlists';
 import Image from 'next/image';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -227,8 +228,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
     if (!isLoggedIn) return;
     api.get('/api/v1/orders')
       .then((res) => {
-        const orders = res.data.data as { product: { id: string } }[];
-        if (orders.some((o) => o.product.id === p.id)) setPurchased(true);
+        if (hasPurchasedProduct(res.data.data ?? [], p.id)) setPurchased(true);
       })
       .catch(() => {});
     getWishlistIdForProduct(p.id)

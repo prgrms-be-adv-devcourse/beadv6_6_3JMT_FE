@@ -300,7 +300,7 @@ export default function ShopPage() {
                 <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {/* 카드 + 오버레이 */}
                   <div style={{ opacity: dim ? 0.5 : 1, filter: dim ? 'grayscale(0.7)' : 'none', pointerEvents: dim ? 'none' : 'auto', transition: 'opacity .15s ease, filter .15s ease' }}>
-                    <PromptCard p={p} showStatus stopped={off} />
+                    <PromptCard p={p as any} showStatus stopped={off} />
                   </div>
 
                   {/* 카드 아래 액션 */}
@@ -355,12 +355,12 @@ export default function ShopPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ph-error)', display: 'flex', alignItems: 'center', gap: 5 }}>
                         <AlertTriangle style={{ width: 14, height: 14 }} />
-                        {p.status === 'draft' ? '삭제하면 복구할 수 없어요' : '중단하면 다시 등록할 수 없어요'}
+                        중단하면 다시 등록할 수 없어요
                       </span>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <Button variant="secondary" size="sm" fullWidth onClick={() => setConfirmId(null)}>취소</Button>
                         <Button variant="solid" size="sm" fullWidth onClick={() => stopSelling(p.id)}>
-                          {p.status === 'draft' ? '삭제' : '중단'}
+                          중단
                         </Button>
                       </div>
                     </div>
@@ -371,7 +371,7 @@ export default function ShopPage() {
                       </Button>
                       <Button variant="secondary" size="sm" fullWidth onClick={() => setConfirmId(p.id)}>
                         <CirclePause style={{ width: 15, height: 15 }} />
-                        {p.status === 'draft' ? '삭제' : '판매 중단'}
+                        판매 중단
                       </Button>
                     </div>
                   )}
