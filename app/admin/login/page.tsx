@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Sparkles, ShieldCheck, Mail, Lock, Info, LockKeyhole, MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/auth'
+import { isApiMockingEnabled } from '@/lib/hybridApi'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -13,7 +14,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const isMocking = process.env.NEXT_PUBLIC_API_MOCKING === 'enabled'
+  const isMocking = isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING)
 
   const kakaoAdminLogin = () => {
     if (isMocking) {
@@ -32,7 +33,7 @@ export default function AdminLoginPage() {
   // 이미 로그인된 admin이 /admin/login 재방문 시 자동 이동
   // deps 빈 배열: mount 시 1회만 실행 → handleSubmit의 router.push와 충돌 없음
   useEffect(() => {
-    if (isLoggedIn && user?.role === 'admin') {
+    if (isLoggedIn && user?.roles?.includes('admin')) {
       router.replace('/admin')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -44,12 +45,13 @@ export default function AdminLoginPage() {
     setLoading(true)
     try {
       const res = await api.post('/api/v1/auth/login', { email, password })
-      const { user: loginUser, token } = res.data.data
-      if (loginUser.role !== 'admin') {
+      const { user: loginUser, accessToken, refreshToken } = res.data.data
+      const loginRoles = ((loginUser.roles ?? (loginUser.role ? [loginUser.role] : [])) as string[]).map((r: string) => r.toLowerCase())
+      if (!loginRoles.includes('admin')) {
         setError('관리자 계정이 아닙니다.')
         return
       }
-      login(loginUser, token)
+      login({ ...loginUser, roles: loginRoles }, accessToken, refreshToken)
       router.push('/admin')
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
@@ -176,7 +178,7 @@ export default function AdminLoginPage() {
           </form>
 
           {/* 데모 안내 — MSW Mock 활성화 시에만 표시 */}
-          {process.env.NEXT_PUBLIC_API_MOCKING === 'enabled' && (
+          {isMocking && (
             <div className="mt-4 flex items-center gap-2 rounded-ph-md border border-ph-border bg-ph-gray-50 px-[13px] py-[11px] text-[12.5px] leading-[1.5] text-ph-text-muted">
               <Info style={{ width: 14, height: 14, flexShrink: 0 }} />
               <span>

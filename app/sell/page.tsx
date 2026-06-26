@@ -16,8 +16,16 @@ import Tag from '@/components/ui/Tag';
 /* ── Types ─────────────────────────────────────────────────────────── */
 
 type Category = { id: string; label: string; icon: string };
+type ProductType = { id: string; label: string };
 
 /* ── Data ───────────────────────────────────────────────────────────── */
+
+const PRODUCT_TYPES: ProductType[] = [
+  { id: 'PROMPT',      label: '프롬프트'   },
+  { id: 'TEMPLATE',    label: '템플릿'     },
+  { id: 'DATASET',     label: '데이터셋'   },
+  { id: 'IMAGE_ASSET', label: '이미지 에셋' },
+];
 
 const CATEGORIES: Category[] = [
   { id: 'image',     label: '이미지 생성', icon: 'image'          },
@@ -91,8 +99,10 @@ export default function SellPage() {
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('writing');
+  const [productType, setProductType] = useState('PROMPT');
   const [model, setModel] = useState('');
   const [price, setPrice] = useState('');
+  const [desc, setDesc] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -120,9 +130,10 @@ export default function SellPage() {
       await api.post('/api/v1/products', {
         title,
         category,
+        productType,
         model,
         amount: Number(price),
-        desc: body,
+        desc,
         content: body,
         thumbnailUrl: thumbUrl,
         tags,
@@ -149,12 +160,13 @@ export default function SellPage() {
     title: title.trim() || '프롬프트 제목이 여기에 표시돼요',
     category,
     icon: catObj.icon,
+    productType,
     model: model.trim() || '모델 미정',
     amount: price ? Number(price) : 0,
     rating: '신규',
     salesCount: 0,
     seller: '내 상점',
-    desc: body || '',
+    desc: desc || '',
     thumbnail_url: thumbUrl ?? undefined,
   };
 
@@ -196,11 +208,32 @@ export default function SellPage() {
                   ))}
                 </div>
               </div>
+              <div>
+                <Label>상품 유형</Label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {PRODUCT_TYPES.map((t) => (
+                    <Tag key={t.id} selected={productType === t.id} onClick={() => setProductType(t.id)}>{t.label}</Tag>
+                  ))}
+                </div>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <FormField label="대상 모델" value={model} onChange={(v) => setModel(v)} placeholder="예: GPT-4o" />
                 <FormField label="가격" value={price} onChange={(v) => setPrice(v.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="4900" leading={<span style={{ fontWeight: 700 }}>₩</span>} />
               </div>
             </div>
+          </Card>
+
+          {/* 상품 소개 카드 */}
+          <Card padding="28px">
+            <FormField
+              label="상품 소개"
+              hint={`${desc.length}/200`}
+              type="textarea"
+              value={desc}
+              onChange={(v) => setDesc(v.slice(0, 200))}
+              rows={3}
+              placeholder="상품 목록에 표시되는 짧은 소개 문구를 입력하세요. 예: 전환율 높이는 랜딩 카피를 단계별로 만들어 드립니다."
+            />
           </Card>
 
           {/* 프롬프트 내용 카드 */}
@@ -215,7 +248,7 @@ export default function SellPage() {
               placeholder={'실제 판매할 프롬프트 본문을 입력하세요.\n\n예) 당신은 전문 카피라이터입니다. 아래 제품 정보를 바탕으로...\n- 타깃:\n- 톤앤매너:\n- 출력 형식:'}
             />
             <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Eye style={{ width: 14, height: 14 }} /> 입력한 내용은 오른쪽 미리보기에 실시간으로 반영돼요.
+              <Eye style={{ width: 14, height: 14 }} /> 구매 후 공개되는 실제 프롬프트 원문이에요.
             </p>
           </Card>
 

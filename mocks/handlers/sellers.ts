@@ -91,7 +91,58 @@ export const sellerHandlers = [
     if (!user || user.role !== 'seller') return ERR.forbidden();
 
     const myProducts = PRODUCTS.filter((p) => p.sellerId === userId);
-    return ok(myProducts);
+    const toApiStatus = (s?: string) => {
+      if (s === 'active')   return 'ON_SALE';
+      if (s === 'review')   return 'PENDING_REVIEW';
+      if (s === 'rejected') return 'REJECTED';
+      if (s === 'stopped')  return 'STOPPED';
+      return 'ON_SALE';
+    };
+    return ok(myProducts.map((p) => ({
+      productId: p.id,
+      title: p.title,
+      category: p.category,
+      model: p.model,
+      amount: p.amount,
+      status: toApiStatus(p.status),
+      salesCount: p.salesCount,
+      thumbnailUrl: p.thumbnail_url ?? null,
+      rejectionReason: null,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+    })));
+  }),
+
+  // GET /api/v1/sellers/me/products/:id
+  http.get(`${BASE}/me/products/:id`, ({ request, params }) => {
+    const token  = extractToken(request);
+    const userId = getUserIdFromToken(token);
+    if (!userId) return ERR.unauthorized();
+
+    const user = MOCK_USERS.find((u) => u.id === userId);
+    if (!user || user.role !== 'seller') return ERR.forbidden();
+
+    const product = PRODUCTS.find((p) => p.id === params.id && p.sellerId === userId);
+    if (!product) return ERR.notFound('상품을 찾을 수 없습니다.');
+
+    return ok({
+      productId: product.id,
+      title: product.title,
+      category: product.category,
+      productType: product.productType ?? 'PROMPT',
+      model: product.model,
+      amount: product.amount,
+      desc: product.desc,
+      content: product.desc,
+      status: product.status === 'active' ? 'ON_SALE'
+             : product.status === 'review' ? 'PENDING_REVIEW'
+             : product.status === 'rejected' ? 'REJECTED'
+             : product.status === 'stopped' ? 'STOPPED'
+             : 'ON_SALE',
+      version: '1.0',
+      thumbnailUrl: product.thumbnail_url ?? null,
+      tags: [],
+    });
   }),
 
   // GET /api/v1/sellers/me/stats

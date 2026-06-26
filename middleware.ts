@@ -8,7 +8,8 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   const token = request.cookies.get('token')?.value
-  const role = request.cookies.get('role')?.value
+  const rolesCookie = request.cookies.get('roles')?.value
+  const roleList = rolesCookie ? rolesCookie.split(',') : []
 
   const requiresAuth = AUTH_REQUIRED.some((path) => pathname.startsWith(path))
   const requiresSeller = SELLER_REQUIRED.some((path) => pathname.startsWith(path))
@@ -16,7 +17,7 @@ export function middleware(request: NextRequest) {
 
   if (requiresAdmin) {
     if (pathname === '/admin/login') return NextResponse.next()
-    if (!token || role !== 'admin') {
+    if (!token || !roleList.includes('admin')) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
     return NextResponse.next()
@@ -26,7 +27,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  if (requiresSeller && role !== 'seller') {
+  if (requiresSeller && !roleList.includes('seller')) {
     return NextResponse.redirect(new URL('/mypage', request.url))
   }
 

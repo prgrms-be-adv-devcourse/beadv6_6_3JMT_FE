@@ -18,9 +18,11 @@ export interface PromptItem {
   title: string;
   category: string;
   icon: string;
+  productType?: string;
   model: string;
   amount: number;
   originalAmount?: number;
+  priceLabel?: string;
   rating: number | string;
   salesCount: number;
   seller: string;
@@ -58,6 +60,7 @@ function Thumb({ p }: { p: PromptItem }) {
 /* ── PriceTag ────────────────────────────────────────────────────── */
 
 function PriceTag({ p }: { p: PromptItem }) {
+  if (p.priceLabel) return <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--ph-primary)' }}>{p.priceLabel}</span>;
   if (p.amount === 0) return <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--ph-primary)' }}>무료</span>;
   if (p.originalAmount && p.originalAmount > p.amount) {
     const pct = Math.round((1 - p.amount / p.originalAmount) * 100);
@@ -124,6 +127,8 @@ interface PromptCardProps {
   stopped?: boolean;
   showActions?: boolean;
   detailBadge?: boolean;
+  hideStats?: boolean;
+  hideBadge?: boolean;
 }
 
 export default function PromptCard({
@@ -135,6 +140,8 @@ export default function PromptCard({
   stopped,
   showActions,
   detailBadge,
+  hideStats,
+  hideBadge,
 }: PromptCardProps) {
   const [hovered, setHovered] = useState(false);
   const { isLoggedIn, openLoginModal } = useAuthStore();
@@ -188,14 +195,14 @@ export default function PromptCard({
       <div className="ph-card-media" style={{ position: 'relative' }}>
         <Thumb p={p} />
 
-        {(p.amount === 0 || p.badge) && (
+        {!hideBadge && ((p.amount === 0 && !p.priceLabel) || p.badge) && (
           <div style={{ position: 'absolute', top: 10, left: 10 }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', padding: '4px 8px',
               borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-primary)',
               color: '#fff', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
             }}>
-              {p.amount === 0 ? '무료' : p.badge}
+              {p.amount === 0 && !p.priceLabel ? '무료' : p.badge}
             </span>
           </div>
         )}
@@ -257,17 +264,23 @@ export default function PromptCard({
       }}>{p.title}</div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ph-text-muted)', fontSize: 13, minWidth: 0 }}>
-        <Star style={{ width: 14, height: 14, flexShrink: 0, color: 'var(--ph-primary)', fill: 'var(--ph-primary)' } as React.CSSProperties} />
-        <span style={{ color: 'var(--ph-text)', fontWeight: 600, flexShrink: 0 }}>{p.rating}</span>
-        <span style={{ flexShrink: 0 }}>·</span>
+        {!hideStats && (
+          <>
+            <Star style={{ width: 14, height: 14, flexShrink: 0, color: 'var(--ph-primary)', fill: 'var(--ph-primary)' } as React.CSSProperties} />
+            <span style={{ color: 'var(--ph-text)', fontWeight: 600, flexShrink: 0 }}>{p.rating}</span>
+            <span style={{ flexShrink: 0 }}>·</span>
+          </>
+        )}
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.seller}</span>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 2 }}>
         <PriceTag p={p} />
-        <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', whiteSpace: 'nowrap' }}>
-          {p.salesCount.toLocaleString()}회 판매
-        </span>
+        {!hideStats && (
+          <span style={{ fontSize: 13, color: 'var(--ph-text-muted)', whiteSpace: 'nowrap' }}>
+            {p.salesCount.toLocaleString()}회 판매
+          </span>
+        )}
       </div>
     </div>
   );

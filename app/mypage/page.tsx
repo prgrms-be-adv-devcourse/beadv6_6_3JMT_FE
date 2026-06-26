@@ -8,7 +8,9 @@ import { useToast } from '@/store/useToastStore';
 import api from '@/lib/auth';
 import { deleteUserMe, updateUserMe } from '@/lib/users';
 import { getWishlists, type WishlistItem } from '@/lib/wishlists';
-import { getPayments, requestRefund as apiRequestRefund, type PaymentItem as ApiPaymentItem } from '@/lib/payments';
+import { getPayments, requestRefund as apiRequestRefund } from '@/lib/payments';
+import { mapOrderToPrompt } from '@/lib/orderAdapters';
+import { MyOrderItem, PaymentItem as ApiPaymentItem } from '@/types/api/orders';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';
 import {
@@ -47,7 +49,8 @@ type Prompt = {
 type UserInfo = {
   name: string;
   email: string;
-  role: 'buyer' | 'seller';
+  role?: 'buyer' | 'seller';
+  roles?: string[];
   provider: 'local' | 'kakao';
   sellerStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
 };
@@ -270,7 +273,7 @@ function PasswordChangeModal({ onClose }: { onClose: () => void }) {
           <div>
             <div style={{ fontSize: 19, fontWeight: 700, margin: '14px 0 6px' }}>비밀번호 변경</div>
             <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ph-text-secondary)', margin: '0 0 20px' }}>
-              현재 비밀번호를 확인한 후 새 비밀번호로 변경해요. (데모 기본값: password123)
+              현재 비밀번호를 확인한 후 새 비밀번호로 변경해요.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <PHInput
@@ -367,7 +370,7 @@ const NOTIF_ROWS: { k: keyof NotifState; t: string; d: string }[] = [
 function MyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isLoggedIn, openLoginModal, login: authLogin, token: authToken, logout, user: authUser } = useAuthStore();
+  const { isLoggedIn, _hasHydrated, openLoginModal, login: authLogin, token: authToken, logout, user: authUser } = useAuthStore();
   const { items: cartItems } = useCartStore();
   const showToast = useToast();
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -401,7 +404,7 @@ function MyPageContent() {
     setUserLoadError(false);
     try {
       const res = await api.get('/api/v1/users/me');
-      const u: UserInfo = { provider: 'local', ...res.data.data };
+      const u: UserInfo = { provider: authUser?.provider ?? 'local', ...res.data.data };
       setUser(u);
       setNick(u.name);
     } catch {
@@ -437,16 +440,13 @@ function MyPageContent() {
   };
 
   useEffect(() => {
+    if (!_hasHydrated) return;
     if (!isLoggedIn) { openLoginModal(); return; }
     fetchUser();
     api.get('/api/v1/orders')
       .then((res) => {
-        const orders: { orderId: string; purchasedAt: string; product: Prompt | null }[] = res.data.data ?? [];
-        setPurchased(
-          orders
-            .filter((o) => o.product)
-            .map((o) => ({ ...o.product!, purchasedAt: o.purchasedAt, orderId: o.orderId }))
-        );
+        const orders: MyOrderItem[] = res.data.data ?? [];
+        setPurchased(orders.map(mapOrderToPrompt).filter((item): item is Prompt => item !== null));
       })
       .catch(() => {})
       .finally(() => setLoadingPurchased(false));
@@ -476,9 +476,11 @@ function MyPageContent() {
       })
       .catch(() => {})
       .finally(() => setLoadingWishlist(false));
-  }, [isLoggedIn, openLoginModal, fetchUser]);
+  }, [isLoggedIn, _hasHydrated, openLoginModal, fetchUser]);
 
   const cart = cartItems;
+
+  if (!_hasHydrated) return null;
 
   if (!isLoggedIn) {
     return (
@@ -494,6 +496,7 @@ function MyPageContent() {
       setUser((u) => u ? { ...u, name: updated.name ?? u.name } : u);
       if (authToken && authUser) authLogin({ ...authUser, ...updated }, authToken);
       setSavedNick(true);
+      showToast('닉네임이 변경됐어요');
     } catch {
       setSavedNick(false);
     }
@@ -638,7 +641,7 @@ function MyPageContent() {
                       padding: '5px 11px', background: 'var(--ph-secondary)', color: 'var(--ph-primary)',
                       borderRadius: 'var(--ph-radius-full)', fontSize: 13, fontWeight: 600,
                     }}>
-                      {user.role === 'seller'
+                      {(user.roles ? user.roles.includes('seller') : user.role === 'seller')
                         ? <><Store style={{ width: 13, height: 13 }} />판매자 계정</>
                         : <><User style={{ width: 13, height: 13 }} />구매자 계정</>}
                     </div>
@@ -730,14 +733,14 @@ function MyPageContent() {
                 />
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-                  {purchased.map((p) => {
+                  {purchased.map((p, index) => {
                     const rst = refunds[p.id];
                     if (rst) {
                       const label = rst === 'refunded' ? '환불 완료' : '환불 신청 중';
                       return (
-                        <div key={p.id} style={{ position: 'relative', cursor: 'not-allowed' }} aria-disabled="true">
+                        <div key={`${p.orderId || 'order'}-${p.id}-${index}`} style={{ position: 'relative', cursor: 'not-allowed' }} aria-disabled="true">
                           <div style={{ pointerEvents: 'none', filter: 'grayscale(0.5)' }}>
-                            <PromptCard p={p} />
+                            <PromptCard p={p} hideStats hideBadge />
                           </div>
                           <div style={{
                             position: 'absolute', inset: 0, borderRadius: 'var(--ph-radius-lg)',
@@ -766,7 +769,7 @@ function MyPageContent() {
                       );
                     }
                     return (
-                      <PromptCard key={p.id} p={p} onClick={() => router.push(`/reader/${p.id}`)} />
+                      <PromptCard key={`${p.orderId || 'order'}-${p.id}-${index}`} p={p} onClick={() => router.push(`/reader/${p.id}`)} hideStats hideBadge />
                     );
                   })}
                 </div>
@@ -878,28 +881,38 @@ function MyPageContent() {
                       <Check style={{ width: 12, height: 12 }} />인증됨
                     </span>
                   </div>
-                  <Button variant="secondary" onClick={() => setEmailModal(true)} style={{ whiteSpace: 'nowrap' }}>
-                    이메일 변경
-                  </Button>
+                  {user.provider !== 'local' ? (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
+                      padding: '3px 10px', borderRadius: 'var(--ph-radius-full)',
+                      background: 'var(--ph-secondary)', color: 'var(--ph-primary)', fontSize: 12, fontWeight: 600,
+                    }}>
+                      소셜 계정
+                    </span>
+                  ) : (
+                    <Button variant="secondary" onClick={() => setEmailModal(true)} style={{ whiteSpace: 'nowrap' }}>
+                      이메일 변경
+                    </Button>
+                  )}
                 </Row>
                 {/* 비밀번호 */}
                 <Row last>
                   <div style={{ minWidth: 120 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>비밀번호</div>
                     <div style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 2 }}>
-                      {user.provider === 'kakao'
-                        ? '소셜 로그인 계정은 카카오에서 비밀번호를 관리해요'
+                      {user.provider !== 'local'
+                        ? '소셜 로그인 계정은 해당 서비스에서 비밀번호를 관리해요'
                         : '로그인 시 사용하는 비밀번호'}
                     </div>
                   </div>
                   <div style={{ flex: 1 }} />
-                  {user.provider === 'kakao' ? (
+                  {user.provider !== 'local' ? (
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
                       padding: '3px 10px', borderRadius: 'var(--ph-radius-full)',
                       background: 'var(--ph-secondary)', color: 'var(--ph-primary)', fontSize: 12, fontWeight: 600,
                     }}>
-                      카카오 계정
+                      소셜 계정
                     </span>
                   ) : (
                     <Button variant="secondary" onClick={() => setPwModal(true)} style={{ whiteSpace: 'nowrap' }}>

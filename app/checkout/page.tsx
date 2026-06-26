@@ -7,7 +7,8 @@ import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import api from '@/lib/auth';
-import { createOrder } from '@/lib/payments';
+import { createOrder } from '@/lib/orders';
+import { confirmPayment } from '@/lib/payments';
 import { ShoppingCart, Trash2, ArrowLeft, CreditCard } from 'lucide-react';
 import { won } from '@/lib/utils';
 

@@ -16,7 +16,12 @@ import {
 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useAuthStore } from '@/store/useAuthStore'
-import api from '@/lib/auth'
+import { getAdminUserStats } from '@/lib/adminUsers'
+import { getAdminDashboardStats, getAdminMonthlyOrders, getAdminWeeklyOrders } from '@/lib/adminStats'
+import { getAdminSellerApplies, approveSellerApply, rejectSellerApply } from '@/lib/adminSellers'
+import type { SellerApply } from '@/lib/adminSellers'
+import { getAdminProducts } from '@/lib/adminProducts'
+import type { AdminProduct } from '@/lib/adminProducts'
 import { SectionCard, LinkAction } from '@/components/admin/SectionCard'
 import { Identity } from '@/components/admin/DataTable'
 import { ICON_MAP } from '@/lib/iconMap'
@@ -30,35 +35,16 @@ interface SalesPoint {
 
 interface Stats {
   totalUsers: number
-  totalUsersDelta: number
+  totalUsersDelta?: number
   newToday: number
-  newTodayDelta: number
+  newTodayDelta?: number
   monthRevenue: number
-  monthRevenueDelta: number
-  pendingPayout: number
-  pendingPayoutCount: number
+  monthRevenueDelta?: number
+  pendingPayout?: number
+  pendingPayoutCount?: number
   sales7d: SalesPoint[]
 }
 
-interface SellerApply {
-  id: string
-  userId: string
-  userName: string
-  email: string
-  categories: string[]
-  appliedAt: string
-  status: 'pending' | 'approved' | 'rejected'
-}
-
-interface ReviewProduct {
-  id: string
-  title: string
-  seller: string
-  model: string
-  category: string
-  icon: string
-  status?: string
-}
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`
 function wonShort(n: number) {
@@ -234,23 +220,39 @@ export default function AdminDashboardPage() {
   const router = useRouter()
   const [stats, setStats] = useState<Stats | null>(null)
   const [applies, setApplies] = useState<SellerApply[]>([])
-  const [products, setProducts] = useState<ReviewProduct[]>([])
+  const [products, setProducts] = useState<AdminProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState<string | null>(null)
 
   const load = async () => {
     try {
-      const [statsRes, appliesRes, productsRes] = await Promise.all([
-        api.get('/api/v1/admin/stats', { headers: { Authorization: `Bearer ${token}` } }),
-        api.get('/api/v1/admin/sellers/applies', { headers: { Authorization: `Bearer ${token}` } }),
-        api.get('/api/v1/admin/products', {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { status: 'review' },
-        }),
+      const [statsData, appliesData, productsData, monthData, weekendData] = await Promise.all([
+        getAdminDashboardStats().catch(() => null),
+        getAdminSellerApplies().catch(() => null),
+        getAdminProducts({ status: 'review' }).catch(() => null),
+        getAdminMonthlyOrders().catch(() => null),
+        getAdminWeeklyOrders().catch(() => null),
       ])
-      setStats(statsRes.data.data)
-      setApplies(appliesRes.data.data ?? [])
-      setProducts(productsRes.data.data ?? [])
+      const userStats = await getAdminUserStats().catch(() => null)
+
+      setStats({
+        ...(statsData ?? {}),
+        totalUsers: userStats?.totalUsers ?? statsData?.totalUsers ?? 0,
+        newToday: userStats?.todayNewUsers ?? statsData?.newToday ?? 0,
+        monthRevenue: monthData?.monthlyTransactionAmount ?? statsData?.monthRevenue ?? 0,
+        sales7d: weekendData?.dailyTransactions?.map((d) => {
+          const dt = new Date(d.date)
+          const dayStr = Number.isNaN(dt.getTime()) ? '' : ['일', '월', '화', '수', '목', '금', '토'][dt.getDay()]
+          return {
+            day: dayStr,
+            date: d.date && !Number.isNaN(dt.getTime()) ? `${dt.getMonth() + 1}/${dt.getDate()}` : d.date,
+            count: d.transactionCount || 0,
+            revenue: d.transactionAmount || 0,
+          }
+        }) || statsData?.sales7d || []
+      })
+      setApplies(appliesData ?? [])
+      setProducts(productsData ?? [])
     } finally {
       setLoading(false)
     }
@@ -264,7 +266,11 @@ export default function AdminDashboardPage() {
   const actSellerApp = async (id: string, action: 'approve' | 'reject') => {
     setActing(id)
     try {
-      await api.put(`/api/v1/admin/sellers/${id}/${action}`, {}, { headers: { Authorization: `Bearer ${token}` } })
+      if (action === 'approve') {
+        await approveSellerApply(id)
+      } else {
+        await rejectSellerApply(id)
+      }
       setApplies((prev) =>
         prev.map((a) => (a.id === id ? { ...a, status: action === 'approve' ? 'approved' : 'rejected' } : a)),
       )

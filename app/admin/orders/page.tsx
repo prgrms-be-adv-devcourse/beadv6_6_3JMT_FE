@@ -7,16 +7,7 @@ import { SectionCard } from '@/components/admin/SectionCard'
 import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { StatusBadge } from '@/components/admin/Badge'
 
-interface AdminOrder {
-  id: string
-  userId: string
-  userName: string
-  productId: string
-  productTitle: string
-  amount: number
-  status: string
-  createdAt: string
-}
+import { AdminOrder } from '@/types/api/orders'
 
 const FILTER_OPTIONS = [
   { value: 'all', label: '전체' },
@@ -33,7 +24,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
 
-  const filtered = filter === 'all' ? orders : orders.filter((o) => o.status === filter)
+  const filtered = filter === 'all' ? orders : orders.filter((o) => o.orderStatus === filter)
 
   useEffect(() => {
     if (!token) return
@@ -69,7 +60,7 @@ export default function AdminOrdersPage() {
           <thead>
             <tr>
               <Th>주문 ID</Th>
-              <Th>구매자</Th>
+              <Th>판매자</Th>
               <Th>상품명</Th>
               <Th align="right">금액</Th>
               <Th align="center">상태</Th>
@@ -88,21 +79,21 @@ export default function AdminOrdersPage() {
                   </Tr>
                 ))
               : filtered.map((order) => (
-                  <Tr key={order.id}>
+                  <Tr key={order.orderId}>
                     <Td>
-                      <span className="text-[12.5px] text-ph-text-muted">{order.id}</span>
+                      <span className="text-[12.5px] text-ph-text-muted">{order.orderId}</span>
                     </Td>
                     <Td>
-                      <Identity name={order.userName} />
+                      <Identity name={order.sellerNickname} />
                     </Td>
                     <Td>
                       <span className="block max-w-[200px] truncate">{order.productTitle}</span>
                     </Td>
                     <Td align="right" style={{ fontWeight: 600 }}>
-                      {order.amount === 0 ? '무료' : `${order.amount.toLocaleString()}원`}
+                      {order.totalOrderAmount === 0 ? '무료' : `${order.totalOrderAmount.toLocaleString()}원`}
                     </Td>
                     <Td align="center">
-                      <StatusBadge status={order.status} />
+                      <StatusBadge status={order.orderStatus} />
                     </Td>
                     <Td>
                       <span className="text-[13px] text-ph-text-secondary">

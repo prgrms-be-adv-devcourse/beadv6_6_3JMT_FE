@@ -288,7 +288,7 @@ function SellerCTA() {
 
   const onSell = () => {
     if (!isLoggedIn) { openLoginModal(); return; }
-    router.push(authUser?.role === 'seller' ? '/shop' : '/apply');
+    router.push(authUser?.roles?.includes('seller') ? '/shop' : '/apply');
   };
 
   return (

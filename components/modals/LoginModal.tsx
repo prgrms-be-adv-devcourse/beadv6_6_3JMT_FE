@@ -3,6 +3,7 @@
 import React from 'react';
 import { Sparkles, X, MessageCircle, Info } from 'lucide-react';
 import api from '@/lib/auth';
+import { isApiMockingEnabled } from '@/lib/hybridApi';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /* ── 타입 ──────────────────────────────────────────────── */
@@ -42,7 +43,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
 
-  const isMocking = process.env.NEXT_PUBLIC_API_MOCKING === 'enabled';
+  const isMocking = isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING);
 
   React.useEffect(() => {
     if (open) {
@@ -83,8 +84,9 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       const endpoint = signup ? '/api/v1/auth/signup' : '/api/v1/auth/login';
       const body = signup ? { name, email, password, serviceAgree } : { email, password };
       const res = await api.post(endpoint, body);
-      const { user, token } = res.data.data;
-      login(user, token);
+      const { user, accessToken, refreshToken } = res.data.data;
+      const roles = ((user.roles ?? (user.role ? [user.role] : [])) as string[]).map((r: string) => r.toLowerCase());
+      login({ ...user, roles, provider: user.provider ?? 'local' }, accessToken, refreshToken);
       onClose();
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;

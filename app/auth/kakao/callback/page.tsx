@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 import { kakaoLogin } from '@/lib/oauth';
+import { isApiMockingEnabled } from '@/lib/hybridApi';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToast } from '@/store/useToastStore';
 
@@ -70,7 +71,7 @@ function KakaoCallbackContent() {
       return;
     }
 
-    const isMocking = process.env.NEXT_PUBLIC_API_MOCKING === 'enabled';
+    const isMocking = isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING);
     const state = searchParams.get('state');
     const isAdminFlow = state === 'admin';
 
@@ -119,16 +120,16 @@ function KakaoCallbackContent() {
     getKakaoPayload()
       .then((payload) => kakaoLogin(payload))
       .then(({ user, accessToken, refreshToken }) => {
-        const role = user.role.toLowerCase() as 'buyer' | 'seller' | 'admin';
+        const roles = user.roles.map((r: string) => r.toLowerCase());
 
-        if (isAdminFlow && role !== 'admin') {
+        if (isAdminFlow && !roles.includes('admin')) {
           showToast('관리자 계정이 아닙니다.');
           router.replace('/admin/login');
           return;
         }
 
-        login({ ...user, role }, accessToken, refreshToken);
-        router.replace(role === 'admin' ? '/admin' : '/');
+        login({ ...user, roles, provider: 'kakao' }, accessToken, refreshToken);
+        router.replace(isAdminFlow ? '/admin' : '/');
       })
       .catch(() => {
         showToast('카카오 로그인에 실패했습니다. 다시 시도해주세요.');

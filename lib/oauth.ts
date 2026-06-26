@@ -4,7 +4,7 @@ export type OAuthUser = {
   id: string
   name: string
   email: string
-  role: string
+  roles: string[]
 }
 
 export type KakaoLoginRequest = {

@@ -1,15 +1,17 @@
 import axios from 'axios'
+import { attachHybridGatewayHeaders, isApiMockingEnabled } from '@/lib/hybridApi'
 import { useAuthStore } from '@/store/useAuthStore'
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: typeof window !== 'undefined' ? '' : process.env.NEXT_PUBLIC_API_URL,
 })
 
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token
+  const { token, user } = useAuthStore.getState()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  attachHybridGatewayHeaders(config, token, user?.roles?.find(r => r === 'admin') ?? user?.roles?.[0])
   return config
 })
 
@@ -26,7 +28,7 @@ api.interceptors.response.use(
 
       if (!refreshToken) {
         logout()
-        if (process.env.NEXT_PUBLIC_API_MOCKING !== 'enabled' && typeof window !== 'undefined') {
+        if (!isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING) && typeof window !== 'undefined') {
           window.location.href = '/'
         }
         return Promise.reject(error)
@@ -54,7 +56,7 @@ api.interceptors.response.use(
         return api(originalRequest)
       } catch {
         logout()
-        if (process.env.NEXT_PUBLIC_API_MOCKING !== 'enabled' && typeof window !== 'undefined') {
+        if (!isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING) && typeof window !== 'undefined') {
           window.location.href = '/'
         }
         return Promise.reject(error)
