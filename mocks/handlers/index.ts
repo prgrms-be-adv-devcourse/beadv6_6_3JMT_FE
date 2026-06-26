@@ -18,8 +18,16 @@ const settlementProxyPassthrough =
     ? [http.all('*/settlement-proxy/*', () => passthrough())]
     : [];
 
+// 결제 서비스 직접 통신 모드: /payment-proxy/* 요청은 MSW가 가로채지 않고
+// 실제 네트워크(Next rewrite → payment-service)로 통과시킨다.
+const paymentProxyPassthrough =
+  process.env.NEXT_PUBLIC_PAYMENT_DIRECT === 'true'
+    ? [http.all('*/payment-proxy/*', () => passthrough())]
+    : [];
+
 export const handlers = [
   ...settlementProxyPassthrough,
+  ...paymentProxyPassthrough,
   ...authHandlers,
   ...oauthHandlers,
   ...productHandlers,
