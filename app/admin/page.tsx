@@ -17,6 +17,7 @@ import {
 import type { CSSProperties, ReactNode } from 'react'
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/auth'
+import { getAdminUserStats } from '@/lib/adminUsers'
 import { SectionCard, LinkAction } from '@/components/admin/SectionCard'
 import { Identity } from '@/components/admin/DataTable'
 import { ICON_MAP } from '@/lib/iconMap'
@@ -241,23 +242,26 @@ export default function AdminDashboardPage() {
   const load = async () => {
     try {
       const [statsRes, appliesRes, productsRes, monthRes, weekendRes] = await Promise.all([
-        api.get('/api/v1/admin/stats', { headers: { Authorization: `Bearer ${token}` } }),
-        api.get('/api/v1/admin/sellers/applies', { headers: { Authorization: `Bearer ${token}` } }),
+        api.get('/api/v1/admin/stats', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
+        api.get('/api/v1/admin/sellers/applies', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
         api.get('/api/v1/admin/products', {
           headers: { Authorization: `Bearer ${token}` },
           params: { status: 'review' },
-        }),
+        }).catch(() => null),
         api.get('/api/v1/admin/orders/month', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
         api.get('/api/v1/admin/orders/weekend', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
       ])
-      
-      const statsData = statsRes.data.data
+      const userStats = await getAdminUserStats().catch(() => null)
+
+      const statsData = statsRes?.data?.data ?? {}
       const monthData = monthRes?.data?.data
       const weekendData = weekendRes?.data?.data
 
       setStats({
         ...statsData,
-        monthRevenue: monthData?.monthlyTransactionAmount ?? statsData.monthRevenue,
+        totalUsers: userStats?.totalUsers ?? statsData.totalUsers ?? 0,
+        newToday: userStats?.todayNewUsers ?? statsData.newToday ?? 0,
+        monthRevenue: monthData?.monthlyTransactionAmount ?? statsData.monthRevenue ?? 0,
         sales7d: weekendData?.dailyTransactions?.map((d: any) => {
           const dt = new Date(d.date)
           const dayStr = Number.isNaN(dt.getTime()) ? '' : ['일', '월', '화', '수', '목', '금', '토'][dt.getDay()]
@@ -267,10 +271,10 @@ export default function AdminDashboardPage() {
             count: d.transactionCount || 0,
             revenue: d.transactionAmount || 0,
           }
-        }) || statsData.sales7d
+        }) || statsData.sales7d || []
       })
-      setApplies(appliesRes.data.data ?? [])
-      setProducts(productsRes.data.data ?? [])
+      setApplies(appliesRes?.data?.data ?? [])
+      setProducts(productsRes?.data?.data ?? [])
     } finally {
       setLoading(false)
     }
