@@ -8,7 +8,9 @@ import { useToast } from '@/store/useToastStore';
 import api from '@/lib/auth';
 import { deleteUserMe, updateUserMe } from '@/lib/users';
 import { getWishlists, type WishlistItem } from '@/lib/wishlists';
-import { getPayments, requestRefund as apiRequestRefund, type PaymentItem as ApiPaymentItem } from '@/lib/payments';
+import { getPayments, requestRefund as apiRequestRefund } from '@/lib/payments';
+import { mapOrderToPrompt } from '@/lib/orderAdapters';
+import { MyOrderItem, PaymentItem as ApiPaymentItem } from '@/types/api/orders';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';
 import {
@@ -441,12 +443,8 @@ function MyPageContent() {
     fetchUser();
     api.get('/api/v1/orders')
       .then((res) => {
-        const orders: { orderId: string; purchasedAt: string; product: Prompt | null }[] = res.data.data ?? [];
-        setPurchased(
-          orders
-            .filter((o) => o.product)
-            .map((o) => ({ ...o.product!, purchasedAt: o.purchasedAt, orderId: o.orderId }))
-        );
+        const orders: MyOrderItem[] = res.data.data ?? [];
+        setPurchased(orders.map(mapOrderToPrompt).filter((item): item is Prompt => item !== null));
       })
       .catch(() => {})
       .finally(() => setLoadingPurchased(false));
@@ -730,14 +728,14 @@ function MyPageContent() {
                 />
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-                  {purchased.map((p) => {
+                  {purchased.map((p, index) => {
                     const rst = refunds[p.id];
                     if (rst) {
                       const label = rst === 'refunded' ? '환불 완료' : '환불 신청 중';
                       return (
-                        <div key={p.id} style={{ position: 'relative', cursor: 'not-allowed' }} aria-disabled="true">
+                        <div key={`${p.orderId || 'order'}-${p.id}-${index}`} style={{ position: 'relative', cursor: 'not-allowed' }} aria-disabled="true">
                           <div style={{ pointerEvents: 'none', filter: 'grayscale(0.5)' }}>
-                            <PromptCard p={p} />
+                            <PromptCard p={p} hideStats hideBadge />
                           </div>
                           <div style={{
                             position: 'absolute', inset: 0, borderRadius: 'var(--ph-radius-lg)',
@@ -766,7 +764,7 @@ function MyPageContent() {
                       );
                     }
                     return (
-                      <PromptCard key={p.id} p={p} onClick={() => router.push(`/reader/${p.id}`)} />
+                      <PromptCard key={`${p.orderId || 'order'}-${p.id}-${index}`} p={p} onClick={() => router.push(`/reader/${p.id}`)} hideStats hideBadge />
                     );
                   })}
                 </div>

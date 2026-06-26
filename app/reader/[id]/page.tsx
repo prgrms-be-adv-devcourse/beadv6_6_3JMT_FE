@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import api from '@/lib/auth';
+import { mapOrderToPrompt } from '@/lib/orderAdapters';
 import {
   ArrowLeft, CalendarCheck, FileText, Lock, Download,
   AlertTriangle, CheckCircle2, MessageCircle, Sparkles,
@@ -147,13 +148,13 @@ export default function ReaderPage() {
     if (!id) { router.push('/mypage'); return; }
     api.get('/api/v1/orders')
       .then((res) => {
-        const orders: { orderId: string; purchasedAt: string; product: Prompt | null }[] = res.data.data ?? [];
-        const found = orders.find((o) => o.product && String(o.product.id) === String(id));
-        if (!found?.product) {
+        const products = (res.data.data ?? []).map(mapOrderToPrompt).filter(Boolean) as Prompt[];
+        const found = products.find((product) => String(product.id) === String(id));
+        if (!found) {
           router.push('/mypage');
           return;
         }
-        setP({ ...found.product, purchasedAt: found.purchasedAt });
+        setP(found);
       })
       .catch(() => router.push('/mypage'))
       .finally(() => setLoading(false));
