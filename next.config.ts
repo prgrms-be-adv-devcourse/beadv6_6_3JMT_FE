@@ -12,9 +12,9 @@ const nextConfig: NextConfig = {
       const target = process.env.SETTLEMENT_PROXY_TARGET || 'http://localhost:8080';
       rules.push({ source: '/settlement-proxy/:path*', destination: `${target}/:path*` });
     }
-    // 임시: 결제 서비스 직접 통신 프록시 (CORS·MSW 우회)
+    // 결제 API 프록시: MSW 우회 + CORS 해결. 게이트웨이(기본 8080)를 통해 결제 서비스로 라우팅.
     if (process.env.NEXT_PUBLIC_PAYMENT_DIRECT === 'true') {
-      const target = process.env.PAYMENT_PROXY_TARGET || 'http://localhost:8084';
+      const target = process.env.PAYMENT_PROXY_TARGET || 'http://localhost:8080';
       rules.push({ source: '/payment-proxy/:path*', destination: `${target}/:path*` });
     }
     return rules;
