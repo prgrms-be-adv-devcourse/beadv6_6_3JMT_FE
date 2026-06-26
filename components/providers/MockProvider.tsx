@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { isApiMockingEnabled } from '@/lib/hybridApi';
 
 export default function MockProvider({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(process.env.NEXT_PUBLIC_API_MOCKING !== 'enabled');
+  const [ready, setReady] = useState(!isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING));
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_API_MOCKING !== 'enabled') return;
+    if (!isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING)) return;
 
     import('../../mocks/browser')
       .then(({ worker }) => {

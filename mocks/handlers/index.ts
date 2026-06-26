@@ -18,8 +18,22 @@ const settlementProxyPassthrough =
     ? [http.all('*/settlement-proxy/*', () => passthrough())]
     : [];
 
+// hybrid 모드일 경우 order, cart 등 백엔드가 연동된 API는 MSW를 통과시킵니다.
+const hybridPassthrough =
+  process.env.NEXT_PUBLIC_API_MOCKING === 'hybrid'
+    ? [
+        http.all('*/api/v1/orders/*', () => passthrough()),
+        http.all('*/api/v1/orders', () => passthrough()),
+        http.all('*/api/v1/admin/orders/*', () => passthrough()),
+        http.all('*/api/v1/admin/orders', () => passthrough()),
+        http.all('*/api/v1/cart/*', () => passthrough()),
+        http.all('*/api/v1/cart', () => passthrough()),
+      ]
+    : [];
+
 export const handlers = [
   ...settlementProxyPassthrough,
+  ...hybridPassthrough,
   ...authHandlers,
   ...oauthHandlers,
   ...productHandlers,

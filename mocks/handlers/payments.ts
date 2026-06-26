@@ -45,19 +45,19 @@ export const paymentHandlers = [
     return ok({ paymentId }, 201);
   }),
 
-  // GET /api/v1/orders/payments — 결제 내역 목록 조회
-  http.get('*/api/v1/orders/payments', ({ request }) => {
-    const token  = extractToken(request);
-    const userId = getUserIdFromToken(token);
-    if (!userId) return ERR.unauthorized();
-
-    const url    = new URL(request.url);
-    const page   = Number(url.searchParams.get('page')  ?? 1);
-    const size   = Number(url.searchParams.get('size')  ?? 20);
-    const items  = MOCK_PAYMENT_HISTORY[userId] ?? [];
-
-    return okList(items, page, size);
-  }),
+  // // GET /api/v1/orders/payments — 결제 내역 목록 조회
+  // http.get('*/api/v1/orders/payments', ({ request }) => {
+  //   const token  = extractToken(request);
+  //   const userId = getUserIdFromToken(token);
+  //   if (!userId) return ERR.unauthorized();
+  //
+  //   const url    = new URL(request.url);
+  //   const page   = Number(url.searchParams.get('page')  ?? 1);
+  //   const size   = Number(url.searchParams.get('size')  ?? 20);
+  //   const items  = MOCK_PAYMENT_HISTORY[userId] ?? [];
+  //
+  //   return okList(items, page, size);
+  // }),
 
   // POST /api/v1/payments/:paymentId/refund — 환불 요청
   http.post('*/api/v1/payments/:paymentId/refund', ({ request, params }) => {

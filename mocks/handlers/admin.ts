@@ -160,6 +160,36 @@ export const adminHandlers = [
     });
   }),
 
+  // 이번 달 실제 거래액 (order-service 연동 모의)
+  http.get(`${BASE}/orders/month`, ({ request }) => {
+    if (!isAdmin(request)) return ERR.forbidden();
+    return ok({
+      monthlyTransactionAmount: 184320000,
+    });
+  }),
+
+  // 최근 7일 거래량 (order-service 연동 모의)
+  http.get(`${BASE}/orders/weekend`, ({ request }) => {
+    if (!isAdmin(request)) return ERR.forbidden();
+    return ok({
+      totalTransactionCount: 2554,
+      totalTransactionAmount: 47170000,
+      period: {
+        startDate: '2026-06-08',
+        endDate: '2026-06-14',
+      },
+      dailyTransactions: [
+        { date: '2026-06-08', transactionCount: 284, transactionAmount: 5120000 },
+        { date: '2026-06-09', transactionCount: 312, transactionAmount: 5740000 },
+        { date: '2026-06-10', transactionCount: 268, transactionAmount: 4860000 },
+        { date: '2026-06-11', transactionCount: 401, transactionAmount: 7220000 },
+        { date: '2026-06-12', transactionCount: 488, transactionAmount: 9140000 },
+        { date: '2026-06-13', transactionCount: 372, transactionAmount: 6680000 },
+        { date: '2026-06-14', transactionCount: 429, transactionAmount: 7910000 },
+      ],
+    });
+  }),
+
   // 회원 통계
   http.get(`${BASE}/stats/users`, ({ request }) => {
     if (!isAdmin(request)) return ERR.forbidden();
@@ -342,24 +372,24 @@ export const adminHandlers = [
     return ok({ id, status: 'rejected' });
   }),
 
-  // 주문 목록 (전체)
-  http.get(`${BASE}/orders`, ({ request }) => {
-    if (!isAdmin(request)) return ERR.forbidden();
-    const url = new URL(request.url);
-    const page = Number(url.searchParams.get('page') ?? 1);
-    const size = Number(url.searchParams.get('size') ?? 20);
-    return okList(ordersStore, page, size);
-  }),
+  // // 주문 목록 (전체)
+  // http.get(`${BASE}/orders`, ({ request }) => {
+  //   if (!isAdmin(request)) return ERR.forbidden();
+  //   const url = new URL(request.url);
+  //   const page = Number(url.searchParams.get('page') ?? 1);
+  //   const size = Number(url.searchParams.get('size') ?? 20);
+  //   return okList(ordersStore, page, size);
+  // }),
 
-  // 주문 환불
-  http.put(`${BASE}/orders/:id/refund`, ({ request, params }) => {
-    if (!isAdmin(request)) return ERR.forbidden();
-    const { id } = params;
-    const order = ordersStore.find((o) => o.id === id);
-    if (!order) return ERR.notFound('주문');
-    order.status = 'REFUNDED';
-    return ok(order);
-  }),
+  // // 주문 환불
+  // http.put(`${BASE}/orders/:id/refund`, ({ request, params }) => {
+  //   if (!isAdmin(request)) return ERR.forbidden();
+  //   const { id } = params;
+  //   const order = ordersStore.find((o) => o.id === id);
+  //   if (!order) return ERR.notFound('주문');
+  //   order.status = 'REFUNDED';
+  //   return ok(order);
+  // }),
 
   // ── 정산 관리 (settlement-service) ──
 
