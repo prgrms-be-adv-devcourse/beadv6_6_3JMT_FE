@@ -3,6 +3,7 @@ export type MockUser = {
   name: string;
   email: string;
   role: 'buyer' | 'seller' | 'admin';
+  provider?: 'local' | 'kakao';
   status?: 'active' | 'suspended' | 'withdrawn';
   createdAt?: string;
 };
@@ -44,6 +45,7 @@ export type NotificationItem = {
 
 export const MOCK_USERS: MockUser[] = [
   { id: 'user-1', name: '김민서', email: 'kms12782@nangman.cloud', role: 'buyer', status: 'active', createdAt: '2026-06-24T08:00:00.000Z' },
+  { id: 'user-kakao-mock-kakao-123456', name: '카카오사용자', email: 'kakao@user.com', role: 'buyer', provider: 'kakao', status: 'active', createdAt: '2026-06-24T08:00:00.000Z' },
   { id: 'user-4', name: '구매자', email: 'buyer@prompthub.kr', role: 'buyer', status: 'active', createdAt: '2026-06-24T09:30:00.000Z' },
   { id: 'user-2', name: '프롬트랩', email: 'promptlab@prompthub.kr', role: 'seller', status: 'active', createdAt: '2026-06-20T10:00:00.000Z' },
   { id: 'user-3', name: '판매자', email: 'seller@prompthub.kr', role: 'seller', status: 'active', createdAt: '2026-06-18T11:00:00.000Z' },

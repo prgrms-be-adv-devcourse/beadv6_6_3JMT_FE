@@ -128,7 +128,7 @@ function KakaoCallbackContent() {
           return;
         }
 
-        login({ ...user, role }, accessToken, refreshToken);
+        login({ ...user, role, provider: 'kakao' }, accessToken, refreshToken);
         router.replace(role === 'admin' ? '/admin' : '/');
       })
       .catch(() => {

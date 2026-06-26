@@ -272,7 +272,7 @@ function PasswordChangeModal({ onClose }: { onClose: () => void }) {
           <div>
             <div style={{ fontSize: 19, fontWeight: 700, margin: '14px 0 6px' }}>비밀번호 변경</div>
             <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ph-text-secondary)', margin: '0 0 20px' }}>
-              현재 비밀번호를 확인한 후 새 비밀번호로 변경해요. (데모 기본값: password123)
+              현재 비밀번호를 확인한 후 새 비밀번호로 변경해요.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <PHInput
@@ -403,7 +403,7 @@ function MyPageContent() {
     setUserLoadError(false);
     try {
       const res = await api.get('/api/v1/users/me');
-      const u: UserInfo = { provider: 'local', ...res.data.data };
+      const u: UserInfo = { provider: authUser?.provider ?? 'local', ...res.data.data };
       setUser(u);
       setNick(u.name);
     } catch {
@@ -885,19 +885,19 @@ function MyPageContent() {
                   <div style={{ minWidth: 120 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>비밀번호</div>
                     <div style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 2 }}>
-                      {user.provider === 'kakao'
-                        ? '소셜 로그인 계정은 카카오에서 비밀번호를 관리해요'
+                      {user.provider !== 'local'
+                        ? '소셜 로그인 계정은 해당 서비스에서 비밀번호를 관리해요'
                         : '로그인 시 사용하는 비밀번호'}
                     </div>
                   </div>
                   <div style={{ flex: 1 }} />
-                  {user.provider === 'kakao' ? (
+                  {user.provider !== 'local' ? (
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
                       padding: '3px 10px', borderRadius: 'var(--ph-radius-full)',
                       background: 'var(--ph-secondary)', color: 'var(--ph-primary)', fontSize: 12, fontWeight: 600,
                     }}>
-                      카카오 계정
+                      소셜 계정
                     </span>
                   ) : (
                     <Button variant="secondary" onClick={() => setPwModal(true)} style={{ whiteSpace: 'nowrap' }}>

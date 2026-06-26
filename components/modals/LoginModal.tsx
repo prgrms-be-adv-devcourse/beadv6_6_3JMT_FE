@@ -85,7 +85,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       const body = signup ? { name, email, password, serviceAgree } : { email, password };
       const res = await api.post(endpoint, body);
       const { user, token } = res.data.data;
-      login(user, token);
+      login({ ...user, provider: user.provider ?? 'local' }, token);
       onClose();
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;

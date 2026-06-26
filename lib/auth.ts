@@ -3,7 +3,7 @@ import { attachHybridGatewayHeaders, isApiMockingEnabled } from '@/lib/hybridApi
 import { useAuthStore } from '@/store/useAuthStore'
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: typeof window !== 'undefined' ? '' : process.env.NEXT_PUBLIC_API_URL,
 })
 
 api.interceptors.request.use((config) => {
