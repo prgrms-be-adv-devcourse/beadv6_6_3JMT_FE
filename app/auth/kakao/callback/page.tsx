@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 import { kakaoLogin } from '@/lib/oauth';
+import { isApiMockingEnabled } from '@/lib/hybridApi';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToast } from '@/store/useToastStore';
 
@@ -70,7 +71,7 @@ function KakaoCallbackContent() {
       return;
     }
 
-    const isMocking = process.env.NEXT_PUBLIC_API_MOCKING === 'enabled';
+    const isMocking = isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING);
     const state = searchParams.get('state');
     const isAdminFlow = state === 'admin';
 

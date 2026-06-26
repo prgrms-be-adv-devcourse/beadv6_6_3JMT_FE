@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Sparkles, ShieldCheck, Mail, Lock, Info, LockKeyhole, MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/auth'
+import { isApiMockingEnabled } from '@/lib/hybridApi'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -13,7 +14,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const isMocking = process.env.NEXT_PUBLIC_API_MOCKING === 'enabled'
+  const isMocking = isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING)
 
   const kakaoAdminLogin = () => {
     if (isMocking) {
@@ -176,7 +177,7 @@ export default function AdminLoginPage() {
           </form>
 
           {/* 데모 안내 — MSW Mock 활성화 시에만 표시 */}
-          {process.env.NEXT_PUBLIC_API_MOCKING === 'enabled' && (
+          {isMocking && (
             <div className="mt-4 flex items-center gap-2 rounded-ph-md border border-ph-border bg-ph-gray-50 px-[13px] py-[11px] text-[12.5px] leading-[1.5] text-ph-text-muted">
               <Info style={{ width: 14, height: 14, flexShrink: 0 }} />
               <span>

@@ -240,15 +240,35 @@ export default function AdminDashboardPage() {
 
   const load = async () => {
     try {
-      const [statsRes, appliesRes, productsRes] = await Promise.all([
+      const [statsRes, appliesRes, productsRes, monthRes, weekendRes] = await Promise.all([
         api.get('/api/v1/admin/stats', { headers: { Authorization: `Bearer ${token}` } }),
         api.get('/api/v1/admin/sellers/applies', { headers: { Authorization: `Bearer ${token}` } }),
         api.get('/api/v1/admin/products', {
           headers: { Authorization: `Bearer ${token}` },
           params: { status: 'review' },
         }),
+        api.get('/api/v1/admin/orders/month', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
+        api.get('/api/v1/admin/orders/weekend', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
       ])
-      setStats(statsRes.data.data)
+      
+      const statsData = statsRes.data.data
+      const monthData = monthRes?.data?.data
+      const weekendData = weekendRes?.data?.data
+
+      setStats({
+        ...statsData,
+        monthRevenue: monthData?.monthlyTransactionAmount ?? statsData.monthRevenue,
+        sales7d: weekendData?.dailyTransactions?.map((d: any) => {
+          const dt = new Date(d.date)
+          const dayStr = Number.isNaN(dt.getTime()) ? '' : ['일', '월', '화', '수', '목', '금', '토'][dt.getDay()]
+          return {
+            day: dayStr,
+            date: d.date && !Number.isNaN(dt.getTime()) ? `${dt.getMonth() + 1}/${dt.getDate()}` : d.date,
+            count: d.transactionCount || 0,
+            revenue: d.transactionAmount || 0,
+          }
+        }) || statsData.sales7d
+      })
       setApplies(appliesRes.data.data ?? [])
       setProducts(productsRes.data.data ?? [])
     } finally {
