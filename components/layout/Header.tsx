@@ -425,7 +425,7 @@ export default function Header() {
         <div className="ph-header-search" style={{ flex: 1, maxWidth: 340, marginLeft: 8 }}>
           <SearchBar value={query} onChange={setQuery} onSubmit={onSearch} size="header" />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', flexShrink: 0 }}>
           {Hamburger}
           {!user && (
             <button

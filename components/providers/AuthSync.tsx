@@ -11,6 +11,13 @@ export default function AuthSync() {
   const { isLoggedIn, user, logout } = useAuthStore();
   const { setItems } = useWishStore();
 
+  // 앱 마운트 시 토큰 유효성 검증 — 무효 토큰이면 401 인터셉터가 logout() 처리
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    api.get('/api/v1/users/me').catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 위시리스트 동기화
   useEffect(() => {
     if (!isLoggedIn) {
