@@ -34,6 +34,9 @@ type Prompt = {
   rating: number;
   salesCount: number;
   seller: string;
+  sellerId?: string;
+  sellerProfileImageUrl?: string | null;
+  sellerProductCount?: number;
   badge?: string;
   desc: string;
   thumbnail_url?: string | null;
@@ -98,9 +101,17 @@ function Badge({
 
 /* ── Avatar ─────────────────────────────────────────────────────────── */
 
-function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+function Avatar({ name, size = 40, imageUrl }: { name: string; size?: number; imageUrl?: string | null }) {
   const initials = name.slice(0, 2);
-  return (
+  return imageUrl ? (
+    <Image
+      src={imageUrl}
+      alt={name}
+      width={size}
+      height={size}
+      style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+    />
+  ) : (
     <div
       style={{
         width: size,
@@ -313,10 +324,10 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
 
           <h3 style={{ fontSize: 20, fontWeight: 700, margin: '40px 0 16px' }}>판매자</h3>
           <Card padding="20px" style={{ maxWidth: 420, display: 'flex', alignItems: 'center', gap: 14 }}>
-            <Avatar name={p.seller} size={48} />
+            <Avatar name={p.seller} size={48} imageUrl={p.sellerProfileImageUrl} />
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>{p.seller}</div>
-              <div style={{ color: 'var(--ph-text-muted)', fontSize: 14 }}>검증된 크리에이터 · 프롬프트 24개</div>
+              <div style={{ color: 'var(--ph-text-muted)', fontSize: 14 }}>검증된 크리에이터 · 프롬프트 {p.sellerProductCount ?? 0}개</div>
             </div>
           </Card>
         </div>
