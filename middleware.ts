@@ -26,7 +26,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  if (requiresSeller && role !== 'seller') {
+  if (requiresSeller && role !== 'seller' && role !== 'admin') {
     return NextResponse.redirect(new URL('/mypage', request.url))
   }
 

@@ -129,7 +129,7 @@ function KakaoCallbackContent() {
         }
 
         login({ ...user, role, provider: 'kakao' }, accessToken, refreshToken);
-        router.replace(role === 'admin' ? '/admin' : '/');
+        router.replace(isAdminFlow ? '/admin' : '/');
       })
       .catch(() => {
         showToast('카카오 로그인에 실패했습니다. 다시 시도해주세요.');

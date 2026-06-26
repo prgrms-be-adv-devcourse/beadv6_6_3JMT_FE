@@ -433,7 +433,7 @@ export default function Header() {
               style={{ flexShrink: 0, border: 'none', cursor: 'pointer', fontFamily: 'var(--ph-font-family)', fontWeight: 600, color: '#fff', background: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-md)', height: 36, padding: '0 14px', fontSize: 14 }}
             >로그인</button>
           )}
-          {role === 'seller' && (
+          {(role === 'seller' || role === 'admin') && (
             <React.Fragment>
               <button
                 onClick={() => go('sell')}
