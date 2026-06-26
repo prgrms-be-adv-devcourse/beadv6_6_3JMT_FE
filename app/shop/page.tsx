@@ -300,7 +300,7 @@ export default function ShopPage() {
                 <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {/* 카드 + 오버레이 */}
                   <div style={{ opacity: dim ? 0.5 : 1, filter: dim ? 'grayscale(0.7)' : 'none', pointerEvents: dim ? 'none' : 'auto', transition: 'opacity .15s ease, filter .15s ease' }}>
-                    <PromptCard p={p as any} showStatus stopped={off} />
+                    <PromptCard p={p as any} showStatus stopped={off} onClick={() => router.push(`/detail/${p.id}`)} />
                   </div>
 
                   {/* 카드 아래 액션 */}

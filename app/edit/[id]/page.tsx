@@ -19,6 +19,7 @@ import Tag from '@/components/ui/Tag';
 /* ── Types ─────────────────────────────────────────────────────────── */
 
 type Category = { id: string; label: string; icon: string };
+type ProductType = { id: string; label: string };
 
 type Version = { ver: string; date: string; note: string };
 
@@ -26,9 +27,11 @@ type Prompt = {
   id: string;
   title: string;
   category: string;
+  productType: string;
   model: string;
   amount: number;
   desc: string;
+  content: string;
   status?: string;
   thumbnailUrl?: string | null;
   tags?: string[];
@@ -44,6 +47,13 @@ const CATEGORIES: Category[] = [
   { id: 'marketing', label: '마케팅',      icon: 'megaphone'      },
   { id: 'chatbot',   label: '챗봇',        icon: 'message-circle' },
   { id: 'data',      label: '데이터 분석', icon: 'bar-chart-3'    },
+];
+
+const PRODUCT_TYPES: ProductType[] = [
+  { id: 'PROMPT',      label: '프롬프트'   },
+  { id: 'TEMPLATE',    label: '템플릿'     },
+  { id: 'DATASET',     label: '데이터셋'   },
+  { id: 'IMAGE_ASSET', label: '이미지 에셋' },
 ];
 
 function nextVer(latest: string, type: 'MAJOR' | 'PATCH'): string {
@@ -82,13 +92,18 @@ function Badge({
   );
 }
 
-/* ── TagInput ────────────────────────────────────────────────────────── */
+/* ── Input ───────────────────────────────────────────────────────────── */
 
-function TagInput({ value, onChange, placeholder }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; placeholder?: string }) {
+function Input({ value, onChange, placeholder, leading }: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  leading?: React.ReactNode;
+}) {
   const [focus, setFocus] = useState(false);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, border: `1px solid ${focus ? 'var(--ph-primary)' : 'var(--ph-border)'}`, borderRadius: 'var(--ph-radius-md)', padding: '0 12px', background: 'var(--ph-surface)', transition: 'border-color .15s' }}>
-      <span style={{ fontWeight: 700, color: 'var(--ph-text-muted)' }}>#</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: `1px solid ${focus ? 'var(--ph-primary)' : 'var(--ph-border)'}`, borderRadius: 'var(--ph-radius-md)', padding: '0 14px', background: 'var(--ph-surface)', transition: 'border-color .15s ease' }}>
+      {leading && <span style={{ display: 'flex', color: 'var(--ph-text-muted)' }}>{leading}</span>}
       <input
         value={value}
         onChange={onChange}
@@ -109,9 +124,11 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
 
   const [title, setTitle] = useState(prompt.title);
   const [category, setCategory] = useState(prompt.category);
+  const [productType, setProductType] = useState(prompt.productType);
   const [model, setModel] = useState(prompt.model);
   const [price, setPrice] = useState(prompt.amount === 0 ? '0' : String(prompt.amount));
-  const [body, setBody] = useState(prompt.desc);
+  const [desc, setDesc] = useState(prompt.desc);
+  const [body, setBody] = useState(prompt.content);
   const [tags, setTags] = useState<string[]>(prompt.tags ?? []);
   const [tagInput, setTagInput] = useState('');
   const [thumbUrl, setThumbUrl] = useState<string | null>(prompt.thumbnailUrl ?? null);
@@ -144,9 +161,9 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     setSaving(true);
     try {
       await api.put(`/api/v1/products/${id}`, {
-        title, category, model,
+        title, category, productType, model,
         amount: Number(price),
-        desc: body, content: body,
+        desc, content: body,
         thumbnailUrl: thumbUrl,
         tags,
         ...(isDraft ? {} : { versionType, changeReason }),
@@ -178,12 +195,13 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     title: title.trim() || '프롬프트 제목이 여기에 표시돼요',
     category,
     icon: catObj.icon,
+    productType,
     model: model.trim() || '모델 미정',
     amount: price ? Number(price) : 0,
     rating: '신규',
     salesCount: 0,
     seller: '내 상점',
-    desc: body || '',
+    desc: desc || '',
     thumbnail_url: thumbUrl ?? undefined,
   };
 
@@ -236,11 +254,32 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
                   ))}
                 </div>
               </div>
+              <div>
+                <Label>상품 유형</Label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {PRODUCT_TYPES.map((t) => (
+                    <Tag key={t.id} selected={productType === t.id} onClick={() => setProductType(t.id)}>{t.label}</Tag>
+                  ))}
+                </div>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <FormField label="대상 모델" value={model} onChange={(v) => setModel(v)} placeholder="예: GPT-4o" />
                 <FormField label="가격" value={price} onChange={(v) => setPrice(v.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="4900" leading={<span style={{ fontWeight: 700 }}>₩</span>} />
               </div>
             </div>
+          </Card>
+
+          {/* 상품 소개 카드 */}
+          <Card padding="28px">
+            <FormField
+              label="상품 소개"
+              hint={`${desc.length}/200`}
+              type="textarea"
+              value={desc}
+              onChange={(v) => setDesc(v.slice(0, 200))}
+              rows={3}
+              placeholder="상품 목록에 표시되는 짧은 소개 문구를 입력하세요."
+            />
           </Card>
 
           {/* 프롬프트 내용 카드 */}
@@ -255,7 +294,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
               placeholder={'실제 판매할 프롬프트 본문을 입력하세요.\n\n예) 당신은 전문 카피라이터입니다...'}
             />
             <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Eye style={{ width: 14, height: 14 }} /> 입력한 내용은 오른쪽 미리보기에 실시간으로 반영돼요.
+              <Eye style={{ width: 14, height: 14 }} /> 구매 후 공개되는 실제 프롬프트 원문이에요.
             </p>
           </Card>
 
@@ -268,10 +307,11 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
                 <Label hint={`${tags.length}/8`}>태그</Label>
                 <form onSubmit={addTag} style={{ display: 'flex', gap: 8 }}>
                   <div style={{ flex: 1 }}>
-                    <TagInput
+                    <Input
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
                       placeholder="태그를 입력하고 Enter (예: 카피라이팅)"
+                      leading={<span style={{ fontWeight: 700, color: 'var(--ph-text-muted)' }}>#</span>}
                     />
                   </div>
                   <Button variant="secondary" size="sm" type="submit">추가</Button>
@@ -281,7 +321,12 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
                     {tags.map((t) => (
                       <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 8px 6px 12px', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-full)', fontSize: 13, fontWeight: 600 }}>
                         #{t}
-                        <button type="button" onClick={() => removeTag(t)} style={{ display: 'inline-flex', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ph-primary)', padding: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => removeTag(t)}
+                          aria-label="태그 삭제"
+                          style={{ display: 'inline-flex', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ph-primary)', padding: 0 }}
+                        >
                           <X style={{ width: 14, height: 14 }} />
                         </button>
                       </span>
@@ -387,15 +432,23 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
           </div>
         </div>
 
-        {/* ── 미리보기 ── */}
-        <div style={{ position: 'sticky', top: 24 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-full)', fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
-            <Store style={{ width: 14, height: 14 }} /> 카드 미리보기
+        {/* ── 라이브 미리보기 ── */}
+        <div style={{ position: 'sticky', top: 88, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ph-text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Eye style={{ width: 15, height: 15 }} /> 미리보기
           </div>
           <PromptCard p={previewItem} />
-          <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Eye style={{ width: 14, height: 14 }} /> 실제 마켓에 표시될 카드 형태예요.
-          </p>
+          <Card padding="16px">
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>프롬프트 내용</div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.65, color: body ? 'var(--ph-text-secondary)' : 'var(--ph-text-muted)', whiteSpace: 'pre-wrap', maxHeight: 220, overflowY: 'auto', fontFamily: 'var(--ph-font-family)' }}>
+              {body || '내용을 입력하면 이곳에서 실제 표시 형태를 확인할 수 있어요.'}
+            </div>
+            {tags.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
+                {tags.map((t) => <span key={t} style={{ fontSize: 12, color: 'var(--ph-text-muted)' }}>#{t}</span>)}
+              </div>
+            )}
+          </Card>
         </div>
 
       </div>
@@ -426,9 +479,11 @@ export default function EditPage() {
           id: d.productId,
           title: d.title,
           category: d.category ?? '',
+          productType: d.productType ?? 'PROMPT',
           model: d.model,
           amount: d.amount,
-          desc: d.desc,
+          desc: d.desc ?? '',
+          content: d.content ?? '',
           status: d.status,
           thumbnailUrl: d.thumbnailUrl ?? null,
           tags: d.tags ?? [],

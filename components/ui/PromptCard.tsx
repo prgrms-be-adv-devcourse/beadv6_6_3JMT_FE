@@ -18,6 +18,7 @@ export interface PromptItem {
   title: string;
   category: string;
   icon: string;
+  productType?: string;
   model: string;
   amount: number;
   originalAmount?: number;
