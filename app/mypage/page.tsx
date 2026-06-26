@@ -492,6 +492,7 @@ function MyPageContent() {
       setUser((u) => u ? { ...u, name: updated.name ?? u.name } : u);
       if (authToken && authUser) authLogin({ ...authUser, ...updated }, authToken);
       setSavedNick(true);
+      showToast('닉네임이 변경됐어요');
     } catch {
       setSavedNick(false);
     }
@@ -876,9 +877,19 @@ function MyPageContent() {
                       <Check style={{ width: 12, height: 12 }} />인증됨
                     </span>
                   </div>
-                  <Button variant="secondary" onClick={() => setEmailModal(true)} style={{ whiteSpace: 'nowrap' }}>
-                    이메일 변경
-                  </Button>
+                  {user.provider !== 'local' ? (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
+                      padding: '3px 10px', borderRadius: 'var(--ph-radius-full)',
+                      background: 'var(--ph-secondary)', color: 'var(--ph-primary)', fontSize: 12, fontWeight: 600,
+                    }}>
+                      소셜 계정
+                    </span>
+                  ) : (
+                    <Button variant="secondary" onClick={() => setEmailModal(true)} style={{ whiteSpace: 'nowrap' }}>
+                      이메일 변경
+                    </Button>
+                  )}
                 </Row>
                 {/* 비밀번호 */}
                 <Row last>

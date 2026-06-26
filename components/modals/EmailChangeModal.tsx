@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Mail, ShieldCheck, X, AlertCircle, Info, ArrowLeft } from 'lucide-react';
+import { Mail, ShieldCheck, X, AlertCircle, ArrowLeft } from 'lucide-react';
 
 interface Props {
   currentEmail: string;
@@ -167,20 +167,6 @@ export default function EmailChangeModal({ currentEmail, onClose, onVerified }: 
             <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ph-text-secondary)', margin: '0 0 16px' }}>
               <strong style={{ color: 'var(--ph-text)', fontWeight: 700 }}>{email.trim()}</strong>으로 보낸 6자리 인증번호를 입력하세요.
             </p>
-
-            {/* 데모 힌트 박스 */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '10px 12px', background: 'var(--ph-secondary)',
-              borderRadius: 'var(--ph-radius-md)', marginBottom: 18,
-              fontSize: 13, color: 'var(--ph-primary)', fontWeight: 600,
-            }}>
-              <Info style={{ width: 15, height: 15, flexShrink: 0 }} />
-              <span>
-                데모용 인증번호:{' '}
-                <span style={{ fontFamily: 'ui-monospace, monospace', letterSpacing: '0.08em' }}>{sentCode}</span>
-              </span>
-            </div>
 
             {/* 인증번호 입력 + 타이머 */}
             <div style={{ position: 'relative' }}>
