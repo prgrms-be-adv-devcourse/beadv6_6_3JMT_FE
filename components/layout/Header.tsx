@@ -8,6 +8,7 @@ import { useWishStore } from '@/store/useWishStore';
 import Logo from '@/components/ui/Logo';
 import api from '@/lib/auth';
 import { won } from '@/lib/utils';
+import { getCartItems, removeCartItem as deleteCartItem } from '@/lib/cart';
 import {
   Search,
   Bell,
@@ -235,18 +236,31 @@ export default function Header() {
   const pathname = usePathname();
 
   const { user, logout, openLoginModal } = useAuthStore();
-  const { items: cart, removeItem: removeCartItem } = useCartStore();
+  const { items: cart, setItems: setCartItems, removeItem: removeCartItem } = useCartStore();
   const { items: wishItems } = useWishStore();
   const [query, setQuery] = React.useState('');
   const [menu, setMenu] = React.useState<string | null>(null);
   const [notifList, setNotifList] = React.useState<Notif[]>([]);
 
   React.useEffect(() => {
-    if (!user) { setNotifList([]); return; }
+    if (!user) {
+      Promise.resolve().then(() => setNotifList([]));
+      return;
+    }
     api.get('/api/v1/notifications')
       .then((res) => setNotifList(res.data.data ?? []))
       .catch(() => {});
   }, [user]);
+
+  React.useEffect(() => {
+    if (!user) {
+      Promise.resolve().then(() => setCartItems([]));
+      return;
+    }
+    getCartItems()
+      .then(setCartItems)
+      .catch(() => {});
+  }, [setCartItems, user]);
 
   const unreadCount = notifList.filter((n) => !n.read).length;
 
@@ -271,7 +285,14 @@ export default function Header() {
       logout();
     }
   };
-  const onRemoveFromCart = (id: string) => removeCartItem(id);
+  const onRemoveFromCart = async (cartProductId: string) => {
+    try {
+      await deleteCartItem(cartProductId);
+      removeCartItem(cartProductId);
+    } catch {
+      // API 실패 시 서버와 로컬 장바구니가 어긋나지 않도록 로컬 반영을 보류합니다.
+    }
+  };
 
   const current = pathname === '/' ? 'home' : pathname.split('/')[1];
 
@@ -339,11 +360,11 @@ export default function Header() {
           ) : (
             <React.Fragment>
               {cart.map((it) => (
-                <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', fontSize: 13 }}>
+                <div key={it.cartProductId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', fontSize: 13 }}>
                   <span style={{ flex: 1, color: 'var(--ph-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.title}</span>
                   <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{it.amount === 0 ? '무료' : won(it.amount)}</span>
                   <button
-                    onClick={() => onRemoveFromCart(it.id)}
+                    onClick={() => onRemoveFromCart(it.cartProductId)}
                     aria-label="삭제"
                     style={{ display: 'inline-flex', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ph-text-muted)', padding: 4, borderRadius: 'var(--ph-radius-sm)' }}
                   >

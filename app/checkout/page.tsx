@@ -8,11 +8,11 @@ import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import api from '@/lib/auth';
 import { createOrder } from '@/lib/orders';
-import { confirmPayment } from '@/lib/payments';
+import { getCartItems, removeCartItem } from '@/lib/cart';
 import { ShoppingCart, Trash2, ArrowLeft, CreditCard } from 'lucide-react';
 import { won } from '@/lib/utils';
 
-type LineItem = { id: string; title: string; amount: number; thumbnailUrl: string | null };
+type LineItem = { id: string; productId: string; cartProductId: string; title: string; amount: number; thumbnailUrl: string | null };
 
 /* ─── 실제 결제 콘텐츠 (useSearchParams 사용 → Suspense 필요) ─── */
 
@@ -22,11 +22,12 @@ function CheckoutContent() {
   const productId = searchParams.get('id');
   const isSingle = !!productId;
 
-  const { items: cartItems, removeItem, clearCart } = useCartStore();
+  const { items: cartItems, setItems: setCartItems, removeItem, clearCart } = useCartStore();
   const user = useAuthStore((s) => s.user);
 
   const [singleItem, setSingleItem] = useState<LineItem | null>(null);
   const [fetchErr, setFetchErr] = useState(false);
+  const [cartReady, setCartReady] = useState(isSingle);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,19 +38,50 @@ function CheckoutContent() {
           const d = res.data.data;
           setSingleItem({
             id: String(d.id),
+            productId: String(d.id),
+            cartProductId: String(d.id),
             title: d.title,
             amount: d.amount,
             thumbnailUrl: d.thumbnail_url ?? null,
           });
         })
         .catch(() => setFetchErr(true));
-    } else if (cartItems.length === 0) {
-      router.replace('/shop');
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (isSingle) {
+      Promise.resolve().then(() => setCartReady(true));
+      return;
+    }
+
+    if (!user) {
+      Promise.resolve().then(() => setCartReady(true));
+      return;
+    }
+
+    getCartItems()
+      .then((items) => {
+        setCartItems(items);
+        if (items.length === 0) router.replace('/shop');
+      })
+      .catch(() => {
+        if (cartItems.length === 0) router.replace('/shop');
+      })
+      .finally(() => setCartReady(true));
+  }, [cartItems.length, isSingle, router, setCartItems, user]);
+
   const items: LineItem[] = isSingle ? (singleItem ? [singleItem] : []) : cartItems;
   const total = items.reduce((s, i) => s + i.amount, 0);
+
+  const handleRemoveCartItem = async (cartProductId: string) => {
+    try {
+      await removeCartItem(cartProductId);
+      removeItem(cartProductId);
+    } catch {
+      // API 실패 시 서버와 로컬 장바구니가 어긋나지 않도록 로컬 반영을 보류합니다.
+    }
+  };
 
   const handleOrder = async () => {
     if (loading || items.length === 0 || !user) return;
@@ -57,14 +89,14 @@ function CheckoutContent() {
     setLoading(true);
     try {
       const orderParams = isSingle
-        ? { productId: items[0].id }
-        : { productIds: items.map((i) => i.id) };
+        ? { productId: items[0].productId }
+        : { productIds: items.map((i) => i.productId) };
       const { orderId } = await createOrder(orderParams);
 
       // MSW용: 결제창이 팝업으로 열려 sessionStorage가 격리될 수 있으므로 localStorage 사용
       localStorage.setItem(
         '_mock_pending_order',
-        JSON.stringify({ orderId, productIds: items.map((i) => i.id) })
+        JSON.stringify({ orderId, productIds: items.map((i) => i.productId) })
       );
 
       if (!isSingle) clearCart();
@@ -116,7 +148,7 @@ function CheckoutContent() {
   }
 
   /* 단건 상품 로딩 중 */
-  if (isSingle && !singleItem) {
+  if ((isSingle && !singleItem) || (!isSingle && !cartReady)) {
     return (
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
         <p style={{ fontSize: 15, color: 'var(--ph-text-muted)' }}>불러오는 중...</p>
@@ -192,7 +224,7 @@ function CheckoutContent() {
               {/* 카트 모드에서만 삭제 버튼 표시 */}
               {!isSingle && (
                 <button
-                  onClick={() => removeItem(item.id)}
+                  onClick={() => handleRemoveCartItem(item.cartProductId)}
                   aria-label="삭제"
                   style={{
                     display: 'inline-flex', background: 'none', border: 'none',

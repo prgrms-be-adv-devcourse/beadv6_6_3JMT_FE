@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/auth';
 import { hasPurchasedProduct } from '@/lib/orderAdapters';
+import { addCartItem } from '@/lib/cart';
 import { getWishlistIdForProduct, addWishlist, removeWishlist } from '@/lib/wishlists';
 import Image from 'next/image';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -227,13 +228,13 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
   const router = useRouter();
   const { isLoggedIn, openLoginModal } = useAuthStore();
   const { items: wishItems, toggle } = useWishStore();
-  const { items: cartItems, addItem } = useCartStore();
+  const { items: cartItems, addItem, upsertItem } = useCartStore();
   const [showVersions, setShowVersions] = useState(false);
   const [purchased, setPurchased] = useState(false);
   const [wishlistId, setWishlistId] = useState<string | null>(null);
 
   const inWish = wishItems.some((i) => i.id === String(p.id));
-  const inCart = cartItems.some((i) => i.id === String(p.id));
+  const inCart = cartItems.some((i) => i.productId === String(p.id));
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -255,7 +256,14 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
 
   const onCart = () => {
     if (!isLoggedIn) { openLoginModal(); return; }
-    addItem({ id: String(p.id), title: p.title, amount: p.amount, thumbnailUrl: p.thumbnail_url ?? null });
+    const productId = String(p.id);
+    const item = { id: productId, productId, cartProductId: productId, title: p.title, amount: p.amount, thumbnailUrl: p.thumbnail_url ?? null };
+    addItem(item);
+    void addCartItem(productId)
+      .then((saved) => {
+        if (saved) upsertItem(saved);
+      })
+      .catch(() => {});
   };
 
   const onWish = async () => {

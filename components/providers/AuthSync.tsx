@@ -3,11 +3,14 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
+import { useCartStore } from '@/store/useCartStore';
 import api from '@/lib/auth';
+import { getCartItems } from '@/lib/cart';
 
 export default function AuthSync() {
   const { isLoggedIn } = useAuthStore();
   const { setItems } = useWishStore();
+  const setCartItems = useCartStore((state) => state.setItems);
 
   // 앱 마운트 시 토큰 유효성 검증 — 무효 토큰이면 401 인터셉터가 logout() 처리
   useEffect(() => {
@@ -19,7 +22,7 @@ export default function AuthSync() {
   // 위시리스트 동기화
   useEffect(() => {
     if (!isLoggedIn) {
-      setItems([]);
+      Promise.resolve().then(() => setItems([]));
       return;
     }
     api.get('/api/v1/wishlists')
@@ -39,6 +42,18 @@ export default function AuthSync() {
       })
       .catch(() => {});
   }, [isLoggedIn, setItems]);
+
+  // 장바구니 동기화
+  useEffect(() => {
+    if (!isLoggedIn) {
+      Promise.resolve().then(() => setCartItems([]));
+      return;
+    }
+
+    getCartItems()
+      .then(setCartItems)
+      .catch(() => {});
+  }, [isLoggedIn, setCartItems]);
 
 
   return null;

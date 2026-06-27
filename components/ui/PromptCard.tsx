@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
 import { useCartStore } from '@/store/useCartStore';
 import { won } from '@/lib/utils';
+import { addCartItem } from '@/lib/cart';
 
 /* ── 공유 Prompt 타입 ────────────────────────────────────────────── */
 
@@ -146,7 +147,7 @@ export default function PromptCard({
   const [hovered, setHovered] = useState(false);
   const { isLoggedIn, openLoginModal } = useAuthStore();
   const { items: wishItems, toggle } = useWishStore();
-  const { addItem } = useCartStore();
+  const { addItem, upsertItem } = useCartStore();
 
   const isWished = wishItems.some((i) => i.id === String(p.id));
   const isClickable = !disabled && (!!onOpen || !!onClick);
@@ -166,7 +167,14 @@ export default function PromptCard({
   const onCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isLoggedIn) { openLoginModal(); return; }
-    addItem({ id: String(p.id), title: p.title, amount: p.amount, thumbnailUrl: p.thumbnail_url ?? null });
+    const productId = String(p.id);
+    const item = { id: productId, productId, cartProductId: productId, title: p.title, amount: p.amount, thumbnailUrl: p.thumbnail_url ?? null };
+    addItem(item);
+    void addCartItem(productId)
+      .then((saved) => {
+        if (saved) upsertItem(saved);
+      })
+      .catch(() => {});
   };
 
   /* detail 페이지 관련 카드는 gray-100, 나머지는 gray-50 */
