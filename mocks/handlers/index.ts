@@ -6,6 +6,7 @@ import { oauthHandlers }        from './oauth';
 import { productHandlers }      from './products';
 import { userHandlers }         from './users';
 import { wishlistHandlers }     from './wishlist';
+import { cartHandlers }         from './cart';
 import { sellerHandlers }       from './sellers';
 import { orderHandlers }        from './orders';
 import { paymentHandlers }      from './payments';
@@ -72,6 +73,7 @@ export const handlers = [
   ...productHandlers,
   ...userHandlers,
   ...wishlistHandlers,
+  ...cartHandlers,
   ...sellerHandlers,
   ...orderHandlers,
   ...paymentHandlers,
