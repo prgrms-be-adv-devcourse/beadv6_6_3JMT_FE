@@ -6,6 +6,7 @@ import { hasPurchasedProduct, mapOrderToPrompt } from './orderAdapters.ts'
 test('mapOrderToPrompt keeps legacy mocked nested product orders', () => {
   const prompt = mapOrderToPrompt({
     orderId: 'order-1',
+    isRefund: false,
     purchasedAt: '2026-06-25T10:00:00',
     product: {
       id: 'product-1',
@@ -56,6 +57,7 @@ test('hasPurchasedProduct supports both mocked and real order shapes', () => {
     hasPurchasedProduct([
       {
         orderId: 'order-1',
+        isRefund: false,
         purchasedAt: '2026-06-25T10:00:00',
         product: null,
         productId: 'product-1',
@@ -68,10 +70,46 @@ test('hasPurchasedProduct supports both mocked and real order shapes', () => {
     hasPurchasedProduct([
       {
         orderId: 'order-2',
+        isRefund: false,
         purchasedAt: '2026-06-25T10:00:00',
         product: { id: 'product-2' } as never,
       },
     ], 'product-2'),
     true,
+  )
+})
+
+test('mapOrderToPrompt excludes refunded orders', () => {
+  const prompt = mapOrderToPrompt({
+    orderId: 'order-1',
+    orderProductId: 'order-product-1',
+    productId: 'product-1',
+    orderStatus: 'REFUNDED',
+    isRefund: true,
+    productType: 'PROMPT',
+    title: 'Refunded prompt',
+    model: 'GPT-4.1',
+    rating: 4.5,
+    paidAt: '2026-06-25T10:00:00',
+    createdAt: '2026-06-25T09:50:00',
+    product: null,
+  })
+
+  assert.equal(prompt, null)
+})
+
+test('hasPurchasedProduct excludes refunded orders', () => {
+  assert.equal(
+    hasPurchasedProduct([
+      {
+        orderId: 'order-1',
+        productId: 'product-1',
+        orderStatus: 'REFUNDED',
+        isRefund: true,
+        purchasedAt: '2026-06-25T10:00:00',
+        product: null,
+      },
+    ], 'product-1'),
+    false,
   )
 })
