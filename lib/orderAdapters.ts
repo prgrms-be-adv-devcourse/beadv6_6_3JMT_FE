@@ -14,7 +14,7 @@ function normalizeModel(model?: string | null): string {
 }
 
 export function isActivePurchasedOrder(order: MyOrderItem): boolean {
-  return order.isRefund === false
+  return order.orderStatus !== 'REFUNDED'
 }
 
 export function mapOrderToPrompt(order: MyOrderItem): PromptLike | null {

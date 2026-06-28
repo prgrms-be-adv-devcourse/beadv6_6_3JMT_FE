@@ -36,7 +36,7 @@ export interface MyOrderItem {
   orderProductId?: string;
   productId?: string;
   orderStatus?: string;
-  isRefund: boolean;
+  isRefundable: boolean;
   productType?: string;
   title?: string;
   model?: string | null;
@@ -58,7 +58,7 @@ export interface PaymentItem {
   orderProductId: string;
   paymentId: string;
   paymentStatus: PaymentStatus;
-  isRefund: boolean;
+  isRefundable: boolean;
   productType: string;
   title: string;
   amount: number;

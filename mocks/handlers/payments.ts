@@ -73,7 +73,7 @@ export const paymentHandlers = [
     if (item.paymentStatus !== 'PAID') return err('PAY004', '환불 불가 상태입니다.', 400);
 
     item.paymentStatus = 'REFUNDING';
-    item.isRefund      = false;
+    item.isRefundable  = false;
 
     return new Response(null, { status: 202 });
   }),

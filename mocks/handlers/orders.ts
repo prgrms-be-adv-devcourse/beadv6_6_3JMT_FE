@@ -21,7 +21,7 @@ export const orderHandlers = [
         orderProductId: o.orderId,
         productId: o.productId,
         orderStatus: 'PAID',
-        isRefund: false,
+        isRefundable: false,
         productType: product?.productType ?? 'PROMPT',
         title: product?.title,
         model: product?.model ?? null,

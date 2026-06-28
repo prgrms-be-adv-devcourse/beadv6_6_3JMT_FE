@@ -6,7 +6,7 @@ import { hasPurchasedProduct, mapOrderToPrompt } from './orderAdapters.ts'
 test('mapOrderToPrompt keeps legacy mocked nested product orders', () => {
   const prompt = mapOrderToPrompt({
     orderId: 'order-1',
-    isRefund: false,
+    isRefundable: false,
     purchasedAt: '2026-06-25T10:00:00',
     product: {
       id: 'product-1',
@@ -32,8 +32,8 @@ test('mapOrderToPrompt converts real order-service flat orders', () => {
     orderId: 'order-1',
     orderProductId: 'order-product-1',
     productId: 'product-1',
+    isRefundable: false,
     orderStatus: 'PENDING',
-    isRefund: false,
     productType: 'PROMPT',
     title: 'Real prompt',
     model: null,
@@ -57,8 +57,8 @@ test('hasPurchasedProduct supports both mocked and real order shapes', () => {
     hasPurchasedProduct([
       {
         orderId: 'order-1',
-        isRefund: false,
-        purchasedAt: '2026-06-25T10:00:00',
+        isRefundable: false,
+            purchasedAt: '2026-06-25T10:00:00',
         product: null,
         productId: 'product-1',
       },
@@ -70,8 +70,8 @@ test('hasPurchasedProduct supports both mocked and real order shapes', () => {
     hasPurchasedProduct([
       {
         orderId: 'order-2',
-        isRefund: false,
-        purchasedAt: '2026-06-25T10:00:00',
+        isRefundable: false,
+            purchasedAt: '2026-06-25T10:00:00',
         product: { id: 'product-2' } as never,
       },
     ], 'product-2'),
@@ -84,8 +84,8 @@ test('mapOrderToPrompt excludes refunded orders', () => {
     orderId: 'order-1',
     orderProductId: 'order-product-1',
     productId: 'product-1',
+    isRefundable: false,
     orderStatus: 'REFUNDED',
-    isRefund: true,
     productType: 'PROMPT',
     title: 'Refunded prompt',
     model: 'GPT-4.1',
@@ -104,9 +104,9 @@ test('hasPurchasedProduct excludes refunded orders', () => {
       {
         orderId: 'order-1',
         productId: 'product-1',
+        isRefundable: false,
         orderStatus: 'REFUNDED',
-        isRefund: true,
-        purchasedAt: '2026-06-25T10:00:00',
+            purchasedAt: '2026-06-25T10:00:00',
         product: null,
       },
     ], 'product-1'),

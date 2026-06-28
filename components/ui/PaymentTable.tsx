@@ -8,7 +8,7 @@ export interface Payment {
   title: string;
   amount: number;
   paymentStatus: 'PAID' | 'REFUNDING' | 'REFUNDED';
-  isRefund: boolean;
+  isRefundable: boolean;
   paidAt: string;
 }
 
@@ -70,7 +70,7 @@ export default function PaymentTable({ payments, showRefundColumn, onRefund }: P
       {payments.map((pay, i) => {
         const meta     = STATUS_MAP[pay.paymentStatus] ?? STATUS_MAP.PAID;
         const isFree   = pay.amount === 0;
-        const canRefund = pay.paymentStatus === 'PAID' && !pay.isRefund;
+        const canRefund = pay.isRefundable;
         return (
           <div
             key={pay.paymentId}

@@ -515,7 +515,7 @@ function MyPageContent() {
     try {
       await apiRequestRefund(paymentId);
       setPayments((prev) =>
-        prev.map((p) => p.paymentId === paymentId ? { ...p, paymentStatus: 'REFUNDING', isRefund: false } : p)
+        prev.map((p) => p.paymentId === paymentId ? { ...p, paymentStatus: 'REFUNDING', isRefundable: false } : p)
       );
       // 구매 탭 잠금 오버레이 동기화: orderId로 해당 purchased 항목 찾아 overlay 표시
       const paymentItem = payments.find((p) => p.paymentId === paymentId);
