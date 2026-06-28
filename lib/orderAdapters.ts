@@ -13,7 +13,13 @@ function normalizeModel(model?: string | null): string {
   return model || 'Prompt'
 }
 
+export function isActivePurchasedOrder(order: MyOrderItem): boolean {
+  return order.isRefund === false
+}
+
 export function mapOrderToPrompt(order: MyOrderItem): PromptLike | null {
+  if (!isActivePurchasedOrder(order)) return null
+
   if (order.product) {
     return {
       ...order.product,
@@ -48,6 +54,7 @@ export function mapOrderToPrompt(order: MyOrderItem): PromptLike | null {
 
 export function hasPurchasedProduct(orders: MyOrderItem[], productId: string): boolean {
   return orders.some((order) => {
+    if (!isActivePurchasedOrder(order)) return false
     if (order.product?.id === productId) return true
     return order.productId === productId
   })

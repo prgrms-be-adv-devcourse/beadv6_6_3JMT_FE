@@ -13,11 +13,25 @@ export const orderHandlers = [
     if (!userId) return ERR.unauthorized();
 
     const orders = MOCK_ORDERS[userId] ?? [];
-    const result = orders.map((o) => ({
-      orderId:     o.orderId,
-      purchasedAt: o.purchasedAt,
-      product:     PRODUCTS.find((p) => p.id === o.productId) ?? null,
-    }));
+    const result = orders.map((o) => {
+      const product = PRODUCTS.find((p) => p.id === o.productId) ?? null;
+
+      return {
+        orderId: o.orderId,
+        orderProductId: o.orderId,
+        productId: o.productId,
+        orderStatus: 'PAID',
+        isRefund: false,
+        productType: product?.productType ?? 'PROMPT',
+        title: product?.title,
+        model: product?.model ?? null,
+        rating: typeof product?.rating === 'number' ? product.rating : null,
+        paidAt: o.purchasedAt,
+        createdAt: o.purchasedAt,
+        purchasedAt: o.purchasedAt,
+        product,
+      };
+    });
 
     return ok(result);
   }),

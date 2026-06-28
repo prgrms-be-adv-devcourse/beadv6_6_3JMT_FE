@@ -36,7 +36,7 @@ export interface MyOrderItem {
   orderProductId?: string;
   productId?: string;
   orderStatus?: string;
-  isRefund?: boolean;
+  isRefund: boolean;
   productType?: string;
   title?: string;
   model?: string | null;
