@@ -6,6 +6,7 @@ import { hasPurchasedProduct, mapOrderToPrompt } from './orderAdapters.ts'
 test('mapOrderToPrompt keeps legacy mocked nested product orders', () => {
   const prompt = mapOrderToPrompt({
     orderId: 'order-1',
+    downloaded: false,
     isRefundable: false,
     purchasedAt: '2026-06-25T10:00:00',
     product: {
@@ -32,6 +33,7 @@ test('mapOrderToPrompt converts real order-service flat orders', () => {
     orderId: 'order-1',
     orderProductId: 'order-product-1',
     productId: 'product-1',
+    downloaded: false,
     isRefundable: false,
     orderStatus: 'PENDING',
     productType: 'PROMPT',
@@ -57,7 +59,8 @@ test('hasPurchasedProduct supports both mocked and real order shapes', () => {
     hasPurchasedProduct([
       {
         orderId: 'order-1',
-        isRefundable: false,
+        downloaded: false,
+    isRefundable: false,
             purchasedAt: '2026-06-25T10:00:00',
         product: null,
         productId: 'product-1',
@@ -70,7 +73,8 @@ test('hasPurchasedProduct supports both mocked and real order shapes', () => {
     hasPurchasedProduct([
       {
         orderId: 'order-2',
-        isRefundable: false,
+        downloaded: false,
+    isRefundable: false,
             purchasedAt: '2026-06-25T10:00:00',
         product: { id: 'product-2' } as never,
       },
@@ -84,6 +88,7 @@ test('mapOrderToPrompt excludes refunded orders', () => {
     orderId: 'order-1',
     orderProductId: 'order-product-1',
     productId: 'product-1',
+    downloaded: false,
     isRefundable: false,
     orderStatus: 'REFUNDED',
     productType: 'PROMPT',
@@ -104,7 +109,8 @@ test('hasPurchasedProduct excludes refunded orders', () => {
       {
         orderId: 'order-1',
         productId: 'product-1',
-        isRefundable: false,
+        downloaded: false,
+    isRefundable: false,
         orderStatus: 'REFUNDED',
             purchasedAt: '2026-06-25T10:00:00',
         product: null,

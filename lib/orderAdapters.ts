@@ -3,6 +3,8 @@ import type { MyOrderItem, ProductInfo } from '../types/api/orders'
 type PromptLike = ProductInfo & {
   orderProductId?: string
   priceLabel?: string
+  downloaded?: boolean
+  isRefundable?: boolean
 }
 
 function normalizeCategory(productType?: string): string {
@@ -26,6 +28,8 @@ export function mapOrderToPrompt(order: MyOrderItem): PromptLike | null {
       orderId: order.orderId,
       orderProductId: order.orderProductId,
       purchasedAt: order.purchasedAt ?? order.paidAt ?? order.createdAt,
+      downloaded: order.downloaded,
+      isRefundable: order.isRefundable,
     }
   }
 
@@ -49,6 +53,8 @@ export function mapOrderToPrompt(order: MyOrderItem): PromptLike | null {
     thumbnail_url: null,
     purchasedAt: order.paidAt ?? order.createdAt ?? order.purchasedAt,
     priceLabel: '구매 완료',
+    downloaded: order.downloaded,
+    isRefundable: order.isRefundable,
   }
 }
 
