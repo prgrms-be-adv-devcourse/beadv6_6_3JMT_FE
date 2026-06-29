@@ -19,13 +19,12 @@
   "data": [
     {
       "orderId": "9f1c2a7e-4b8d-4e2a-9c11-2d3e4f5a1111",
-      "orderProductId": "9f1c2a7e-4b8d-4e2a-9c11-2d3e4f5a1234",
       "paymentId": "9f1c2a7e-4b8d-4e2a-9c11-2d3e4f5a1234",
       "paymentStatus": "PAID",
-      "isRefund": true,
+      "isRefundable": true,
       "productType": "PROMPT",
-      "title": "면접 답변 프롬프트",
-      "amount": 1900,
+      "title": "면접 답변 프롬프트 외 1건",
+      "amount": 3800,
       "paidAt": "2026-06-18T10:45:00"
     }
   ],
@@ -39,6 +38,8 @@
 }
 ```
 
+> 장바구니 다건 결제는 `paymentId` 단위로 1개 row만 반환한다. `title`은 첫 상품명 기준으로 `외 N건`을 붙이고, `amount`와 `meta.total`은 품목 수가 아니라 결제 건 기준이다. `orderProductId`는 1:1 매핑이 아니므로 제거되거나 optional/null일 수 있다.
+
 **paymentStatus enum** (프론트에 반환되는 값만)
 
 | 값 | 의미 |
@@ -47,7 +48,7 @@
 | `REFUNDING` | 환불 처리 중 |
 | `REFUNDED` | 환불 완료 |
 
-**isRefund**: `true`이면 환불 버튼 노출 가능. `PAID && isRefund === true` 조건 모두 충족 시에만 환불 버튼 표시.
+**isRefundable**: `true`이면 환불 버튼 노출 가능. `PAID && isRefundable === true` 조건 모두 충족 시에만 환불 버튼 표시.
 
 ---
 
@@ -88,10 +89,10 @@ export type PaymentStatus = 'PAID' | 'REFUNDING' | 'REFUNDED';
 
 export interface PaymentItem {
   orderId: string;
-  orderProductId: string;
+  orderProductId?: string | null;
   paymentId: string;
   paymentStatus: PaymentStatus;
-  isRefund: boolean;
+  isRefundable: boolean;
   productType: string;
   title: string;
   amount: number;
@@ -144,7 +145,7 @@ interface Payment {
   title: string;
   amount: number;
   paymentStatus: 'PAID' | 'REFUNDING' | 'REFUNDED';
-  isRefund: boolean;
+  isRefundable: boolean;
   paidAt: string;
 }
 ```
@@ -162,7 +163,7 @@ const STATUS_MAP = {
 **환불 버튼 노출 조건**
 
 ```ts
-const canRefund = paymentStatus === 'PAID' && isRefund;
+const canRefund = paymentStatus === 'PAID' && isRefundable;
 ```
 
 ---
@@ -191,7 +192,7 @@ const canRefund = paymentStatus === 'PAID' && isRefund;
      await requestRefund(paymentId);  // POST /api/v1/payments/{paymentId}/refund
      // 202 성공 시 로컬 상태 업데이트
      setPayments(prev =>
-       prev.map(p => p.paymentId === paymentId ? { ...p, paymentStatus: 'REFUNDING', isRefund: false } : p)
+       prev.map(p => p.paymentId === paymentId ? { ...p, paymentStatus: 'REFUNDING', isRefundable: false } : p)
      );
    };
    ```
@@ -236,7 +237,7 @@ const canRefund = paymentStatus === 'PAID' && isRefund;
 | C4 | MSW mock 응답 구조 | `GET /api/v1/orders/payments` 핸들러가 `data[]` + `meta` 구조를 반환하는지 코드 확인 |
 | C5 | MSW mock 상태 전환 | `POST /api/v1/payments/:paymentId/refund` 핸들러가 202 반환하는지 코드 확인 |
 | C6 | `PaymentTable` 타입 일치 | `mypage/page.tsx`에서 `payments` 데이터를 `PaymentTable`에 넘길 때 타입 오류 없음 |
-| C7 | 환불 버튼 노출 조건 | `canRefund = paymentStatus === 'PAID' && isRefund` 로직이 코드에 반영됐는지 확인 |
+| C7 | 환불 버튼 노출 조건 | `canRefund = paymentStatus === 'PAID' && isRefundable` 로직이 코드에 반영됐는지 확인 |
 
 ---
 
@@ -256,7 +257,7 @@ const canRefund = paymentStatus === 'PAID' && isRefund;
 
 mock 데이터에 4가지 상태를 모두 포함시켜 한 화면에서 확인.
 
-| paymentStatus | isRefund | 기대 UI |
+| paymentStatus | isRefundable | 기대 UI |
 |--------------|---------|--------|
 | `PAID` | `true` | "결제완료" 배지 + "환불 신청" 버튼 노출 |
 | `PAID` | `false` | "결제완료" 배지 + 버튼 없음 |
@@ -267,7 +268,7 @@ mock 데이터에 4가지 상태를 모두 포함시켜 한 화면에서 확인.
 
 | 시나리오 | 확인 방법 | 기대 결과 |
 |---------|----------|---------|
-| 정상 환불 신청 | `PAID + isRefund:true` 항목 → "환불 신청" 클릭 → 확인 모달 "확인" | 해당 항목 즉시 "환불 신청 중" 배지로 전환, 버튼 사라짐 |
+| 정상 환불 신청 | `PAID + isRefundable:true` 항목 → "환불 신청" 클릭 → 확인 모달 "확인" | 해당 항목 즉시 "환불 신청 중" 배지로 전환, 버튼 사라짐 |
 | 모달 취소 | 확인 모달 "취소" 클릭 | 상태 변화 없음 |
 | 환불 후 탭 재진입 | 환불 신청 후 다른 탭 이동 → 결제 탭 재진입 | API 재호출, `REFUNDING` 상태 유지 표시 |
 
