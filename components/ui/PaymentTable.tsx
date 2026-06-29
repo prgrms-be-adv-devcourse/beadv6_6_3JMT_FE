@@ -8,6 +8,7 @@ export interface Payment {
   title: string;
   amount: number;
   paymentStatus: 'PAID' | 'REFUNDING' | 'REFUNDED';
+  downloaded: boolean;
   isRefundable: boolean;
   paidAt: string;
 }
@@ -105,7 +106,14 @@ export default function PaymentTable({ payments, showRefundColumn, onRefund }: P
                 {canRefund ? (
                   <RefundButton onClick={() => onRefund?.(pay.paymentId)} />
                 ) : (
-                  <span style={{ fontSize: 13, color: 'var(--ph-text-muted)' }}>—</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                    <span style={{ fontSize: 13, color: 'var(--ph-text-muted)' }}>—</span>
+                    {!pay.isRefundable && pay.downloaded && (
+                      <p style={{ margin: 0, fontSize: 11, color: 'var(--ph-red)', lineHeight: 1.2, textAlign: 'right', wordBreak: 'keep-all' }}>
+                        이미 다운로드한 상품은 환불할 수 없습니다.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             )}
