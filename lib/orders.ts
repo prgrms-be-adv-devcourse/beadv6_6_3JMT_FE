@@ -10,3 +10,7 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
   const res = await api.post('/api/v1/orders', normalizeCreateOrderParams(params))
   return res.data.data as CreateOrderResult
 }
+
+export async function downloadOrderProduct(orderId: string, orderProductId: string) {
+  return api.patch(`/api/v1/orders/${orderId}/products/${orderProductId}/download`)
+}
