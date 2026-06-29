@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import api from '@/lib/auth';
 import { mapOrderToPrompt } from '@/lib/orderAdapters';
+import { downloadOrderProduct } from '@/lib/orders';
 import {
   ArrowLeft, CalendarCheck, FileText, Lock, Download,
   AlertTriangle, CheckCircle2, MessageCircle, Sparkles,
@@ -32,6 +33,10 @@ type Prompt = {
   desc: string;
   thumbnail_url?: string | null;
   purchasedAt?: string;
+  orderId?: string;
+  orderProductId?: string;
+  downloaded?: boolean;
+  isRefundable?: boolean;
 };
 
 type FormatKey = 'txt' | 'md' | 'pdf';
@@ -155,15 +160,20 @@ export default function ReaderPage() {
           return;
         }
         setP(found);
+        if (found.downloaded) {
+          setDownloaded(true);
+        } else if (localStorage.getItem(`ph_downloaded_${id}`) === 'true') {
+          // 서버에서 downloaded 응답이 내려오기 전 과도기 지원
+          setDownloaded(true);
+        }
       })
       .catch(() => router.push('/mypage'))
       .finally(() => setLoading(false));
   }, [id, router]);
 
-  // localStorage로 downloaded·rating 상태를 새로고침 후에도 유지
+  // localStorage로 rating 상태를 새로고침 후에도 유지
   useEffect(() => {
     if (!id) return;
-    if (localStorage.getItem(`ph_downloaded_${id}`) === 'true') setDownloaded(true);
     const saved = localStorage.getItem(`ph_rating_${id}`);
     if (saved) setMyRating(Number(saved));
   }, [id]);
@@ -232,10 +242,28 @@ export default function ReaderPage() {
     showToast(fmtLabel[format] + ' 파일을 다운로드했어요');
   };
 
-  const confirmDownload = () => {
-    setConfirmOpen(false);
-    setDownloaded(true);
-    if (id) localStorage.setItem(`ph_downloaded_${id}`, 'true');
+  const confirmDownload = async () => {
+    if (!p || !p.orderId || !p.orderProductId) {
+      // API 호출에 필요한 정보가 없을 경우 로컬 다운로드만 처리 (에러 상황 대비)
+      setConfirmOpen(false);
+      setDownloaded(true);
+      if (id) localStorage.setItem(`ph_downloaded_${id}`, 'true');
+      return;
+    }
+
+    try {
+      const res = await downloadOrderProduct(p.orderId, p.orderProductId);
+      if (res.data.success) {
+        setConfirmOpen(false);
+        setDownloaded(true);
+        setP((prev) => prev ? { ...prev, downloaded: true, isRefundable: false } : prev);
+        if (id) localStorage.setItem(`ph_downloaded_${id}`, 'true'); // 과도기적 호환용
+      } else {
+        showToast('다운로드 처리에 실패했어요. 다시 시도해 주세요');
+      }
+    } catch (e) {
+      showToast('다운로드 처리에 실패했어요. 다시 시도해 주세요');
+    }
   };
 
   const backLink = (
