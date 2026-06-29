@@ -2,7 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: [{ protocol: 'https', hostname: '*.amazonaws.com' }],
+    remotePatterns: [
+      { protocol: 'https', hostname: '*.amazonaws.com' },
+      { protocol: 'https', hostname: '*.kakaocdn.net' },
+      { protocol: 'http', hostname: '*.kakaocdn.net' },
+    ],
   },
   async rewrites() {
     const rules = [];
