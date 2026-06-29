@@ -55,7 +55,7 @@ export type PaymentStatus = 'PAID' | 'REFUNDING' | 'REFUNDED';
 
 export interface PaymentItem {
   orderId: string;
-  orderProductId: string;
+  orderProductId?: string;
   paymentId: string;
   paymentStatus: PaymentStatus;
   isRefundable: boolean;

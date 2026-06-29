@@ -19,13 +19,13 @@ export type PaymentItem = {
   orderId: string;
   productIds: string[];
   totalAmount: number;
-  status: 'paid';
+  status: 'paid' | 'refunded';
   paidAt: string;
 };
 
 export type MockPaymentHistoryItem = {
   orderId: string;
-  orderProductId: string;
+  orderProductId?: string;
   paymentId: string;
   paymentStatus: 'PAID' | 'REFUNDING' | 'REFUNDED';
   isRefundable: boolean;
@@ -111,9 +111,9 @@ export const MOCK_PAYMENT_HISTORY: Record<string, MockPaymentHistoryItem[]> = {
       title: '사진 같은 제품 목업 생성기', amount: 5900, paidAt: '2026-06-10T08:00:00',
     },
     {
-      orderId: 'order-402', orderProductId: 'op-402-1', paymentId: 'pay-402',
+      orderId: 'order-402', paymentId: 'pay-402',
       paymentStatus: 'PAID', isRefundable: false, productType: 'PROMPT',
-      title: '리액트 컴포넌트 리팩터링 도우미', amount: 7900, paidAt: '2026-06-05T13:00:00',
+      title: '리액트 컴포넌트 리팩터링 도우미 외 1건', amount: 15800, paidAt: '2026-06-05T13:00:00',
     },
   ],
 };

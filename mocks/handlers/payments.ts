@@ -1,5 +1,6 @@
 import { http } from 'msw';
 import { MOCK_PAYMENTS, MOCK_ORDERS, MOCK_PAYMENT_HISTORY } from '../data/users';
+import { mapMockPaymentToHistoryItem } from '../paymentHistory';
 import { ok, err, ERR, okList, extractToken, getUserIdFromToken } from '../utils';
 
 const BASE = '*/api/v1/payments';
@@ -45,19 +46,25 @@ export const paymentHandlers = [
     return ok({ paymentId }, 201);
   }),
 
-  // // GET /api/v1/orders/payments — 결제 내역 목록 조회
-  // http.get('*/api/v1/orders/payments', ({ request }) => {
-  //   const token  = extractToken(request);
-  //   const userId = getUserIdFromToken(token);
-  //   if (!userId) return ERR.unauthorized();
-  //
-  //   const url    = new URL(request.url);
-  //   const page   = Number(url.searchParams.get('page')  ?? 1);
-  //   const size   = Number(url.searchParams.get('size')  ?? 20);
-  //   const items  = MOCK_PAYMENT_HISTORY[userId] ?? [];
-  //
-  //   return okList(items, page, size);
-  // }),
+  // GET /api/v1/orders/payments — 결제 내역 목록 조회
+  http.get('*/api/v1/orders/payments', ({ request }) => {
+    const token  = extractToken(request);
+    const userId = getUserIdFromToken(token);
+    if (!userId) return ERR.unauthorized();
+
+    const url    = new URL(request.url);
+    const page   = Number(url.searchParams.get('page')  ?? 1);
+    const size   = Number(url.searchParams.get('size')  ?? 20);
+    const historyItems = MOCK_PAYMENT_HISTORY[userId] ?? [];
+
+    // 새로 결제된 항목들(MOCK_PAYMENTS)도 결제 건 단위로 반환하도록 합침
+    const newPayments = MOCK_PAYMENTS[userId] ?? [];
+    const newHistoryItems = newPayments.map(mapMockPaymentToHistoryItem);
+
+    const items = [...newHistoryItems, ...historyItems].sort((a,b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
+
+    return okList(items, page, size);
+  }),
 
   // POST /api/v1/payments/:paymentId/refund — 환불 요청
   http.post('*/api/v1/payments/:paymentId/refund', ({ request, params }) => {
@@ -67,7 +74,14 @@ export const paymentHandlers = [
 
     const { paymentId } = params as { paymentId: string };
     const history   = MOCK_PAYMENT_HISTORY[userId] ?? [];
+    const newItem   = (MOCK_PAYMENTS[userId] ?? []).find((p) => p.paymentId === paymentId);
     const item      = history.find((p) => p.paymentId === paymentId);
+
+    if (newItem) {
+      if (newItem.status !== 'paid') return err('PAY004', '환불 불가 상태입니다.', 400);
+      newItem.status = 'refunded';
+      return new Response(null, { status: 202 });
+    }
 
     if (!item) return err('PAY005', '결제 정보를 찾을 수 없어요.', 404);
     if (item.paymentStatus !== 'PAID') return err('PAY004', '환불 불가 상태입니다.', 400);
