@@ -12,6 +12,7 @@ import Label from '@/components/ui/Label';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Tag from '@/components/ui/Tag';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -110,6 +111,7 @@ export default function SellPage() {
   const [loading, setLoading] = useState(false);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [galleryUrls, setGalleryUrls] = useState<(string | null)[]>(Array(5).fill(null));
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const showToast = useToast();
 
   const catObj = CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
@@ -136,6 +138,7 @@ export default function SellPage() {
         desc,
         content: body,
         thumbnailUrl: thumbUrl,
+        imageUrls: galleryUrls.filter((u): u is string => u !== null),
         tags,
       });
       if (navigate) {
@@ -154,6 +157,24 @@ export default function SellPage() {
   };
 
   const submit = () => saveProduct(true);
+
+  const cleanupAndLeave = async () => {
+    const uploadedUrls = [thumbUrl, ...galleryUrls].filter((u): u is string => u !== null);
+    if (uploadedUrls.length > 0) {
+      await api.delete('/api/v1/sellers/me/products/images', { data: uploadedUrls }).catch(() => {});
+    }
+    router.push('/shop');
+  };
+
+  const handleBack = () => {
+    const uploadedUrls = [thumbUrl, ...galleryUrls].filter((u): u is string => u !== null);
+    const hasContent = title.trim() || uploadedUrls.length > 0;
+    if (hasContent) {
+      setLeaveDialogOpen(true);
+      return;
+    }
+    router.push('/shop');
+  };
 
   const previewItem: PromptItem = {
     id: 'preview',
@@ -174,7 +195,7 @@ export default function SellPage() {
     <div style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 32px 0' }}>
       {/* 뒤로가기 */}
       <button
-        onClick={() => router.push('/shop')}
+        onClick={handleBack}
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ph-text-secondary)', fontFamily: 'var(--ph-font-family)', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20, padding: 0 }}
       >
         <ArrowLeft style={{ width: 16, height: 16 }} /> 내 상점으로
@@ -369,6 +390,18 @@ export default function SellPage() {
       </div>
 
       <div style={{ height: 80 }} />
+
+      <ConfirmDialog
+        open={leaveDialogOpen}
+        title="작성 중인 내용이 사라집니다"
+        description="저장하지 않은 변경 내용과 이미지가 삭제됩니다."
+        confirmLabel="나가기"
+        cancelLabel="계속 작성"
+        confirmVariant="danger"
+        titleAlign="center"
+        onConfirm={cleanupAndLeave}
+        onCancel={() => setLeaveDialogOpen(false)}
+      />
 
     </div>
   );

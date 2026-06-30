@@ -4,12 +4,14 @@ import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { X, Upload } from 'lucide-react';
 import { useToast } from '@/store/useToastStore';
+import api from '@/lib/auth';
 
 interface Props {
   value?: string | null;
   onChange: (url: string | null) => void;
   height?: number;
   placeholder?: string;
+  productId?: string;
 }
 
 export default function ImageUpload({
@@ -17,15 +19,17 @@ export default function ImageUpload({
   onChange,
   height = 220,
   placeholder = '이미지를 클릭하거나 드래그해 업로드',
+  productId,
 }: Props) {
   const [dragging, setDragging] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const showToast = useToast();
 
   const compact = height < 140;
 
-  const process = (file: File) => {
+  const process = async (file: File) => {
     if (!['image/jpeg', 'image/png'].includes(file.type)) {
       showToast('JPG 또는 PNG 이미지만 업로드할 수 있어요');
       return;
@@ -34,15 +38,32 @@ export default function ImageUpload({
       showToast('파일 크기가 5MB를 초과해요');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => onChange(e.target?.result as string);
-    reader.readAsDataURL(file);
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (productId) formData.append('productId', productId);
+      const { data } = await api.post('/api/v1/sellers/me/products/images', formData);
+      onChange(data.data.url);
+    } catch {
+      showToast('이미지 업로드에 실패했어요. 다시 시도해 주세요');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const onFiles = (files: FileList | null) => {
     const f = files?.[0];
     if (f) process(f);
   };
+
+  if (uploading) {
+    return (
+      <div style={{ width: '100%', height, borderRadius: 12, border: '1.5px dashed var(--ph-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ph-gray-50)' }}>
+        <span style={{ fontSize: compact ? 11 : 13, color: 'var(--ph-text-muted)' }}>업로드 중...</span>
+      </div>
+    );
+  }
 
   const borderColor = dragging || hovered ? 'var(--ph-primary)' : 'var(--ph-border)';
 

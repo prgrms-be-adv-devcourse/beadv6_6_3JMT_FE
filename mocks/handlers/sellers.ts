@@ -141,6 +141,7 @@ export const sellerHandlers = [
              : 'ON_SALE',
       version: '1.0',
       thumbnailUrl: product.thumbnail_url ?? null,
+      imageUrls: [],
       tags: [],
     });
   }),

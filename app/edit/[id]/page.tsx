@@ -15,6 +15,7 @@ import Label from '@/components/ui/Label';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Tag from '@/components/ui/Tag';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -34,6 +35,7 @@ type Prompt = {
   content: string;
   status?: string;
   thumbnailUrl?: string | null;
+  imageUrls?: string[];
   tags?: string[];
   versions?: Version[];
 };
@@ -132,11 +134,17 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   const [tags, setTags] = useState<string[]>(prompt.tags ?? []);
   const [tagInput, setTagInput] = useState('');
   const [thumbUrl, setThumbUrl] = useState<string | null>(prompt.thumbnailUrl ?? null);
-  const [galleryUrls, setGalleryUrls] = useState<(string | null)[]>(Array(5).fill(null));
+  const initGallery = (urls?: string[]) => {
+    const base: (string | null)[] = Array(5).fill(null);
+    urls?.forEach((u, i) => { if (i < 5) base[i] = u; });
+    return base;
+  };
+  const [galleryUrls, setGalleryUrls] = useState<(string | null)[]>(() => initGallery(prompt.imageUrls));
   const [versionType, setVersionType] = useState<'PATCH' | 'MAJOR'>('PATCH');
   const [changeReason, setChangeReason] = useState('');
   const [noteErr, setNoteErr] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const showToast = useToast();
 
   const curVer = (versions[0]?.ver ?? '1.0').replace(/^v/, '');
@@ -165,6 +173,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
         amount: Number(price),
         desc, content: body,
         thumbnailUrl: thumbUrl,
+        imageUrls: galleryUrls.filter((u): u is string => u !== null),
         tags,
         ...(isDraft ? {} : { versionType, changeReason }),
       });
@@ -190,6 +199,18 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     }
   };
 
+  const cleanupAndCancel = async () => {
+    const tempUrls = [thumbUrl, ...galleryUrls].filter((u): u is string => !!u && u.includes('/temp/'));
+    if (tempUrls.length > 0) {
+      await api.delete('/api/v1/sellers/me/products/images', { data: tempUrls }).catch(() => {});
+    }
+    router.push('/shop');
+  };
+
+  const handleCancel = () => {
+    setCancelDialogOpen(true);
+  };
+
   const previewItem: PromptItem = {
     id: 'preview',
     title: title.trim() || '프롬프트 제목이 여기에 표시돼요',
@@ -209,7 +230,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     <div style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 32px 0' }}>
       {/* 뒤로가기 */}
       <button
-        onClick={() => router.push('/shop')}
+        onClick={handleCancel}
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ph-text-secondary)', fontFamily: 'var(--ph-font-family)', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20, padding: 0 }}
       >
         <ArrowLeft style={{ width: 16, height: 16 }} /> 내 상점으로
@@ -424,7 +445,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
           {/* 버튼 영역 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 8 }}>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-              <Button variant="secondary" size="lg" onClick={() => router.push('/shop')}>취소</Button>
+              <Button variant="secondary" size="lg" onClick={handleCancel}>취소</Button>
               <Button variant="solid" size="lg" disabled={saving || !title.trim()} onClick={save}>
                 {saving ? '저장 중...' : isDraft ? '저장' : '새 버전으로 저장'}
               </Button>
@@ -454,6 +475,17 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
       </div>
 
       <div style={{ height: 80 }} />
+      <ConfirmDialog
+        open={cancelDialogOpen}
+        title="수정 중인 내용이 사라집니다"
+        description="저장하지 않은 변경 내용과 이미지가 삭제됩니다."
+        confirmLabel="나가기"
+        cancelLabel="계속 수정"
+        confirmVariant="danger"
+        titleAlign="center"
+        onConfirm={cleanupAndCancel}
+        onCancel={() => setCancelDialogOpen(false)}
+      />
     </div>
   );
 }
@@ -486,6 +518,7 @@ export default function EditPage() {
           content: d.content ?? '',
           status: d.status,
           thumbnailUrl: d.thumbnailUrl ?? null,
+          imageUrls: d.imageUrls ?? [],
           tags: d.tags ?? [],
         });
         setVersions(d.version ? [{ ver: d.version, date: '', note: '' }] : []);
