@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { attachHybridGatewayHeaders, isApiMockingEnabled } from '@/lib/hybridApi'
+import { directRoutingHeaders } from '@/lib/directRouting'
 import { useAuthStore } from '@/store/useAuthStore'
 
 const api = axios.create({
@@ -12,6 +13,10 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`
   }
   attachHybridGatewayHeaders(config, token, user?.roles?.find(r => r === 'admin') ?? user?.roles?.[0])
+  const directHeaders = directRoutingHeaders(config.url, user ?? null)
+  if (directHeaders) {
+    Object.assign(config.headers, directHeaders)
+  }
   return config
 })
 

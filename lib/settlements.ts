@@ -2,32 +2,10 @@
 // 스펙: settlement-service/docs/settlement-api-for-frontend.md
 // 주의: 정산 서비스는 공통 { success, data } 봉투 없이 응답 본문을 직접 내려준다.
 //      또 금액(BigDecimal)은 문자열("459000.00")로 오므로 이 레이어에서 Number로 정규화한다.
-import axios from 'axios'
-import sharedApi from '@/lib/auth'
-
-// 정산 서비스 "직접 통신" 모드 (NEXT_PUBLIC_SETTLEMENT_DIRECT=true)
-// - 게이트웨이 없이 settlement-service(기본 8080)에 직접 붙어 로컬 테스트할 때 사용
-// - 게이트웨이가 하던 인증 헤더 주입(X-User-Id/X-User-Role)을 프론트가 직접 한다
-// - CORS 회피를 위해 /settlement-proxy 프리픽스로 보내고 next.config.ts rewrite가 백엔드로 전달한다
-// - 그 외(게이트웨이/mock) 모드에서는 기존 공통 axios(Bearer)를 그대로 쓴다
-const DIRECT = process.env.NEXT_PUBLIC_SETTLEMENT_DIRECT === 'true'
-
-function createDirectClient() {
-  const client = axios.create({ baseURL: '/settlement-proxy' })
-  client.interceptors.request.use((config) => {
-    // 관리자 엔드포인트(/admin/)는 ADMIN, 그 외(판매자)는 SELLER 역할로 호출
-    const isAdmin = (config.url ?? '').includes('/admin/')
-    config.headers['X-User-Id'] =
-      (isAdmin
-        ? process.env.NEXT_PUBLIC_SETTLEMENT_ADMIN_ID
-        : process.env.NEXT_PUBLIC_SETTLEMENT_SELLER_ID) ?? ''
-    config.headers['X-User-Role'] = isAdmin ? 'ADMIN' : 'SELLER'
-    return config
-  })
-  return client
-}
-
-const api = DIRECT ? createDirectClient() : sharedApi
+//
+// NEXT_PUBLIC_SETTLEMENT_DIRECT=true일 때의 로컬 직접 통신(게이트웨이 우회 + 헤더 주입)은
+// lib/directRouting.ts + lib/auth.ts에서 서비스 공통으로 처리한다. 이 파일은 항상 공용 api를 쓴다.
+import api from '@/lib/auth'
 
 /* === 상태값 === */
 
