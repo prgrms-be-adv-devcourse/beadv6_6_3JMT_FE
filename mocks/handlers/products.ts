@@ -12,16 +12,16 @@ export const productHandlers = [
   // GET /api/v1/products
   http.get(BASE, ({ request }) => {
     const url = new URL(request.url);
-    const q        = url.searchParams.get('q')?.toLowerCase() ?? '';
-    const category = url.searchParams.get('category') ?? 'all';
-    const page     = Number(url.searchParams.get('page') ?? 1);
-    const size     = Number(url.searchParams.get('size') ?? 20);
-    const sort     = url.searchParams.get('sort') ?? 'popular';
+    const q           = url.searchParams.get('q')?.toLowerCase() ?? '';
+    const productType = url.searchParams.get('productType') ?? 'all';
+    const page        = Number(url.searchParams.get('page') ?? 1);
+    const size        = Number(url.searchParams.get('size') ?? 20);
+    const sort        = url.searchParams.get('sort') ?? 'popular';
 
     let filtered = PRODUCTS.filter((p) => {
-      const matchCat  = category === 'all' || p.category === category;
+      const matchType = productType === 'all' || p.productType === productType;
       const matchQ    = !q || p.title.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q);
-      return matchCat && matchQ && (p.status ?? 'active') === 'active';
+      return matchType && matchQ && (p.status ?? 'active') === 'active';
     });
 
     if (sort === 'rating') {
@@ -42,11 +42,8 @@ export const productHandlers = [
     const product = PRODUCTS.find((p) => p.id === String(params.id));
     if (!product) return ERR.notFound('프로덕트');
 
-    const { category, ...productWithoutCategory } = product;
-
     return ok({
-      ...productWithoutCategory,
-      cat: category,
+      ...product,
       versions: PRODUCT_VERSIONS,
       features: [
         '고해상도 출력 지원',
@@ -65,7 +62,7 @@ export const productHandlers = [
     const url    = new URL(request.url);
     const limit  = Number(url.searchParams.get('limit') ?? 4);
     const related = PRODUCTS.filter((p) =>
-      p.category === product.category &&
+      p.productType === product.productType &&
       p.id !== product.id &&
       (p.status ?? 'active') === 'active'
     ).slice(0, limit);
@@ -83,10 +80,10 @@ export const productHandlers = [
     if (!user || user.role !== 'seller') return ERR.forbidden();
 
     const body = await request.json() as {
-      title?: string; category?: string; model?: string; desc?: string; amount?: number;
+      title?: string; productType?: string; model?: string; desc?: string; amount?: number;
     };
-    if (!body?.title || !body?.category || !body?.amount === undefined) {
-      return ERR.validation('필수 항목(title, category, amount)을 입력해주세요.');
+    if (!body?.title || !body?.productType || body?.amount === undefined) {
+      return ERR.validation('필수 항목(title, productType, amount)을 입력해주세요.');
     }
 
     const newProduct = {
@@ -122,7 +119,7 @@ export const productHandlers = [
     }
 
     const body = await request.json() as {
-      title?: string; category?: string; model?: string;
+      title?: string; productType?: string; model?: string;
       amount?: number; desc?: string; content?: string;
       versionType?: 'MAJOR' | 'PATCH';
       changeReason?: string;

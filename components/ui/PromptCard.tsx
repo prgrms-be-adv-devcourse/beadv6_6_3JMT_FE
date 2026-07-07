@@ -17,7 +17,6 @@ import { addCartItem } from '@/lib/cart';
 export interface PromptItem {
   id: string;
   title: string;
-  category: string;
   icon: string;
   productType?: string;
   model: string;

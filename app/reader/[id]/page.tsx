@@ -11,6 +11,7 @@ import {
   AlertTriangle, CheckCircle2, MessageCircle, Sparkles,
 } from 'lucide-react';
 import { ICON_MAP } from '@/lib/iconMap';
+import { PRODUCT_TYPE_LABEL } from '@/lib/productTypes';
 import { useToast } from '@/store/useToastStore';
 import StarRate from '@/components/ui/StarRate';
 import Button from '@/components/ui/Button';
@@ -22,7 +23,7 @@ import ConfirmDialog from '@/components/modals/ConfirmDialog';
 type Prompt = {
   id: string;
   title: string;
-  category: string;
+  productType: string;
   icon: string;
   model: string;
   amount: number;
@@ -41,31 +42,18 @@ type Prompt = {
 
 type FormatKey = 'txt' | 'md' | 'pdf';
 
-/* ── Categories ─────────────────────────────────────────────────────── */
-
-const CATEGORIES = [
-  { id: 'image',     label: '이미지 생성' },
-  { id: 'writing',   label: '글쓰기·카피' },
-  { id: 'coding',    label: '코딩·개발' },
-  { id: 'marketing', label: '마케팅·광고' },
-  { id: 'chatbot',   label: '챗봇·대화' },
-  { id: 'data',      label: '데이터 분석' },
-];
-
 /* ── Prompt text builder ────────────────────────────────────────────── */
 
-const ROLE_BY_CAT: Record<string, string> = {
-  image:     '전문 비주얼 디렉터',
-  writing:   '전문 카피라이터',
-  coding:    '시니어 소프트웨어 엔지니어',
-  marketing: '데이터 기반 그로스 마케터',
-  chatbot:   'CS 챗봇 설계자',
-  data:      '데이터 분석가',
+const ROLE_BY_PRODUCT_TYPE: Record<string, string> = {
+  PROMPT: 'AI 프롬프트 전문가',
+  NOTION: '노션 템플릿 디자이너',
+  PPT:    'PPT 디자이너',
+  EXCEL:  '엑셀 자동화 전문가',
 };
 
 function buildPromptText(p: Prompt): string {
-  const catLabel = (CATEGORIES.find((c) => c.id === p.category) || { label: '일반' }).label;
-  const role = ROLE_BY_CAT[p.category] || '전문가';
+  const catLabel = PRODUCT_TYPE_LABEL[p.productType] ?? '일반';
+  const role = ROLE_BY_PRODUCT_TYPE[p.productType] ?? '전문가';
   return [
     `당신은 ${role}입니다. 아래 지침에 따라 "${p.title}" 작업을 수행하세요.`,
     ``,
@@ -204,7 +192,7 @@ export default function ReaderPage() {
   const dateStr = new Date(p.purchasedAt || Date.now()).toLocaleDateString('ko-KR', {
     year: 'numeric', month: 'long', day: 'numeric',
   });
-  const catLabel = (CATEGORIES.find((c) => c.id === p.category) || { label: '일반' }).label;
+  const catLabel = PRODUCT_TYPE_LABEL[p.productType] ?? '일반';
 
   const escapeHtml = (s: string) =>
     String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

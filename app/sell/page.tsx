@@ -13,29 +13,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Tag from '@/components/ui/Tag';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
-
-/* ── Types ─────────────────────────────────────────────────────────── */
-
-type Category = { id: string; label: string; icon: string };
-type ProductType = { id: string; label: string };
-
-/* ── Data ───────────────────────────────────────────────────────────── */
-
-const PRODUCT_TYPES: ProductType[] = [
-  { id: 'PROMPT',      label: '프롬프트'   },
-  { id: 'TEMPLATE',    label: '템플릿'     },
-  { id: 'DATASET',     label: '데이터셋'   },
-  { id: 'IMAGE_ASSET', label: '이미지 에셋' },
-];
-
-const CATEGORIES: Category[] = [
-  { id: 'image',     label: '이미지 생성', icon: 'image'          },
-  { id: 'writing',   label: '글쓰기',      icon: 'pen-line'       },
-  { id: 'coding',    label: '코딩',        icon: 'code-xml'       },
-  { id: 'marketing', label: '마케팅',      icon: 'megaphone'      },
-  { id: 'chatbot',   label: '챗봇',        icon: 'message-circle' },
-  { id: 'data',      label: '데이터 분석', icon: 'bar-chart-3'    },
-];
+import { PRODUCT_TYPES, type ProductType } from '@/lib/productTypes';
 
 /* ── Input ───────────────────────────────────────────────────────────── */
 
@@ -99,8 +77,7 @@ export default function SellPage() {
   const router = useRouter();
 
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('writing');
-  const [productType, setProductType] = useState('PROMPT');
+  const [productType, setProductType] = useState<ProductType>('PROMPT');
   const [model, setModel] = useState('');
   const [price, setPrice] = useState('');
   const [desc, setDesc] = useState('');
@@ -113,8 +90,6 @@ export default function SellPage() {
   const [galleryUrls, setGalleryUrls] = useState<(string | null)[]>(Array(5).fill(null));
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const showToast = useToast();
-
-  const catObj = CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
 
   const addTag = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,7 +106,6 @@ export default function SellPage() {
     try {
       await api.post('/api/v1/products', {
         title,
-        category,
         productType,
         model,
         amount: Number(price),
@@ -179,8 +153,7 @@ export default function SellPage() {
   const previewItem: PromptItem = {
     id: 'preview',
     title: title.trim() || '프롬프트 제목이 여기에 표시돼요',
-    category,
-    icon: catObj.icon,
+    icon: 'sparkles',
     productType,
     model: model.trim() || '모델 미정',
     amount: price ? Number(price) : 0,
@@ -221,14 +194,6 @@ export default function SellPage() {
           <Card padding="28px">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
               <FormField label="프롬프트 제목" hint={`${title.length}/60`} value={title} maxLength={60} onChange={(v) => setTitle(v)} placeholder="예: 전환율 높이는 랜딩 카피 작성" />
-              <div>
-                <Label>카테고리</Label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {CATEGORIES.map((c) => (
-                    <Tag key={c.id} selected={category === c.id} onClick={() => setCategory(c.id)}>{c.label}</Tag>
-                  ))}
-                </div>
-              </div>
               <div>
                 <Label>상품 유형</Label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>

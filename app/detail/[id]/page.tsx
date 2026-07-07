@@ -27,7 +27,6 @@ import Card from '@/components/ui/Card';
 type Prompt = {
   id: string;
   title: string;
-  category: string;
   icon: string;
   model: string;
   amount: number;
@@ -46,18 +45,6 @@ type Prompt = {
 };
 
 type Version = { ver: string; date: string; note: string };
-
-type ProductDetailResponse = Omit<Prompt, 'category'> & {
-  category?: string;
-  cat?: string;
-};
-
-function normalizeProductDetail(product: ProductDetailResponse): Prompt {
-  return {
-    ...product,
-    category: product.category ?? product.cat ?? '',
-  };
-}
 
 /* ── Mock data ──────────────────────────────────────────────────────── */
 
@@ -498,7 +485,7 @@ export default function DetailPage() {
       api.get(`/api/v1/products/${id}/related`),
     ])
       .then(([pRes, rRes]) => {
-        setProduct(normalizeProductDetail(pRes.data.data));
+        setProduct(pRes.data.data);
         setRelated(rRes.data.data ?? []);
       })
       .catch(() => {})

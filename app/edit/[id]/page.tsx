@@ -16,18 +16,15 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Tag from '@/components/ui/Tag';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
+import { PRODUCT_TYPES, type ProductType } from '@/lib/productTypes';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
-
-type Category = { id: string; label: string; icon: string };
-type ProductType = { id: string; label: string };
 
 type Version = { ver: string; date: string; note: string };
 
 type Prompt = {
   id: string;
   title: string;
-  category: string;
   productType: string;
   model: string;
   amount: number;
@@ -39,24 +36,6 @@ type Prompt = {
   tags?: string[];
   versions?: Version[];
 };
-
-/* ── Data ───────────────────────────────────────────────────────────── */
-
-const CATEGORIES: Category[] = [
-  { id: 'image',     label: '이미지 생성', icon: 'image'          },
-  { id: 'writing',   label: '글쓰기',      icon: 'pen-line'       },
-  { id: 'coding',    label: '코딩',        icon: 'code-xml'       },
-  { id: 'marketing', label: '마케팅',      icon: 'megaphone'      },
-  { id: 'chatbot',   label: '챗봇',        icon: 'message-circle' },
-  { id: 'data',      label: '데이터 분석', icon: 'bar-chart-3'    },
-];
-
-const PRODUCT_TYPES: ProductType[] = [
-  { id: 'PROMPT',      label: '프롬프트'   },
-  { id: 'TEMPLATE',    label: '템플릿'     },
-  { id: 'DATASET',     label: '데이터셋'   },
-  { id: 'IMAGE_ASSET', label: '이미지 에셋' },
-];
 
 function nextVer(latest: string, type: 'MAJOR' | 'PATCH'): string {
   const clean = String(latest || '1.0').replace(/^v/, '');
@@ -125,8 +104,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   const isDraft = prompt.status === 'DRAFT';
 
   const [title, setTitle] = useState(prompt.title);
-  const [category, setCategory] = useState(prompt.category);
-  const [productType, setProductType] = useState(prompt.productType);
+  const [productType, setProductType] = useState<ProductType>(prompt.productType as ProductType);
   const [model, setModel] = useState(prompt.model);
   const [price, setPrice] = useState(prompt.amount === 0 ? '0' : String(prompt.amount));
   const [desc, setDesc] = useState(prompt.desc);
@@ -149,7 +127,6 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
 
   const curVer = (versions[0]?.ver ?? '1.0').replace(/^v/, '');
   const nxtVer = nextVer(curVer, versionType);
-  const catObj = CATEGORIES.find((c) => c.id === category) || CATEGORIES[0];
 
   const addTag = (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,7 +146,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     setSaving(true);
     try {
       await api.put(`/api/v1/products/${id}`, {
-        title, category, productType, model,
+        title, productType, model,
         amount: Number(price),
         desc, content: body,
         thumbnailUrl: thumbUrl,
@@ -214,8 +191,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   const previewItem: PromptItem = {
     id: 'preview',
     title: title.trim() || '프롬프트 제목이 여기에 표시돼요',
-    category,
-    icon: catObj.icon,
+    icon: 'sparkles',
     productType,
     model: model.trim() || '모델 미정',
     amount: price ? Number(price) : 0,
@@ -267,14 +243,6 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
           <Card padding="28px">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
               <FormField label="프롬프트 제목" hint={`${title.length}/60`} value={title} maxLength={60} onChange={(v) => setTitle(v)} placeholder="예: 전환율 높이는 랜딩 카피 작성" />
-              <div>
-                <Label>카테고리</Label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {CATEGORIES.map((c) => (
-                    <Tag key={c.id} selected={category === c.id} onClick={() => setCategory(c.id)}>{c.label}</Tag>
-                  ))}
-                </div>
-              </div>
               <div>
                 <Label>상품 유형</Label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -510,7 +478,6 @@ export default function EditPage() {
         setPrompt({
           id: d.productId,
           title: d.title,
-          category: d.category ?? '',
           productType: d.productType ?? 'PROMPT',
           model: d.model,
           amount: d.amount,

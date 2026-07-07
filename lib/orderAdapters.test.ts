@@ -12,7 +12,7 @@ test('mapOrderToPrompt keeps legacy mocked nested product orders', () => {
     product: {
       id: 'product-1',
       title: 'Mock prompt',
-      category: 'writing',
+      productType: 'NOTION',
       icon: 'pen',
       model: 'GPT-4o',
       amount: 1000,
@@ -49,7 +49,7 @@ test('mapOrderToPrompt converts real order-service flat orders', () => {
   assert.equal(prompt?.id, 'product-1')
   assert.equal(prompt?.orderProductId, 'order-product-1')
   assert.equal(prompt?.title, 'Real prompt')
-  assert.equal(prompt?.category, 'prompt')
+  assert.equal(prompt?.productType, 'PROMPT')
   assert.equal(prompt?.model, 'Prompt')
   assert.equal(prompt?.priceLabel, '구매 완료')
 })

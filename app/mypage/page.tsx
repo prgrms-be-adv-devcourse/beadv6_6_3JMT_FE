@@ -33,7 +33,7 @@ type Prompt = {
   id: string;
   orderId?: string;
   title: string;
-  category: string;
+  productType: string;
   icon: string;
   model: string;
   amount: number;
@@ -468,7 +468,7 @@ function MyPageContent() {
           seller:        item.sellerNickname,
           rating:        item.averageRating,
           salesCount:    item.salesCount,
-          category:      item.category,
+          productType:   '',
           icon:          '',
           model:         item.model,
           desc:          '',

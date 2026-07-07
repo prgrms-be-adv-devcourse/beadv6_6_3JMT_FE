@@ -9,7 +9,6 @@ export interface WishlistItem {
   sellerNickname: string
   averageRating: number
   salesCount: number
-  category: string
   model: string
   addedAt: string
 }

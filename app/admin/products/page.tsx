@@ -4,12 +4,6 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   ClipboardCheck,
   FileSearch,
-  Image as ImageIcon,
-  PenLine,
-  CodeXml,
-  Megaphone,
-  MessageCircle,
-  BarChart3,
   Box,
   Check,
   X,
@@ -21,12 +15,12 @@ import api from '@/lib/auth'
 import { useAuthStore } from '@/store/useAuthStore'
 import { SectionCard } from '@/components/admin/SectionCard'
 import { Badge, StatusBadge } from '@/components/admin/Badge'
+import { PRODUCT_TYPE_LABEL, PRODUCT_TYPE_ICON } from '@/lib/productTypes'
 
 interface AdminProduct {
   id: string
   title: string
-  category: string
-  icon?: string
+  productType: string
   model?: string
   seller: string
   amount: number
@@ -45,30 +39,6 @@ const STATUS_KEY: Record<string, string> = {
 
 type FilterId = 'review' | 'active' | 'rejected' | 'all'
 
-const CATEGORY_LABEL: Record<string, string> = {
-  image: '이미지',
-  writing: '글쓰기',
-  coding: '코딩',
-  marketing: '마케팅',
-  chatbot: '챗봇',
-  data: '데이터',
-}
-
-// 카테고리/아이콘 키 → lucide 컴포넌트
-const ICON_MAP: Record<string, typeof ImageIcon> = {
-  image: ImageIcon,
-  'pen-line': PenLine,
-  writing: PenLine,
-  'code-xml': CodeXml,
-  coding: CodeXml,
-  megaphone: Megaphone,
-  marketing: Megaphone,
-  'message-circle': MessageCircle,
-  chatbot: MessageCircle,
-  'bar-chart-3': BarChart3,
-  data: BarChart3,
-}
-
 function toLocalStatus(status: string): string {
   if (status === 'PENDING_REVIEW') return 'review'
   if (status === 'ON_SALE') return 'active'
@@ -77,8 +47,8 @@ function toLocalStatus(status: string): string {
   return status
 }
 
-function CategoryIcon({ product, size }: { product: AdminProduct; size: number }) {
-  const Icon = ICON_MAP[product.icon ?? ''] ?? ICON_MAP[product.category] ?? Box
+function ProductTypeIcon({ product, size }: { product: AdminProduct; size: number }) {
+  const Icon = PRODUCT_TYPE_ICON[product.productType] ?? Box
   return <Icon size={size} />
 }
 
@@ -110,7 +80,7 @@ export default function AdminProductsPage() {
       const raw: {
         productId: string
         title: string
-        category: string
+        productType: string
         sellerId: string
         model?: string
         amount: number
@@ -121,7 +91,7 @@ export default function AdminProductsPage() {
         raw.map((p) => ({
           id: p.productId,
           title: p.title,
-          category: p.category,
+          productType: p.productType,
           seller: p.sellerId,
           model: p.model,
           amount: p.amount,
@@ -295,7 +265,7 @@ export default function AdminProductsPage() {
                     className="inline-flex h-[42px] w-[42px] flex-shrink-0 items-center justify-center rounded-ph-md text-ph-primary"
                     style={{ background: on ? '#fff' : 'var(--ph-secondary)' }}
                   >
-                    <CategoryIcon product={p} size={20} />
+                    <ProductTypeIcon product={p} size={20} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[14px] font-semibold text-ph-text">
@@ -334,11 +304,11 @@ export default function AdminProductsPage() {
             {/* head */}
             <div className="flex items-start gap-[16px]">
               <span className="inline-flex h-[64px] w-[64px] flex-shrink-0 items-center justify-center rounded-ph-lg bg-ph-secondary text-ph-primary">
-                <CategoryIcon product={sel} size={30} />
+                <ProductTypeIcon product={sel} size={30} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="mb-[8px] flex gap-[8px]">
-                  <Badge tone="neutral">{CATEGORY_LABEL[sel.category] ?? sel.category}</Badge>
+                  <Badge tone="neutral">{PRODUCT_TYPE_LABEL[sel.productType] ?? sel.productType}</Badge>
                   {sel.model && (
                     <Badge tone="neutral" soft={false}>
                       {sel.model}

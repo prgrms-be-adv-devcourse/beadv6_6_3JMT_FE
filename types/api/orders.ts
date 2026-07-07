@@ -16,7 +16,7 @@ export interface ProductInfo {
   id: string;
   orderId?: string;
   title: string;
-  category: string;
+  productType: string;
   icon: string;
   model: string;
   amount: number;

@@ -6,29 +6,17 @@ import api from '@/lib/auth';
 import { X, Check, SearchX } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
 import Tag from '@/components/ui/Tag';
+import { PRODUCT_TYPES } from '@/lib/productTypes';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
-type Category = { id: string; label: string; icon?: string; desc?: string };
 type Prompt = {
-  id: string; title: string; category: string; icon: string; model: string;
+  id: string; title: string; icon: string; model: string;
   amount: number; originalAmount?: number; rating: number; salesCount: number;
   seller: string; badge?: string; desc: string;
 };
 
-/* ── Mock data ────────────────────────────────────────────────────── */
-
-const CATEGORIES: Category[] = [
-  { id: 'all',       label: '전체' },
-  { id: 'image',     label: '이미지 생성', icon: 'image',          desc: '광고컷·일러스트·목업' },
-  { id: 'writing',   label: '글쓰기',      icon: 'pen-line',       desc: '카피·블로그·이메일' },
-  { id: 'coding',    label: '코딩',        icon: 'code-xml',       desc: '리팩터링·디버깅·테스트' },
-  { id: 'marketing', label: '마케팅',      icon: 'megaphone',      desc: 'SNS·광고·전략' },
-  { id: 'chatbot',   label: '챗봇',        icon: 'message-circle', desc: '페르소나·상담' },
-  { id: 'data',      label: '데이터 분석', icon: 'bar-chart-3',    desc: '요약·인사이트' },
-];
-
-
+const PRODUCT_TYPE_FILTERS = [{ id: 'all', label: '전체' }, ...PRODUCT_TYPES];
 
 /* ── CardGridSkeleton ─────────────────────────────────────────────── */
 
@@ -48,7 +36,7 @@ function BrowseScreen() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams.get('q') ?? '';
-  const category = searchParams.get('category') ?? 'all';
+  const productType = searchParams.get('productType') ?? 'all';
   const [sort, setSort] = useState('인기순');
   const [list, setList] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,23 +46,23 @@ function BrowseScreen() {
     setList([]);
     const sortParam = sort === '평점순' ? 'rating' : sort === '가격순' ? 'price-asc' : 'popular';
     api.get('/api/v1/products', {
-      params: { q: query || undefined, category: category !== 'all' ? category : undefined, sort: sortParam },
+      params: { q: query || undefined, productType: productType !== 'all' ? productType : undefined, sort: sortParam },
     })
       .then((res) => setList(res.data.data ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [query, category, sort]);
+  }, [query, productType, sort]);
 
-  const setCategory = (id: string) => {
+  const setProductType = (id: string) => {
     const params = new URLSearchParams();
     if (query) params.set('q', query);
-    if (id !== 'all') params.set('category', id);
+    if (id !== 'all') params.set('productType', id);
     router.push('/browse' + (params.toString() ? `?${params.toString()}` : ''));
   };
 
   const clearQuery = () => {
     const params = new URLSearchParams();
-    if (category !== 'all') params.set('category', category);
+    if (productType !== 'all') params.set('productType', productType);
     router.push('/browse' + (params.toString() ? `?${params.toString()}` : ''));
   };
 
@@ -86,8 +74,8 @@ function BrowseScreen() {
       </p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
-        {CATEGORIES.map((c) => (
-          <Tag key={c.id} selected={category === c.id} onClick={() => setCategory(c.id)}>{c.label}</Tag>
+        {PRODUCT_TYPE_FILTERS.map((c) => (
+          <Tag key={c.id} selected={productType === c.id} onClick={() => setProductType(c.id)}>{c.label}</Tag>
         ))}
       </div>
 

@@ -73,7 +73,6 @@ export const wishlistHandlers = [
         sellerNickname: p?.seller         ?? '',
         averageRating:  p?.rating         ?? 0,
         salesCount:     p?.salesCount     ?? 0,
-        category:       p?.category       ?? '',
         model:          p?.model          ?? '',
         addedAt:        item.createdAt,
       };

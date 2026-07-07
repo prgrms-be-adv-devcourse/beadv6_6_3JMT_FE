@@ -101,7 +101,7 @@ export const sellerHandlers = [
     return ok(myProducts.map((p) => ({
       productId: p.id,
       title: p.title,
-      category: p.category,
+      productType: p.productType,
       model: p.model,
       amount: p.amount,
       status: toApiStatus(p.status),
@@ -128,8 +128,7 @@ export const sellerHandlers = [
     return ok({
       productId: product.id,
       title: product.title,
-      category: product.category,
-      productType: product.productType ?? 'PROMPT',
+      productType: product.productType,
       model: product.model,
       amount: product.amount,
       desc: product.desc,

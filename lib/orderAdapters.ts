@@ -7,10 +7,6 @@ type PromptLike = ProductInfo & {
   isRefundable?: boolean
 }
 
-function normalizeCategory(productType?: string): string {
-  return productType ? productType.toLowerCase() : 'prompt'
-}
-
 function normalizeModel(model?: string | null): string {
   return model || 'Prompt'
 }
@@ -41,7 +37,7 @@ export function mapOrderToPrompt(order: MyOrderItem): PromptLike | null {
     orderId: order.orderId,
     orderProductId: order.orderProductId,
     title: order.title,
-    category: normalizeCategory(order.productType),
+    productType: order.productType ?? 'PROMPT',
     icon: 'sparkles',
     model: normalizeModel(order.model),
     amount: 0,

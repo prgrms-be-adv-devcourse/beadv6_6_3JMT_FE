@@ -29,7 +29,6 @@ import {
 type Prompt = {
   id: string;
   title: string;
-  category: string;
   icon: string;
   model: string;
   amount: number;

@@ -9,17 +9,16 @@ import api from '@/lib/auth';
 import { ICON_MAP } from '@/lib/iconMap';
 import { useAuthStore } from '@/store/useAuthStore';
 import Card from '@/components/ui/Card';
+import { PRODUCT_TYPES } from '@/lib/productTypes';
 
 /* ── Mock Data ─────────────────────────────────────────────────────── */
 
-const CATEGORIES = [
-  { id: 'image',     label: '이미지 생성', icon: 'image',          desc: '광고컷·일러스트·목업' },
-  { id: 'writing',   label: '글쓰기',      icon: 'pen-line',       desc: '카피·블로그·이메일' },
-  { id: 'coding',    label: '코딩',        icon: 'code-xml',       desc: '리팩터링·디버깅·테스트' },
-  { id: 'marketing', label: '마케팅',      icon: 'megaphone',      desc: 'SNS·광고·전략' },
-  { id: 'chatbot',   label: '챗봇',        icon: 'message-circle', desc: '페르소나·상담' },
-  { id: 'data',      label: '데이터 분석', icon: 'bar-chart-3',    desc: '요약·인사이트' },
-];
+const PRODUCT_TYPE_DESC: Record<string, string> = {
+  PROMPT: '어떤 AI 모델에도 바로 쓰는 프롬프트',
+  NOTION: '정리된 업무·학습용 노션 템플릿',
+  PPT: '발표 바로 가능한 프레젠테이션 템플릿',
+  EXCEL: '즉시 활용하는 스프레드시트·데이터 양식',
+};
 
 const TAGS = [
   { label: 'ChatGPT',     q: 'GPT-4o' },
@@ -31,7 +30,7 @@ const TAGS = [
 ];
 
 type Prompt = {
-  id: string; title: string; category: string; icon: string; model: string;
+  id: string; title: string; icon: string; model: string;
   amount: number; originalAmount?: number; rating: number; salesCount: number;
   seller: string; badge?: string; desc: string;
 };
@@ -224,27 +223,27 @@ function PopularGrid() {
   );
 }
 
-/* ── Category Section ────────────────────────────────────────────── */
+/* ── Product Type Section ─────────────────────────────────────────── */
 
-function CategorySection({ onPick }: { onPick: (label: string) => void }) {
+function ProductTypeSection({ onPick }: { onPick: (id: string) => void }) {
   return (
     <section style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 32px 0' }}>
-      <SectionHead title="카테고리별로 찾아보기" sub="필요한 작업에 맞는 프롬프트를 골라보세요" />
+      <SectionHead title="상품 유형별로 찾아보기" sub="필요한 형태에 맞는 상품을 골라보세요" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-        {CATEGORIES.map((c) => (
+        {PRODUCT_TYPES.map((t) => (
           <button
-            key={c.id}
-            onClick={() => onPick(c.id)}
+            key={t.id}
+            onClick={() => onPick(t.id)}
             style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '22px 22px', background: 'var(--ph-white)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-xl)', cursor: 'pointer', fontFamily: 'var(--ph-font-family)', textAlign: 'left', transition: 'border-color .15s ease' }}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--ph-primary)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--ph-border)'; }}
           >
             <span style={{ width: 52, height: 52, borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Icon name={c.icon} style={{ width: 24, height: 24 }} />
+              <Icon name="sparkles" style={{ width: 24, height: 24 }} />
             </span>
             <span>
-              <span style={{ display: 'block', fontSize: 17, fontWeight: 700, color: 'var(--ph-text)' }}>{c.label}</span>
-              <span style={{ display: 'block', fontSize: 14, color: 'var(--ph-text-muted)', marginTop: 3 }}>{c.desc}</span>
+              <span style={{ display: 'block', fontSize: 17, fontWeight: 700, color: 'var(--ph-text)' }}>{t.label}</span>
+              <span style={{ display: 'block', fontSize: 14, color: 'var(--ph-text-muted)', marginTop: 3 }}>{PRODUCT_TYPE_DESC[t.id]}</span>
             </span>
             <Icon name="chevron-right" style={{ width: 18, height: 18, color: 'var(--ph-text-muted)', marginLeft: 'auto' }} />
           </button>
@@ -336,7 +335,7 @@ export default function HomeScreen() {
     <div>
       <HeroToss query={query} onChange={setQuery} onSearch={onSearch} />
       <PopularGrid />
-      <CategorySection onPick={(id) => router.push(`/browse?category=${id}`)} />
+      <ProductTypeSection onPick={(id) => router.push(`/browse?productType=${id}`)} />
       <WhySection />
       <SellerCTA />
       <div style={{ height: 120 }} />

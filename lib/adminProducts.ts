@@ -5,7 +5,6 @@ export interface AdminProduct {
   title: string
   seller: string
   model: string
-  category: string
   icon: string
   status?: string
 }
