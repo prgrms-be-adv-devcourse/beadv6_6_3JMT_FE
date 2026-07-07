@@ -1,5 +1,10 @@
 # 서비스별 로컬 직접 라우팅 (Direct Routing) Implementation Plan
 
+> **Superseded (2026-07-08)**: 이 플랜의 `DIRECT_ROUTING_CONFIGS`(서비스별 하드코딩 배열) 설계는
+> 폐기됐다. `lib/directRouting.ts`는 `NEXT_PUBLIC_LOCAL_PROXY_PATHS`/`NEXT_PUBLIC_LOCAL_PROXY_TARGET`
+> 단일 env 슬롯 방식으로 재구현됐다 — 자세한 배경은 `docs/specs/2026-07-07-service-direct-routing-design.md`의
+> superseded 안내 참고.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** order-service/product-service/user-service 요청 경로별로, env 플래그가 켜져 있으면 로컬 백엔드(localhost)로, 꺼져 있으면(기본값) AWS 배포 게이트웨이로 보내도록 Next.js rewrite와 인증 헤더 주입을 확장한다.

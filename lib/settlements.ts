@@ -3,8 +3,8 @@
 // 주의: 정산 서비스는 공통 { success, data } 봉투 없이 응답 본문을 직접 내려준다.
 //      또 금액(BigDecimal)은 문자열("459000.00")로 오므로 이 레이어에서 Number로 정규화한다.
 //
-// NEXT_PUBLIC_SETTLEMENT_DIRECT=true일 때의 로컬 직접 통신(게이트웨이 우회 + 헤더 주입)은
-// lib/directRouting.ts + lib/auth.ts에서 서비스 공통으로 처리한다. 이 파일은 항상 공용 api를 쓴다.
+// 로컬 직접 라우팅(NEXT_PUBLIC_LOCAL_PROXY_PATHS/TARGET)일 때의 게이트웨이 우회 + 헤더 주입은
+// lib/directRouting.ts + lib/auth.ts에서 공통으로 처리한다. 이 파일은 항상 공용 api를 쓴다.
 import api from '@/lib/auth'
 
 /* === 상태값 === */

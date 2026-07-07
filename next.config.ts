@@ -12,9 +12,8 @@ const nextConfig: NextConfig = {
   async rewrites() {
     const rules = [];
 
-    // 서비스별 로컬 직접 라우팅(settlement/order/product/payment/user) — 반드시 아래
-    // /api/:path* 캐치올보다 먼저 와야 이 규칙들이 더 구체적인 경로로 먼저 매칭된다.
-    // lib/directRouting.ts 참고.
+    // 로컬 직접 라우팅(지금 로컬로 띄운 서비스 하나만) — 반드시 아래 /api/:path* 캐치올보다
+    // 먼저 와야 이 규칙이 더 구체적인 경로로 먼저 매칭된다. lib/directRouting.ts 참고.
     rules.push(...buildDirectRoutingRewrites());
 
     // API Gateway 프록시 — 브라우저 CORS 우회 (위에서 매칭 안 된 나머지 전부)

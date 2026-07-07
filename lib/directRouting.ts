@@ -1,87 +1,39 @@
-export type DirectRoutingService = 'settlement' | 'order' | 'product' | 'payment' | 'user'
+// 로컬 직접 라우팅 (Direct Routing)
+// 로컬에서 테스트하고 싶은 서비스 하나의 경로 목록과 대상을 .env.local에 개인적으로 설정하면,
+// 그 경로들만 로컬로 가고 나머지는 그대로 AWS 게이트웨이로 간다. 예:
+//   NEXT_PUBLIC_LOCAL_PROXY_PATHS=/api/v1/products,/api/v1/sellers/me/products,/api/v1/admin/products
+//   NEXT_PUBLIC_LOCAL_PROXY_TARGET=http://localhost:8082
+// 둘 다 커밋되지 않는 .env.local에만 두므로, 어떤 경로가 어느 서비스 것인지는 공용 코드가 아니라
+// 지금 그 서비스를 로컬로 띄운 사람이 알아서 적는다.
 
-export interface DirectRoutingConfig {
-  service: DirectRoutingService
-  enableEnvVar: string
-  targetEnvVar: string
-  defaultTarget: string
-  pathPrefixes: string[]
+function getLocalProxyPaths(): string[] {
+  const raw = process.env.NEXT_PUBLIC_LOCAL_PROXY_PATHS
+  if (!raw) return []
+  return raw.split(',').map((p) => p.trim()).filter(Boolean)
 }
 
-// 순서 고정: apigateway(application.yaml)의 라우트 선언 순서(settlement → order → product → payment → user)와
-// 동일하게 맞춘다. user-service는 /api/v1/sellers, /api/v1/admin 같은 넓은 경로를 갖고 있어서 반드시
-// 마지막에 와야 settlement/order/product의 더 구체적인 경로가 먼저 매칭된다.
-export const DIRECT_ROUTING_CONFIGS: DirectRoutingConfig[] = [
-  {
-    service: 'settlement',
-    enableEnvVar: 'NEXT_PUBLIC_SETTLEMENT_DIRECT',
-    targetEnvVar: 'SETTLEMENT_PROXY_TARGET',
-    defaultTarget: 'http://localhost:8085',
-    pathPrefixes: ['/api/v1/sellers/me/settlements', '/api/v1/admin/settlements'],
-  },
-  {
-    service: 'order',
-    enableEnvVar: 'NEXT_PUBLIC_ORDER_DIRECT',
-    targetEnvVar: 'ORDER_PROXY_TARGET',
-    defaultTarget: 'http://localhost:8083',
-    pathPrefixes: ['/api/v1/orders', '/api/v1/cart', '/api/v1/admin/orders'],
-  },
-  {
-    service: 'product',
-    enableEnvVar: 'NEXT_PUBLIC_PRODUCT_DIRECT',
-    targetEnvVar: 'PRODUCT_PROXY_TARGET',
-    defaultTarget: 'http://localhost:8082',
-    pathPrefixes: ['/api/v1/products', '/api/v1/sellers/me/products', '/api/v1/admin/products'],
-  },
-  {
-    service: 'payment',
-    enableEnvVar: 'NEXT_PUBLIC_PAYMENT_DIRECT',
-    targetEnvVar: 'PAYMENT_PROXY_TARGET',
-    defaultTarget: 'http://localhost:8084',
-    pathPrefixes: ['/api/v1/payments'],
-  },
-  {
-    service: 'user',
-    enableEnvVar: 'NEXT_PUBLIC_USER_DIRECT',
-    targetEnvVar: 'USER_PROXY_TARGET',
-    defaultTarget: 'http://localhost:8081',
-    pathPrefixes: [
-      '/api/v1/auth',
-      '/api/v1/users',
-      '/api/v1/seller',
-      '/api/v1/sellers',
-      '/api/v1/wishlists',
-      '/api/v1/admin',
-    ],
-  },
-]
-
-function isEnabled(cfg: DirectRoutingConfig): boolean {
-  return process.env[cfg.enableEnvVar] === 'true'
-}
-
-function targetFor(cfg: DirectRoutingConfig): string {
-  return process.env[cfg.targetEnvVar] || cfg.defaultTarget
+function getLocalProxyTarget(): string | undefined {
+  return process.env.NEXT_PUBLIC_LOCAL_PROXY_TARGET || undefined
 }
 
 export function buildDirectRoutingRewrites(): { source: string; destination: string }[] {
-  const rules: { source: string; destination: string }[] = []
-  for (const cfg of DIRECT_ROUTING_CONFIGS) {
-    if (!isEnabled(cfg)) continue
-    const target = targetFor(cfg)
-    for (const prefix of cfg.pathPrefixes) {
-      rules.push({ source: `${prefix}/:path*`, destination: `${target}${prefix}/:path*` })
-    }
-  }
-  return rules
+  if (process.env.NODE_ENV === 'production') return []
+  const target = getLocalProxyTarget()
+  const paths = getLocalProxyPaths()
+  if (!target || paths.length === 0) return []
+  return paths.map((prefix) => ({
+    source: `${prefix}/:path*`,
+    destination: `${target}${prefix}/:path*`,
+  }))
 }
 
 export function isDirectRoutedUrl(url?: string): boolean {
   if (!url || process.env.NODE_ENV === 'production') return false
+  const target = getLocalProxyTarget()
+  const paths = getLocalProxyPaths()
+  if (!target || paths.length === 0) return false
   const path = url.split('?')[0]
-  return DIRECT_ROUTING_CONFIGS.some(
-    (cfg) => isEnabled(cfg) && cfg.pathPrefixes.some((p) => path === p || path.startsWith(`${p}/`)),
-  )
+  return paths.some((p) => path === p || path.startsWith(`${p}/`))
 }
 
 export function directRoutingHeaders(

@@ -1,5 +1,12 @@
 # 서비스별 로컬 직접 라우팅(Direct Routing) 설계
 
+> **Superseded (2026-07-08)**: 서비스별로 `DIRECT_ROUTING_CONFIGS` 배열을 미리 등록해두는 이 설계는
+> 백엔드 라우트 테이블을 FE가 통째로 복제해야 하는 문제로 폐기했다. 대신 `lib/directRouting.ts`는
+> `NEXT_PUBLIC_LOCAL_PROXY_PATHS`/`NEXT_PUBLIC_LOCAL_PROXY_TARGET` 단일 슬롯 방식으로 단순화됐다 —
+> 지금 로컬로 띄운 서비스 하나의 경로 목록/대상만 개인 `.env.local`에 적으면 된다. 아래 내용은
+> "왜 Eureka 자체 등록 방식이 아닌가" 같은 배경 설명은 여전히 유효하지만, 구체적인 설계(공용 배열)는
+> 더 이상 실제 코드와 맞지 않는다.
+
 ## 배경 / 목적
 
 FE는 기본적으로 로컬(`localhost:3000`)에서 AWS에 배포된 API Gateway(`NEXT_PUBLIC_API_URL`)를 바라보며 개발한다. mock data 없이 실제 AWS 백엔드 + DB를 공통으로 사용하는 것이 기본 워크플로우다.
