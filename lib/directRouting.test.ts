@@ -4,6 +4,7 @@ import test from 'node:test'
 import {
   buildDirectRoutingRewrites,
   directRoutingHeaders,
+  getLocalProxyConfig,
   isDirectRoutedUrl,
 } from './directRouting.ts'
 
@@ -40,6 +41,17 @@ test('buildDirectRoutingRewrites builds a rewrite per configured path prefix', (
     { source: '/api/v1/sellers/me/products/:path*', destination: 'http://localhost:8082/api/v1/sellers/me/products/:path*' },
     { source: '/api/v1/admin/products/:path*', destination: 'http://localhost:8082/api/v1/admin/products/:path*' },
   ])
+  resetEnv()
+})
+
+test('getLocalProxyConfig trims whitespace and strips trailing slashes from the target and each path', () => {
+  resetEnv()
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = ' /api/v1/products/ , /api/v1/admin/products '
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = ' http://localhost:8082/ '
+  assert.deepEqual(getLocalProxyConfig(), {
+    paths: ['/api/v1/products', '/api/v1/admin/products'],
+    target: 'http://localhost:8082',
+  })
   resetEnv()
 })
 
@@ -108,5 +120,25 @@ test('directRoutingHeaders injects the real user id and uppercased role', () => 
     directRoutingHeaders('/api/v1/products', { id: 'u-1', roles: ['seller'] }),
     { 'X-User-Id': 'u-1', 'X-User-Role': 'SELLER' },
   )
+  resetEnv()
+})
+
+test('directRoutingHeaders prefers the admin role when the user has multiple roles', () => {
+  resetEnv()
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
+  assert.deepEqual(
+    directRoutingHeaders('/api/v1/products', { id: 'u-1', roles: ['seller', 'admin'] }),
+    { 'X-User-Id': 'u-1', 'X-User-Role': 'ADMIN' },
+  )
+  resetEnv()
+})
+
+test('directRoutingHeaders is always null in production regardless of config', () => {
+  resetEnv()
+  mutableEnv.NODE_ENV = 'production'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
+  assert.equal(directRoutingHeaders('/api/v1/products', { id: 'u-1', roles: ['seller'] }), null)
   resetEnv()
 })

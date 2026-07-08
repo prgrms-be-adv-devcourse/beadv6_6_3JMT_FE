@@ -5,35 +5,53 @@
 //   NEXT_PUBLIC_LOCAL_PROXY_TARGET=http://localhost:8082
 // 둘 다 커밋되지 않는 .env.local에만 두므로, 어떤 경로가 어느 서비스 것인지는 공용 코드가 아니라
 // 지금 그 서비스를 로컬로 띄운 사람이 알아서 적는다.
+//
+// getLocalProxyConfig()가 유일한 진입점이다 — next.config.ts/lib/auth.ts뿐 아니라
+// mocks/handlers/index.ts도 이걸 그대로 가져다 쓴다. "PATHS/TARGET 둘 다 있어야 활성화"라는
+// 조건과 경로 매칭 규칙이 여러 곳에서 따로 재구현되며 어긋나는 걸 막기 위함이다.
 
-function getLocalProxyPaths(): string[] {
-  const raw = process.env.NEXT_PUBLIC_LOCAL_PROXY_PATHS
-  if (!raw) return []
-  return raw.split(',').map((p) => p.trim()).filter(Boolean)
+export interface LocalProxyConfig {
+  paths: string[]
+  target: string
 }
 
-function getLocalProxyTarget(): string | undefined {
-  return process.env.NEXT_PUBLIC_LOCAL_PROXY_TARGET || undefined
+function normalizePath(p: string): string {
+  return p.trim().replace(/\/+$/, '')
+}
+
+function normalizeTarget(t: string): string {
+  return t.trim().replace(/\/+$/, '')
+}
+
+export function getLocalProxyConfig(): LocalProxyConfig | null {
+  if (process.env.NODE_ENV === 'production') return null
+
+  const rawPaths = process.env.NEXT_PUBLIC_LOCAL_PROXY_PATHS
+  const rawTarget = process.env.NEXT_PUBLIC_LOCAL_PROXY_TARGET
+  if (!rawPaths || !rawTarget) return null
+
+  const paths = rawPaths.split(',').map(normalizePath).filter(Boolean)
+  const target = normalizeTarget(rawTarget)
+  if (paths.length === 0 || !target) return null
+
+  return { paths, target }
 }
 
 export function buildDirectRoutingRewrites(): { source: string; destination: string }[] {
-  if (process.env.NODE_ENV === 'production') return []
-  const target = getLocalProxyTarget()
-  const paths = getLocalProxyPaths()
-  if (!target || paths.length === 0) return []
-  return paths.map((prefix) => ({
+  const config = getLocalProxyConfig()
+  if (!config) return []
+  return config.paths.map((prefix) => ({
     source: `${prefix}/:path*`,
-    destination: `${target}${prefix}/:path*`,
+    destination: `${config.target}${prefix}/:path*`,
   }))
 }
 
 export function isDirectRoutedUrl(url?: string): boolean {
-  if (!url || process.env.NODE_ENV === 'production') return false
-  const target = getLocalProxyTarget()
-  const paths = getLocalProxyPaths()
-  if (!target || paths.length === 0) return false
+  if (!url) return false
+  const config = getLocalProxyConfig()
+  if (!config) return false
   const path = url.split('?')[0]
-  return paths.some((p) => path === p || path.startsWith(`${p}/`))
+  return config.paths.some((p) => path === p || path.startsWith(`${p}/`))
 }
 
 export function directRoutingHeaders(
@@ -41,7 +59,7 @@ export function directRoutingHeaders(
   user: { id: string; roles: string[] } | null | undefined,
 ): Record<string, string> | null {
   if (!user || !isDirectRoutedUrl(url)) return null
-  const role = user.roles[0]
+  const role = user.roles.find((r) => r === 'admin') ?? user.roles[0]
   return {
     'X-User-Id': user.id,
     'X-User-Role': role ? role.toUpperCase() : '',
