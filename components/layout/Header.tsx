@@ -17,7 +17,6 @@ import {
   Menu,
   X,
   Compass,
-  LayoutGrid,
   User,
   Store,
   Receipt,
@@ -429,7 +428,6 @@ export default function Header() {
           </div>
           <div style={{ borderTop: '1px solid var(--ph-border)', margin: '4px 0' }}></div>
           <MenuItem icon={Compass} label="탐색" onClick={() => { close(); onSearch(''); }} />
-          <MenuItem icon={LayoutGrid} label="카테고리" onClick={() => { close(); onSearch(''); }} />
         </Pop>
       )}
     </div>
@@ -441,7 +439,6 @@ export default function Header() {
         <Logo onClick={() => go('home')} />
         <nav className="ph-desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <NavLink label="탐색" active={current === 'browse'} onClick={() => onSearch('')} />
-          <NavLink label="카테고리" onClick={() => onSearch('')} />
         </nav>
         <div className="ph-header-search" style={{ flex: 1, maxWidth: 340, marginLeft: 8 }}>
           <SearchBar value={query} onChange={setQuery} onSubmit={onSearch} size="header" />
