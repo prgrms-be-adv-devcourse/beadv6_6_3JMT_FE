@@ -1,9 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, X, MessageCircle, Info } from 'lucide-react';
+import { Sparkles, X, MessageCircle } from 'lucide-react';
 import api from '@/lib/auth';
-import { isApiMockingEnabled } from '@/lib/hybridApi';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /* ── 타입 ──────────────────────────────────────────────── */
@@ -43,8 +42,6 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
 
-  const isMocking = isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING);
-
   React.useEffect(() => {
     if (open) {
       setMode('login');
@@ -61,16 +58,12 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
   const signup = mode === 'signup';
 
   const kakaoLogin = () => {
-    if (isMocking) {
-      window.location.href = '/auth/kakao/callback?code=mock-kakao-code-001';
-    } else {
-      const params = new URLSearchParams({
-        client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID ?? '',
-        redirect_uri: `${window.location.origin}/auth/kakao/callback`,
-        response_type: 'code',
-      });
-      window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`;
-    }
+    const params = new URLSearchParams({
+      client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID ?? '',
+      redirect_uri: `${window.location.origin}/auth/kakao/callback`,
+      response_type: 'code',
+    });
+    window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`;
   };
 
   const handleEmailSubmit = async () => {
@@ -203,22 +196,6 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
             {loading ? '처리 중...' : signup ? '가입하고 시작하기' : '로그인'}
           </button>
         </form>
-
-        {/* 데모 안내 — MSW Mock 활성화 시에만 표시 */}
-        {isMocking && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, padding: '10px 12px', background: 'var(--ph-gray-50)', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-md)', fontSize: 12.5, color: 'var(--ph-text-muted)', lineHeight: 1.5 }}>
-            <Info style={{ width: 14, height: 14, flexShrink: 0 }} />
-            <span>
-              데모 계정 (비밀번호: <b style={{ color: 'var(--ph-text-secondary)' }}>password123</b>)
-              {' '}— 구매자:{' '}
-              <b style={{ color: 'var(--ph-text-secondary)' }}>buyer@prompthub.kr</b>
-              {' '}/ 판매자:{' '}
-              <b style={{ color: 'var(--ph-text-secondary)' }}>seller@prompthub.kr</b>
-              {' '}/ 관리자:{' '}
-              <b style={{ color: 'var(--ph-text-secondary)' }}>admin@prompthub.kr</b>
-            </span>
-          </div>
-        )}
 
         {/* 모드 전환 */}
         <div style={{ textAlign: 'center', marginTop: 18, fontSize: 14, color: 'var(--ph-text-secondary)' }}>

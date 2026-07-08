@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import ConditionalLayout from '@/components/layout/ConditionalLayout';
-import MockProvider from '@/components/providers/MockProvider';
 import AuthSync from '@/components/providers/AuthSync';
 import Toast from '@/components/ui/Toast';
 
@@ -24,13 +23,11 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <MockProvider>
-          <AuthSync />
-          <ConditionalLayout>
-            {children}
-          </ConditionalLayout>
-          <Toast />
-        </MockProvider>
+        <AuthSync />
+        <ConditionalLayout>
+          {children}
+        </ConditionalLayout>
+        <Toast />
       </body>
     </html>
   );

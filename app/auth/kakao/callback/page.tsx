@@ -4,7 +4,6 @@ import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 import { kakaoLogin } from '@/lib/oauth';
-import { isApiMockingEnabled } from '@/lib/hybridApi';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToast } from '@/store/useToastStore';
 
@@ -71,27 +70,10 @@ function KakaoCallbackContent() {
       return;
     }
 
-    const isMocking = isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING);
     const state = searchParams.get('state');
     const isAdminFlow = state === 'admin';
 
     const getKakaoPayload = async () => {
-      if (isMocking) {
-        return isAdminFlow
-          ? {
-              oauthId: 'mock-admin-kakao-id',
-              name: '관리자',
-              profileImage: null as string | null,
-              email: 'admin@prompthub.kr' as string | null,
-            }
-          : {
-              oauthId: 'mock-kakao-123456',
-              name: '카카오사용자',
-              profileImage: null as string | null,
-              email: 'kakao@user.com' as string | null,
-            };
-      }
-
       const tokenRes = await fetch('https://kauth.kakao.com/oauth/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

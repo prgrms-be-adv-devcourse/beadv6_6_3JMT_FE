@@ -1,5 +1,4 @@
 import axios from 'axios'
-import { attachHybridGatewayHeaders, isApiMockingEnabled } from '@/lib/hybridApi'
 import { directRoutingHeaders } from '@/lib/directRouting'
 import { useAuthStore } from '@/store/useAuthStore'
 
@@ -12,7 +11,6 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
-  attachHybridGatewayHeaders(config, token, user?.roles?.find(r => r === 'admin') ?? user?.roles?.[0])
   const directHeaders = directRoutingHeaders(config.url, user ?? null)
   if (directHeaders) {
     Object.assign(config.headers, directHeaders)
@@ -33,7 +31,7 @@ api.interceptors.response.use(
 
       if (!refreshToken) {
         logout()
-        if (!isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING) && typeof window !== 'undefined') {
+        if (typeof window !== 'undefined') {
           window.location.href = '/'
         }
         return Promise.reject(error)
@@ -61,7 +59,7 @@ api.interceptors.response.use(
         return api(originalRequest)
       } catch {
         logout()
-        if (!isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING) && typeof window !== 'undefined') {
+        if (typeof window !== 'undefined') {
           window.location.href = '/'
         }
         return Promise.reject(error)

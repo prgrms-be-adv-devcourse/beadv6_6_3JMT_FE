@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Sparkles, ShieldCheck, Mail, Lock, Info, LockKeyhole, MessageCircle } from 'lucide-react'
+import { Sparkles, ShieldCheck, Mail, Lock, LockKeyhole, MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/auth'
-import { isApiMockingEnabled } from '@/lib/hybridApi'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -14,20 +13,15 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const isMocking = isApiMockingEnabled(process.env.NEXT_PUBLIC_API_MOCKING)
 
   const kakaoAdminLogin = () => {
-    if (isMocking) {
-      window.location.href = '/auth/kakao/callback?code=mock-kakao-admin-code&state=admin'
-    } else {
-      const params = new URLSearchParams({
-        client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID ?? '',
-        redirect_uri: `${window.location.origin}/auth/kakao/callback`,
-        response_type: 'code',
-        state: 'admin',
-      })
-      window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`
-    }
+    const params = new URLSearchParams({
+      client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID ?? '',
+      redirect_uri: `${window.location.origin}/auth/kakao/callback`,
+      response_type: 'code',
+      state: 'admin',
+    })
+    window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`
   }
 
   // 이미 로그인된 admin이 /admin/login 재방문 시 자동 이동
@@ -176,18 +170,6 @@ export default function AdminLoginPage() {
               {loading ? '로그인 중…' : '로그인'}
             </button>
           </form>
-
-          {/* 데모 안내 — MSW Mock 활성화 시에만 표시 */}
-          {isMocking && (
-            <div className="mt-4 flex items-center gap-2 rounded-ph-md border border-ph-border bg-ph-gray-50 px-[13px] py-[11px] text-[12.5px] leading-[1.5] text-ph-text-muted">
-              <Info style={{ width: 14, height: 14, flexShrink: 0 }} />
-              <span>
-                데모 계정:{' '}
-                <b className="text-ph-text-secondary">admin@prompthub.kr</b> /{' '}
-                <b className="text-ph-text-secondary">password123</b>
-              </span>
-            </div>
-          )}
 
           {/* 접근 제한 안내 */}
           <div className="mt-[22px] flex items-center justify-center gap-[7px] text-[13.5px] text-ph-text-muted">
