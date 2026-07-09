@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { directRoutingHeaders } from '@/lib/directRouting'
 import { useAuthStore } from '@/store/useAuthStore'
+import { API_BASE } from '@/lib/apiBase'
 
 const api = axios.create({
   baseURL: typeof window !== 'undefined' ? '' : process.env.NEXT_PUBLIC_API_URL,
@@ -50,7 +51,7 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
-        const res = await api.post('/api/v1/auth/token/refresh', { refreshToken })
+        const res = await api.post(`${API_BASE}/auth/token/refresh`, { refreshToken })
         const { accessToken } = res.data.data as { accessToken: string }
         setToken(accessToken)
         pendingQueue.forEach((cb) => cb(accessToken))

@@ -1,7 +1,7 @@
 // 로컬 직접 라우팅 (Direct Routing)
 // 로컬에서 테스트하고 싶은 서비스 하나의 경로 목록과 대상을 .env.local에 개인적으로 설정하면,
 // 그 경로들만 로컬로 가고 나머지는 그대로 AWS 게이트웨이로 간다. 예:
-//   NEXT_PUBLIC_LOCAL_PROXY_PATHS=/api/v1/products,/api/v1/sellers/me/products,/api/v1/admin/products
+//   NEXT_PUBLIC_LOCAL_PROXY_PATHS=/api/v2/products,/api/v2/sellers/me/products,/api/v2/admin/products
 //   NEXT_PUBLIC_LOCAL_PROXY_TARGET=http://localhost:8082
 // 둘 다 커밋되지 않는 .env.local에만 두므로, 어떤 경로가 어느 서비스 것인지는 공용 코드가 아니라
 // 지금 그 서비스를 로컬로 띄운 사람이 알아서 적는다.

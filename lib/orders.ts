@@ -1,5 +1,6 @@
 import api from '@/lib/auth'
 import { CreateOrderResult } from '@/types/api/orders'
+import { API_BASE } from '@/lib/apiBase'
 
 type CreateOrderSingle = { productId: string }
 type CreateOrderCart = { productIds: string[] }
@@ -14,10 +15,10 @@ function normalizeCreateOrderParams(params: CreateOrderParams): CreateOrderCart 
 }
 
 export async function createOrder(params: CreateOrderParams): Promise<CreateOrderResult> {
-  const res = await api.post('/api/v1/orders', normalizeCreateOrderParams(params))
+  const res = await api.post(`${API_BASE}/orders`, normalizeCreateOrderParams(params))
   return res.data.data as CreateOrderResult
 }
 
 export async function downloadOrderProduct(orderId: string, orderProductId: string) {
-  return api.patch(`/api/v1/orders/${orderId}/products/${orderProductId}/download`)
+  return api.patch(`${API_BASE}/orders/${orderId}/products/${orderProductId}/download`)
 }

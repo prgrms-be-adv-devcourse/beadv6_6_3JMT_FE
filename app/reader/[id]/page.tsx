@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import api from '@/lib/auth';
+import { API_BASE } from '@/lib/apiBase';
 import { mapOrderToPrompt } from '@/lib/orderAdapters';
 import { downloadOrderProduct } from '@/lib/orders';
 import {
@@ -139,7 +140,7 @@ export default function ReaderPage() {
 
   useEffect(() => {
     if (!id) { router.push('/mypage'); return; }
-    api.get('/api/v1/orders')
+    api.get(`${API_BASE}/orders`)
       .then((res) => {
         const products = (res.data.data ?? []).map(mapOrderToPrompt).filter(Boolean) as Prompt[];
         const found = products.find((product) => String(product.id) === String(id));
@@ -168,7 +169,7 @@ export default function ReaderPage() {
 
   const handleRate = async (n: number) => {
     try {
-      await api.post(`/api/v1/products/${id}/rating`, { rating: n });
+      await api.post(`${API_BASE}/products/${id}/rating`, { rating: n });
       setMyRating(n);
       localStorage.setItem(`ph_rating_${id}`, String(n));
       showToast(`${n}점 별점을 남겼어요`);

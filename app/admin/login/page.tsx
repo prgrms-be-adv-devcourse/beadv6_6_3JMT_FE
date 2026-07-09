@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Sparkles, ShieldCheck, Mail, Lock, LockKeyhole, MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/auth'
+import { API_BASE } from '@/lib/apiBase'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -38,7 +39,7 @@ export default function AdminLoginPage() {
     setError('')
     setLoading(true)
     try {
-      const res = await api.post('/api/v1/auth/login', { email, password })
+      const res = await api.post(`${API_BASE}/auth/login`, { email, password })
       const { user: loginUser, accessToken, refreshToken } = res.data.data
       const loginRoles = ((loginUser.roles ?? (loginUser.role ? [loginUser.role] : [])) as string[]).map((r: string) => r.toLowerCase())
       if (!loginRoles.includes('admin')) {

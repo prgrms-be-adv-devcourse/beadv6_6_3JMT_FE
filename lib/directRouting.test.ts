@@ -22,7 +22,7 @@ test('buildDirectRoutingRewrites returns nothing when nothing is configured', ()
 
 test('buildDirectRoutingRewrites returns nothing when only paths or only target is set', () => {
   resetEnv()
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products'
   assert.deepEqual(buildDirectRoutingRewrites(), [])
 
   resetEnv()
@@ -33,23 +33,23 @@ test('buildDirectRoutingRewrites returns nothing when only paths or only target 
 
 test('buildDirectRoutingRewrites builds a rewrite per configured path prefix', () => {
   resetEnv()
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products, /api/v1/sellers/me/products,/api/v1/admin/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products, /api/v2/sellers/me/products,/api/v2/admin/products'
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
   const rules = buildDirectRoutingRewrites()
   assert.deepEqual(rules, [
-    { source: '/api/v1/products/:path*', destination: 'http://localhost:8082/api/v1/products/:path*' },
-    { source: '/api/v1/sellers/me/products/:path*', destination: 'http://localhost:8082/api/v1/sellers/me/products/:path*' },
-    { source: '/api/v1/admin/products/:path*', destination: 'http://localhost:8082/api/v1/admin/products/:path*' },
+    { source: '/api/v2/products/:path*', destination: 'http://localhost:8082/api/v2/products/:path*' },
+    { source: '/api/v2/sellers/me/products/:path*', destination: 'http://localhost:8082/api/v2/sellers/me/products/:path*' },
+    { source: '/api/v2/admin/products/:path*', destination: 'http://localhost:8082/api/v2/admin/products/:path*' },
   ])
   resetEnv()
 })
 
 test('getLocalProxyConfig trims whitespace and strips trailing slashes from the target and each path', () => {
   resetEnv()
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = ' /api/v1/products/ , /api/v1/admin/products '
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = ' /api/v2/products/ , /api/v2/admin/products '
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = ' http://localhost:8082/ '
   assert.deepEqual(getLocalProxyConfig(), {
-    paths: ['/api/v1/products', '/api/v1/admin/products'],
+    paths: ['/api/v2/products', '/api/v2/admin/products'],
     target: 'http://localhost:8082',
   })
   resetEnv()
@@ -58,7 +58,7 @@ test('getLocalProxyConfig trims whitespace and strips trailing slashes from the 
 test('buildDirectRoutingRewrites is always empty in production regardless of config', () => {
   resetEnv()
   mutableEnv.NODE_ENV = 'production'
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products'
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
   assert.deepEqual(buildDirectRoutingRewrites(), [])
   resetEnv()
@@ -66,58 +66,58 @@ test('buildDirectRoutingRewrites is always empty in production regardless of con
 
 test('isDirectRoutedUrl is false when nothing is configured', () => {
   resetEnv()
-  assert.equal(isDirectRoutedUrl('/api/v1/products/123'), false)
+  assert.equal(isDirectRoutedUrl('/api/v2/products/123'), false)
 })
 
 test('isDirectRoutedUrl is true for configured paths, exact and nested', () => {
   resetEnv()
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products,/api/v1/admin/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products,/api/v2/admin/products'
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
-  assert.equal(isDirectRoutedUrl('/api/v1/products'), true)
-  assert.equal(isDirectRoutedUrl('/api/v1/products/123/related?limit=4'), true)
-  assert.equal(isDirectRoutedUrl('/api/v1/admin/products/123/approve'), true)
+  assert.equal(isDirectRoutedUrl('/api/v2/products'), true)
+  assert.equal(isDirectRoutedUrl('/api/v2/products/123/related?limit=4'), true)
+  assert.equal(isDirectRoutedUrl('/api/v2/admin/products/123/approve'), true)
   resetEnv()
 })
 
 test('isDirectRoutedUrl does not match an unconfigured path', () => {
   resetEnv()
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products'
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
-  assert.equal(isDirectRoutedUrl('/api/v1/orders'), false)
+  assert.equal(isDirectRoutedUrl('/api/v2/orders'), false)
   resetEnv()
 })
 
 test('isDirectRoutedUrl is always false in production regardless of config', () => {
   resetEnv()
   mutableEnv.NODE_ENV = 'production'
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products'
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
-  assert.equal(isDirectRoutedUrl('/api/v1/products/123'), false)
+  assert.equal(isDirectRoutedUrl('/api/v2/products/123'), false)
   resetEnv()
 })
 
 test('directRoutingHeaders returns null when the url is not direct-routed', () => {
   resetEnv()
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products'
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
-  assert.equal(directRoutingHeaders('/api/v1/orders', { id: 'u-1', roles: ['seller'] }), null)
+  assert.equal(directRoutingHeaders('/api/v2/orders', { id: 'u-1', roles: ['seller'] }), null)
   resetEnv()
 })
 
 test('directRoutingHeaders returns null when there is no logged-in user', () => {
   resetEnv()
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products'
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
-  assert.equal(directRoutingHeaders('/api/v1/products/1/approve', null), null)
+  assert.equal(directRoutingHeaders('/api/v2/products/1/approve', null), null)
   resetEnv()
 })
 
 test('directRoutingHeaders injects the real user id and uppercased role', () => {
   resetEnv()
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products'
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
   assert.deepEqual(
-    directRoutingHeaders('/api/v1/products', { id: 'u-1', roles: ['seller'] }),
+    directRoutingHeaders('/api/v2/products', { id: 'u-1', roles: ['seller'] }),
     { 'X-User-Id': 'u-1', 'X-User-Role': 'SELLER' },
   )
   resetEnv()
@@ -125,10 +125,10 @@ test('directRoutingHeaders injects the real user id and uppercased role', () => 
 
 test('directRoutingHeaders prefers the admin role when the user has multiple roles', () => {
   resetEnv()
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products'
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
   assert.deepEqual(
-    directRoutingHeaders('/api/v1/products', { id: 'u-1', roles: ['seller', 'admin'] }),
+    directRoutingHeaders('/api/v2/products', { id: 'u-1', roles: ['seller', 'admin'] }),
     { 'X-User-Id': 'u-1', 'X-User-Role': 'ADMIN' },
   )
   resetEnv()
@@ -137,8 +137,8 @@ test('directRoutingHeaders prefers the admin role when the user has multiple rol
 test('directRoutingHeaders is always null in production regardless of config', () => {
   resetEnv()
   mutableEnv.NODE_ENV = 'production'
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v1/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products'
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
-  assert.equal(directRoutingHeaders('/api/v1/products', { id: 'u-1', roles: ['seller'] }), null)
+  assert.equal(directRoutingHeaders('/api/v2/products', { id: 'u-1', roles: ['seller'] }), null)
   resetEnv()
 })

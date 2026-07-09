@@ -1,15 +1,16 @@
 import api from '@/lib/auth'
 import { CartItem, mapCartResponseToItems } from '@/lib/cartAdapters'
 import axios from 'axios'
+import { API_BASE } from '@/lib/apiBase'
 
 export async function getCartItems(): Promise<CartItem[]> {
-  const res = await api.get('/api/v1/cart/products')
+  const res = await api.get(`${API_BASE}/cart/products`)
   return mapCartResponseToItems(res.data.data)
 }
 
 export async function addCartItem(productId: string): Promise<CartItem | null> {
   try {
-    const res = await api.post('/api/v1/cart/products', { productId })
+    const res = await api.post(`${API_BASE}/cart/products`, { productId })
     return mapCartResponseToItems([res.data.data])[0] ?? null
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 409) {
@@ -22,9 +23,9 @@ export async function addCartItem(productId: string): Promise<CartItem | null> {
 }
 
 export async function removeCartItem(cartProductId: string): Promise<void> {
-  await api.delete(`/api/v1/cart/products/${cartProductId}`)
+  await api.delete(`${API_BASE}/cart/products/${cartProductId}`)
 }
 
 export async function clearCartItems(): Promise<void> {
-  await api.delete('/api/v1/cart')
+  await api.delete(`${API_BASE}/cart`)
 }

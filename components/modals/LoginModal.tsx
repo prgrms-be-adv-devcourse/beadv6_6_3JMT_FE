@@ -4,6 +4,7 @@ import React from 'react';
 import { Sparkles, X, MessageCircle } from 'lucide-react';
 import api from '@/lib/auth';
 import { useAuthStore } from '@/store/useAuthStore';
+import { API_BASE } from '@/lib/apiBase';
 
 /* ── 타입 ──────────────────────────────────────────────── */
 
@@ -74,7 +75,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
     }
     setLoading(true);
     try {
-      const endpoint = signup ? '/api/v1/auth/signup' : '/api/v1/auth/login';
+      const endpoint = signup ? `${API_BASE}/auth/signup` : `${API_BASE}/auth/login`;
       const body = signup ? { name, email, password, serviceAgree } : { email, password };
       const res = await api.post(endpoint, body);
       const { user, accessToken, refreshToken } = res.data.data;

@@ -1,4 +1,5 @@
 import api from '@/lib/auth'
+import { API_BASE } from '@/lib/apiBase'
 
 export type OAuthUser = {
   id: string
@@ -25,7 +26,7 @@ export type KakaoLoginResponse = {
 
 export async function kakaoLogin(payload: KakaoLoginRequest): Promise<KakaoLoginResponse> {
   const res = await api.post<{ success: boolean; data: KakaoLoginResponse; message: string }>(
-    '/api/v1/auth/oauth/kakao',
+    `${API_BASE}/auth/oauth/kakao`,
     payload,
   )
   return res.data.data

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { X, Upload } from 'lucide-react';
 import { useToast } from '@/store/useToastStore';
 import api from '@/lib/auth';
+import { API_BASE } from '@/lib/apiBase';
 
 interface Props {
   value?: string | null;
@@ -43,7 +44,7 @@ export default function ImageUpload({
       const formData = new FormData();
       formData.append('file', file);
       if (productId) formData.append('productId', productId);
-      const { data } = await api.post('/api/v1/sellers/me/products/images', formData);
+      const { data } = await api.post(`${API_BASE}/sellers/me/products/images`, formData);
       onChange(data.data.url);
     } catch {
       showToast('이미지 업로드에 실패했어요. 다시 시도해 주세요');

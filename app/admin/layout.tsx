@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/auth'
+import { API_BASE } from '@/lib/apiBase'
 
 type BadgeKey = 'sellers' | 'products' | 'settlements'
 
@@ -76,9 +77,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const load = async () => {
       try {
         const [appliesRes, productsRes, paymentsRes] = await Promise.all([
-          api.get('/api/v1/admin/sellers/applies'),
-          api.get('/api/v1/admin/products', { params: { status: 'review' } }),
-          api.get('/api/v1/admin/payments'),
+          api.get(`${API_BASE}/admin/sellers/applies`),
+          api.get(`${API_BASE}/admin/products`, { params: { status: 'review' } }),
+          api.get(`${API_BASE}/admin/payments`),
         ])
         const applies = appliesRes.data.data ?? []
         const products = productsRes.data.data ?? []
@@ -100,7 +101,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleLogout = async () => {
     try {
-      await api.post('/api/v1/auth/logout')
+      await api.post(`${API_BASE}/auth/logout`)
     } finally {
       logout()
       router.push('/')

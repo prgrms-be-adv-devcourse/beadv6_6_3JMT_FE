@@ -6,6 +6,7 @@
 // 로컬 직접 라우팅(NEXT_PUBLIC_LOCAL_PROXY_PATHS/TARGET)일 때의 게이트웨이 우회 + 헤더 주입은
 // lib/directRouting.ts + lib/auth.ts에서 공통으로 처리한다. 이 파일은 항상 공용 api를 쓴다.
 import api from '@/lib/auth'
+import { API_BASE } from '@/lib/apiBase'
 
 /* === 상태값 === */
 
@@ -75,10 +76,10 @@ function toAdminItem(raw: Record<string, unknown>): AdminSettlementItem {
   }
 }
 
-// GET /api/v1/admin/settlements/summary — 상태별 합계·건수
+// GET /api/v2/admin/settlements/summary — 상태별 합계·건수
 // 응답은 공통 ApiResult 봉투({ success, data, message })이므로 res.data.data가 실제 페이로드
 export async function getAdminSettlementSummary(): Promise<SettlementSummaryCard[]> {
-  const res = await api.get('/api/v1/admin/settlements/summary')
+  const res = await api.get(`${API_BASE}/admin/settlements/summary`)
   const cards = (res.data?.data?.cards ?? []) as Record<string, unknown>[]
   return cards.map((c) => ({
     status: c.status as SettlementDisplayStatus,
@@ -87,13 +88,13 @@ export async function getAdminSettlementSummary(): Promise<SettlementSummaryCard
   }))
 }
 
-// GET /api/v1/admin/settlements — 정산 목록 (상태 필터·0-base 페이징)
+// GET /api/v2/admin/settlements — 정산 목록 (상태 필터·0-base 페이징)
 export async function getAdminSettlements(params: {
   status?: SettlementDisplayStatus
   page?: number
   size?: number
 } = {}): Promise<AdminSettlementList> {
-  const res = await api.get('/api/v1/admin/settlements', { params })
+  const res = await api.get(`${API_BASE}/admin/settlements`, { params })
   const body = res.data?.data ?? {}
   const items = (body.items ?? []) as Record<string, unknown>[]
   return {
@@ -128,7 +129,7 @@ export async function runAdminSettlementAction(
   settlementId: string,
   action: AdminSettlementAction,
 ): Promise<void> {
-  await api.patch(`/api/v1/admin/settlements/${settlementId}/${ADMIN_ACTION_PATH[action]}`)
+  await api.patch(`${API_BASE}/admin/settlements/${settlementId}/${ADMIN_ACTION_PATH[action]}`)
 }
 
 /* === 판매자 정산 조회 === */
@@ -187,9 +188,9 @@ function toSellerItem(raw: Record<string, unknown>): SellerSettlementItem {
   }
 }
 
-// GET /api/v1/sellers/me/settlements/summary — 내 상점 요약 지표
+// GET /api/v2/sellers/me/settlements/summary — 내 상점 요약 지표
 export async function getSellerSettlementSummary(): Promise<SellerSettlementSummary> {
-  const res = await api.get('/api/v1/sellers/me/settlements/summary')
+  const res = await api.get(`${API_BASE}/sellers/me/settlements/summary`)
   const d = res.data?.data ?? {}
   return {
     registeredPromptCount: Number(d.registeredPromptCount ?? 0),
@@ -199,14 +200,14 @@ export async function getSellerSettlementSummary(): Promise<SellerSettlementSumm
   }
 }
 
-// GET /api/v1/sellers/me/settlements — 본인 정산 내역 (상태·월 필터·0-base 페이징)
+// GET /api/v2/sellers/me/settlements — 본인 정산 내역 (상태·월 필터·0-base 페이징)
 export async function getSellerSettlements(params: {
   status?: SettlementDisplayStatus
   period?: string // "yyyy-MM"
   page?: number
   size?: number
 } = {}): Promise<SellerSettlementList> {
-  const res = await api.get('/api/v1/sellers/me/settlements', { params })
+  const res = await api.get(`${API_BASE}/sellers/me/settlements`, { params })
   const body = res.data?.data ?? {}
   const items = (body.items ?? []) as Record<string, unknown>[]
   return {
@@ -217,9 +218,9 @@ export async function getSellerSettlements(params: {
   }
 }
 
-// PATCH /api/v1/sellers/me/settlements/{id}/payout-request — 지급 신청 (승인완료 → 지급신청)
+// PATCH /api/v2/sellers/me/settlements/{id}/payout-request — 지급 신청 (승인완료 → 지급신청)
 export async function requestSettlementPayout(settlementId: string): Promise<void> {
-  await api.patch(`/api/v1/sellers/me/settlements/${settlementId}/payout-request`)
+  await api.patch(`${API_BASE}/sellers/me/settlements/${settlementId}/payout-request`)
 }
 
 /* === 정산 배치잡 (수동 정산, 관리자) === */
@@ -241,9 +242,9 @@ export interface SettlementJobStatus {
   failureMessage: string | null
 }
 
-// POST /api/v1/admin/settlements/batch — 정산 배치잡 비동기 실행 접수 (202)
+// POST /api/v2/admin/settlements/batch — 정산 배치잡 비동기 실행 접수 (202)
 export async function runSettlementBatch(period: string): Promise<SettlementJob> {
-  const res = await api.post('/api/v1/admin/settlements/batch', { period })
+  const res = await api.post(`${API_BASE}/admin/settlements/batch`, { period })
   const d = res.data?.data ?? {}
   return {
     jobExecutionId: Number(d.jobExecutionId),
@@ -253,9 +254,9 @@ export async function runSettlementBatch(period: string): Promise<SettlementJob>
   }
 }
 
-// GET /api/v1/admin/settlements/batch/{jobExecutionId} — 배치잡 상태 조회(폴링용)
+// GET /api/v2/admin/settlements/batch/{jobExecutionId} — 배치잡 상태 조회(폴링용)
 export async function getSettlementJobStatus(jobExecutionId: number): Promise<SettlementJobStatus> {
-  const res = await api.get(`/api/v1/admin/settlements/batch/${jobExecutionId}`)
+  const res = await api.get(`${API_BASE}/admin/settlements/batch/${jobExecutionId}`)
   const d = res.data?.data ?? {}
   return {
     jobExecutionId: Number(d.jobExecutionId),

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/auth'
+import { API_BASE } from '@/lib/apiBase'
 import { SectionCard } from '@/components/admin/SectionCard'
 import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { StatusBadge } from '@/components/admin/Badge'
@@ -29,7 +30,7 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     if (!token) return
     api
-      .get('/api/v1/admin/orders', { headers: { Authorization: `Bearer ${token}` } })
+      .get(`${API_BASE}/admin/orders`, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => setOrders(res.data.data ?? []))
       .finally(() => setLoading(false))
   }, [token])

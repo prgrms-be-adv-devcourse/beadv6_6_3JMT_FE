@@ -12,6 +12,7 @@ import {
   Search,
 } from 'lucide-react'
 import api from '@/lib/auth'
+import { API_BASE } from '@/lib/apiBase'
 import { useAuthStore } from '@/store/useAuthStore'
 import { SectionCard } from '@/components/admin/SectionCard'
 import { Badge, StatusBadge } from '@/components/admin/Badge'
@@ -76,7 +77,7 @@ export default function AdminProductsPage() {
     if (!token) return
     setLoading(true)
     try {
-      const res = await api.get('/api/v1/admin/products')
+      const res = await api.get(`${API_BASE}/admin/products`)
       const raw: {
         productId: string
         title: string
@@ -151,7 +152,7 @@ export default function AdminProductsPage() {
     if (!sel || acting) return
     setActing(true)
     try {
-      await api.patch(`/api/v1/admin/products/${sel.id}/approve`, {})
+      await api.patch(`${API_BASE}/admin/products/${sel.id}/approve`, {})
       setProducts((prev) => prev.map((p) => (p.id === sel.id ? { ...p, status: 'active' } : p)))
     } finally {
       setActing(false)
@@ -162,7 +163,7 @@ export default function AdminProductsPage() {
     if (!sel || acting) return
     setActing(true)
     try {
-      await api.patch(`/api/v1/admin/products/${sel.id}/revert`, {})
+      await api.patch(`${API_BASE}/admin/products/${sel.id}/revert`, {})
       setProducts((prev) => prev.map((p) => (p.id === sel.id ? { ...p, status: 'review' } : p)))
     } finally {
       setActing(false)
@@ -173,7 +174,7 @@ export default function AdminProductsPage() {
     if (!sel || acting || !rejectReason.trim()) return
     setActing(true)
     try {
-      await api.patch(`/api/v1/admin/products/${sel.id}/reject`, { reason: rejectReason })
+      await api.patch(`${API_BASE}/admin/products/${sel.id}/reject`, { reason: rejectReason })
       setProducts((prev) => prev.map((p) => (p.id === sel.id ? { ...p, status: 'rejected' } : p)))
       setRejectMode(false)
       setRejectReason('')

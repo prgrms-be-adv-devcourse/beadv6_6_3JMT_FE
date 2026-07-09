@@ -1,4 +1,5 @@
 import api from '@/lib/auth'
+import { API_BASE } from '@/lib/apiBase'
 
 export interface AdminRawStats {
   totalUsers?: number
@@ -28,21 +29,21 @@ export interface AdminWeeklyOrdersData {
 
 export async function getAdminDashboardStats(): Promise<AdminRawStats> {
   const res = await api.get<{ success: boolean; data: AdminRawStats; message: string }>(
-    '/api/v1/admin/stats',
+    `${API_BASE}/admin/stats`,
   )
   return res.data.data
 }
 
 export async function getAdminMonthlyOrders(): Promise<AdminMonthlyOrdersData> {
   const res = await api.get<{ success: boolean; data: AdminMonthlyOrdersData; message: string }>(
-    '/api/v1/admin/orders/month',
+    `${API_BASE}/admin/orders/month`,
   )
   return res.data.data
 }
 
 export async function getAdminWeeklyOrders(): Promise<AdminWeeklyOrdersData> {
   const res = await api.get<{ success: boolean; data: AdminWeeklyOrdersData; message: string }>(
-    '/api/v1/admin/orders/weekend',
+    `${API_BASE}/admin/orders/weekend`,
   )
   return res.data.data
 }

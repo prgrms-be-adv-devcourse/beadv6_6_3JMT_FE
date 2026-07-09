@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import ShaderBackground from '@/components/ui/shader-background';
 import PromptCard from '@/components/ui/PromptCard';
 import api from '@/lib/auth';
+import { API_BASE } from '@/lib/apiBase';
 import { ICON_MAP } from '@/lib/iconMap';
 import { useAuthStore } from '@/store/useAuthStore';
 import Card from '@/components/ui/Card';
@@ -201,7 +202,7 @@ function PopularGrid() {
   const [featured, setFeatured] = useState<Prompt[]>([]);
 
   useEffect(() => {
-    api.get('/api/v1/products', { params: { sort: 'popular', size: '8' } })
+    api.get(`${API_BASE}/products`, { params: { sort: 'popular', size: '8' } })
       .then((res) => setFeatured(res.data.data ?? []))
       .catch(() => {});
   }, []);

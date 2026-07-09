@@ -7,6 +7,7 @@ import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import api from '@/lib/auth';
+import { API_BASE } from '@/lib/apiBase';
 import { createOrder } from '@/lib/orders';
 import { getCartItems, removeCartItem } from '@/lib/cart';
 import { ShoppingCart, Trash2, ArrowLeft, CreditCard } from 'lucide-react';
@@ -33,7 +34,7 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (isSingle) {
-      api.get(`/api/v1/products/${productId}`)
+      api.get(`${API_BASE}/products/${productId}`)
         .then((res) => {
           const d = res.data.data;
           setSingleItem({

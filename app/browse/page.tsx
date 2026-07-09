@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/auth';
+import { API_BASE } from '@/lib/apiBase';
 import { X, Check, SearchX } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
 import Tag from '@/components/ui/Tag';
@@ -45,7 +46,7 @@ function BrowseScreen() {
     setLoading(true);
     setList([]);
     const sortParam = sort === '평점순' ? 'rating' : sort === '가격순' ? 'price-asc' : 'popular';
-    api.get('/api/v1/products', {
+    api.get(`${API_BASE}/products`, {
       params: { q: query || undefined, productType: productType !== 'all' ? productType : undefined, sort: sortParam },
     })
       .then((res) => setList(res.data.data ?? []))

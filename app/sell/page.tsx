@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/auth';
+import { API_BASE } from '@/lib/apiBase';
 import { ArrowLeft, Store, Eye, Images, Check, CheckCircle2, X } from 'lucide-react';
 import FormField from '@/components/ui/FormField';
 import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
@@ -104,7 +105,7 @@ export default function SellPage() {
     if (loading) return;
     setLoading(true);
     try {
-      await api.post('/api/v1/products', {
+      await api.post(`${API_BASE}/products`, {
         title,
         productType,
         model,
@@ -135,7 +136,7 @@ export default function SellPage() {
   const cleanupAndLeave = async () => {
     const uploadedUrls = [thumbUrl, ...galleryUrls].filter((u): u is string => u !== null);
     if (uploadedUrls.length > 0) {
-      await api.delete('/api/v1/sellers/me/products/images', { data: uploadedUrls }).catch(() => {});
+      await api.delete(`${API_BASE}/sellers/me/products/images`, { data: uploadedUrls }).catch(() => {});
     }
     router.push('/shop');
   };

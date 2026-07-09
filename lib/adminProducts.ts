@@ -1,4 +1,5 @@
 import api from '@/lib/auth'
+import { API_BASE } from '@/lib/apiBase'
 
 export interface AdminProduct {
   id: string
@@ -17,7 +18,7 @@ export interface GetAdminProductsParams {
 
 export async function getAdminProducts(params?: GetAdminProductsParams): Promise<AdminProduct[]> {
   const res = await api.get<{ success: boolean; data: AdminProduct[]; message: string }>(
-    '/api/v1/admin/products',
+    `${API_BASE}/admin/products`,
     { params },
   )
   return res.data.data

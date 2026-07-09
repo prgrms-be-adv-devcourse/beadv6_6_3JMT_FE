@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/auth';
+import { API_BASE } from '@/lib/apiBase';
 import {
   ArrowLeft, Pencil, ArrowRight, History,
   AlertCircle, Eye, Images, X, Store,
@@ -145,7 +146,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     if (saving) return;
     setSaving(true);
     try {
-      await api.put(`/api/v1/products/${id}`, {
+      await api.put(`${API_BASE}/products/${id}`, {
         title, productType, model,
         amount: Number(price),
         desc, content: body,
@@ -179,7 +180,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   const cleanupAndCancel = async () => {
     const tempUrls = [thumbUrl, ...galleryUrls].filter((u): u is string => !!u && u.includes('/temp/'));
     if (tempUrls.length > 0) {
-      await api.delete('/api/v1/sellers/me/products/images', { data: tempUrls }).catch(() => {});
+      await api.delete(`${API_BASE}/sellers/me/products/images`, { data: tempUrls }).catch(() => {});
     }
     router.push('/shop');
   };
@@ -472,7 +473,7 @@ export default function EditPage() {
 
   useEffect(() => {
     if (!id) return;
-    api.get(`/api/v1/sellers/me/products/${id}`)
+    api.get(`${API_BASE}/sellers/me/products/${id}`)
       .then((res) => {
         const d = res.data.data;
         setPrompt({

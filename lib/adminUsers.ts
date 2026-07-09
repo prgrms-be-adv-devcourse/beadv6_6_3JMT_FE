@@ -1,4 +1,5 @@
 import api from '@/lib/auth'
+import { API_BASE } from '@/lib/apiBase'
 
 export interface AdminUserStats {
   totalUsers: number
@@ -33,7 +34,7 @@ export interface GetAdminUsersResponse {
 
 export async function getAdminUsers(params?: GetAdminUsersParams): Promise<GetAdminUsersResponse> {
   const res = await api.get<{ success: boolean; data: AdminUser[]; message: string; meta: GetAdminUsersResponse['meta'] }>(
-    '/api/v1/admin/users',
+    `${API_BASE}/admin/users`,
     { params },
   )
   return { data: res.data.data, meta: res.data.meta }
@@ -44,7 +45,7 @@ export async function updateAdminUser(
   body: { role?: 'buyer' | 'seller' },
 ): Promise<AdminUser> {
   const res = await api.put<{ success: boolean; data: AdminUser; message: string }>(
-    `/api/v1/admin/users/${userId}`,
+    `${API_BASE}/admin/users/${userId}`,
     body,
   )
   return res.data.data
@@ -61,7 +62,7 @@ export async function updateAdminUserStatus(
   status: AdminUser['status'],
 ): Promise<UpdateAdminUserStatusResponse> {
   const res = await api.patch<{ success: boolean; data: UpdateAdminUserStatusResponse; message: string }>(
-    `/api/v1/admin/users/${userId}/status`,
+    `${API_BASE}/admin/users/${userId}/status`,
     { status },
   )
   return res.data.data
@@ -69,7 +70,7 @@ export async function updateAdminUserStatus(
 
 export async function getAdminUserStats(): Promise<AdminUserStats> {
   const res = await api.get<{ success: boolean; data: AdminUserStats; message: string }>(
-    '/api/v1/admin/stats/users',
+    `${API_BASE}/admin/stats/users`,
   )
   return res.data.data
 }

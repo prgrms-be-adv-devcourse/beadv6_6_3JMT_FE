@@ -1,4 +1,5 @@
 import api from '@/lib/auth'
+import { API_BASE } from '@/lib/apiBase'
 
 export type SellerRegister = {
   registerId: string
@@ -36,7 +37,7 @@ export async function getSellerRegisters(
     data: SellerRegister[]
     message: string
     meta: GetSellerRegistersResponse['meta']
-  }>('/api/v1/admin/sellers/register', { params })
+  }>(`${API_BASE}/admin/sellers/register`, { params })
   return { data: res.data.data, meta: res.data.meta }
 }
 
@@ -49,7 +50,7 @@ export type ApproveSellerRegisterResponse = {
 
 export async function approveSellerRegister(registerId: string): Promise<ApproveSellerRegisterResponse> {
   const res = await api.patch<{ success: boolean; data: ApproveSellerRegisterResponse; message: string }>(
-    `/api/v1/admin/sellers/register/${registerId}/approve`,
+    `${API_BASE}/admin/sellers/register/${registerId}/approve`,
   )
   return res.data.data
 }
@@ -67,7 +68,7 @@ export async function rejectSellerRegister(
   rejectReason: string,
 ): Promise<RejectSellerRegisterResponse> {
   const res = await api.patch<{ success: boolean; data: RejectSellerRegisterResponse; message: string }>(
-    `/api/v1/admin/sellers/register/${registerId}/reject`,
+    `${API_BASE}/admin/sellers/register/${registerId}/reject`,
     { rejectReason },
   )
   return res.data.data
@@ -85,15 +86,15 @@ export interface SellerApply {
 
 export async function getAdminSellerApplies(): Promise<SellerApply[]> {
   const res = await api.get<{ success: boolean; data: SellerApply[]; message: string }>(
-    '/api/v1/admin/sellers/applies',
+    `${API_BASE}/admin/sellers/applies`,
   )
   return res.data.data
 }
 
 export async function approveSellerApply(id: string): Promise<void> {
-  await api.put(`/api/v1/admin/sellers/${id}/approve`, {})
+  await api.put(`${API_BASE}/admin/sellers/${id}/approve`, {})
 }
 
 export async function rejectSellerApply(id: string): Promise<void> {
-  await api.put(`/api/v1/admin/sellers/${id}/reject`, {})
+  await api.put(`${API_BASE}/admin/sellers/${id}/reject`, {})
 }

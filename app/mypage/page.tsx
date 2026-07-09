@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useToast } from '@/store/useToastStore';
 import api from '@/lib/auth';
+import { API_BASE } from '@/lib/apiBase';
 import { deleteUserMe, updateUserMe } from '@/lib/users';
 import { getWishlists, type WishlistItem } from '@/lib/wishlists';
 import { getPayments, requestRefund as apiRequestRefund } from '@/lib/payments';
@@ -201,7 +202,7 @@ function PasswordChangeModal({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setErr('');
     try {
-      await api.put('/api/v1/auth/password', { currentPassword: current, newPassword: next });
+      await api.put(`${API_BASE}/auth/password`, { currentPassword: current, newPassword: next });
       setDone(true);
     } catch (ex: unknown) {
       const msg = (ex as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -403,7 +404,7 @@ function MyPageContent() {
   const fetchUser = useCallback(async () => {
     setUserLoadError(false);
     try {
-      const res = await api.get('/api/v1/users/me');
+      const res = await api.get(`${API_BASE}/users/me`);
       const u: UserInfo = { provider: authUser?.provider ?? 'local', ...res.data.data };
       setUser(u);
       setNick(u.name);
@@ -414,7 +415,7 @@ function MyPageContent() {
 
   const handleLogout = async () => {
     try {
-      await api.post('/api/v1/auth/logout');
+      await api.post(`${API_BASE}/auth/logout`);
     } catch {
       // API 실패해도 로컬 로그아웃은 반드시 실행
     } finally {
@@ -443,7 +444,7 @@ function MyPageContent() {
     if (!_hasHydrated) return;
     if (!isLoggedIn) { openLoginModal(); return; }
     fetchUser();
-    api.get('/api/v1/orders')
+    api.get(`${API_BASE}/orders`)
       .then((res) => {
         const orders: MyOrderItem[] = res.data.data ?? [];
         setPurchased(orders.map(mapOrderToPrompt).filter((item): item is Prompt => item !== null));

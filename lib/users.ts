@@ -1,4 +1,5 @@
 import api from '@/lib/auth'
+import { API_BASE } from '@/lib/apiBase'
 
 export type UserProfile = {
   id: string
@@ -11,7 +12,7 @@ export type UserProfile = {
 }
 
 export async function getUserMe(): Promise<UserProfile> {
-  const res = await api.get<{ success: boolean; data: UserProfile; message: string }>('/api/v1/users/me')
+  const res = await api.get<{ success: boolean; data: UserProfile; message: string }>(`${API_BASE}/users/me`)
   return res.data.data
 }
 
@@ -28,10 +29,10 @@ export interface UpdateUserMeResponse {
 }
 
 export async function updateUserMe(params: UpdateUserMeRequest): Promise<UpdateUserMeResponse> {
-  const res = await api.patch<{ success: boolean; data: UpdateUserMeResponse; message: string }>('/api/v1/users/me', params)
+  const res = await api.patch<{ success: boolean; data: UpdateUserMeResponse; message: string }>(`${API_BASE}/users/me`, params)
   return res.data.data
 }
 
 export async function deleteUserMe(): Promise<void> {
-  await api.delete('/api/v1/users/me')
+  await api.delete(`${API_BASE}/users/me`)
 }

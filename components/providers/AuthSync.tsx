@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
 import { useCartStore } from '@/store/useCartStore';
 import api from '@/lib/auth';
+import { API_BASE } from '@/lib/apiBase';
 import { getCartItems } from '@/lib/cart';
 
 export default function AuthSync() {
@@ -15,7 +16,7 @@ export default function AuthSync() {
   // 앱 마운트 시 토큰 유효성 검증 — 무효 토큰이면 401 인터셉터가 logout() 처리
   useEffect(() => {
     if (!isLoggedIn) return;
-    api.get('/api/v1/users/me').catch(() => {});
+    api.get(`${API_BASE}/users/me`).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -25,7 +26,7 @@ export default function AuthSync() {
       Promise.resolve().then(() => setItems([]));
       return;
     }
-    api.get('/api/v1/wishlists')
+    api.get(`${API_BASE}/wishlists`)
       .then((res) => {
         const items: { productId: string; product: { id: string; title: string; amount: number; thumbnail_url?: string | null } | null }[] =
           res.data.data ?? [];

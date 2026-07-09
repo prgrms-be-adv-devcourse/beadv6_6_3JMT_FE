@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/auth';
+import { API_BASE } from '@/lib/apiBase';
 import { hasPurchasedProduct } from '@/lib/orderAdapters';
 import { addCartItem } from '@/lib/cart';
 import { getWishlistIdForProduct, addWishlist, removeWishlist } from '@/lib/wishlists';
@@ -225,7 +226,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
 
   useEffect(() => {
     if (!isLoggedIn) return;
-    api.get('/api/v1/orders')
+    api.get(`${API_BASE}/orders`)
       .then((res) => {
         if (hasPurchasedProduct(res.data.data ?? [], p.id)) setPurchased(true);
       })
@@ -481,8 +482,8 @@ export default function DetailPage() {
   useEffect(() => {
     if (!id) return;
     Promise.all([
-      api.get(`/api/v1/products/${id}`),
-      api.get(`/api/v1/products/${id}/related`),
+      api.get(`${API_BASE}/products/${id}`),
+      api.get(`${API_BASE}/products/${id}/related`),
     ])
       .then(([pRes, rRes]) => {
         setProduct(pRes.data.data);

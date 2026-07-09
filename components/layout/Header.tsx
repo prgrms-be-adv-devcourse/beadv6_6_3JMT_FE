@@ -7,6 +7,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useWishStore } from '@/store/useWishStore';
 import Logo from '@/components/ui/Logo';
 import api from '@/lib/auth';
+import { API_BASE } from '@/lib/apiBase';
 import { won } from '@/lib/utils';
 import { getCartItems, removeCartItem as deleteCartItem } from '@/lib/cart';
 import {
@@ -246,7 +247,7 @@ export default function Header() {
       Promise.resolve().then(() => setNotifList([]));
       return;
     }
-    api.get('/api/v1/notifications')
+    api.get(`${API_BASE}/notifications`)
       .then((res) => setNotifList(res.data.data ?? []))
       .catch(() => {});
   }, [user]);
@@ -266,7 +267,7 @@ export default function Header() {
   const onNotifRead = async (id: string) => {
     setNotifList((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
     try {
-      await api.post(`/api/v1/notifications/${id}/read`);
+      await api.post(`${API_BASE}/notifications/${id}/read`);
     } catch {
       // 로컬 상태는 이미 업데이트됨, 실패해도 무시
     }
@@ -277,7 +278,7 @@ export default function Header() {
   const openLogin = () => openLoginModal();
   const onLogout = async () => {
     try {
-      await api.post('/api/v1/auth/logout');
+      await api.post(`${API_BASE}/auth/logout`);
     } catch {
       // 로그아웃 API 실패해도 로컬 로그아웃은 반드시 실행
     } finally {
