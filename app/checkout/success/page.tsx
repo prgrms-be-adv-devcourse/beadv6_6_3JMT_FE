@@ -9,6 +9,7 @@ type ConfirmState =
   | { status: 'loading' }
   | { status: 'success' }
   | { status: 'pay002'; message: string }
+  | { status: 'pay_failed'; message: string }
   | { status: 'error'; message: string };
 
 function SuccessContent() {
@@ -16,7 +17,6 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const paymentKey = searchParams.get('paymentKey') ?? '';
   const orderId = searchParams.get('orderId') ?? '';
-  const amount = Number(searchParams.get('amount') ?? '0');
 
   const [state, setState] = useState<ConfirmState>({ status: 'loading' });
   const confirmedRef = useRef(false);
@@ -25,21 +25,28 @@ function SuccessContent() {
     if (confirmedRef.current) return;
     confirmedRef.current = true;
 
-    if (!paymentKey || !orderId || !amount) {
+    if (!paymentKey || !orderId) {
       setState({ status: 'error', message: '잘못된 결제 정보입니다.' });
       return;
     }
 
-    const saved = localStorage.getItem('_mock_pending_order');
-    const _productIds: string[] | undefined = saved ? JSON.parse(saved).productIds : undefined;
-    localStorage.removeItem('_mock_pending_order');
-
-    confirmPayment({ paymentKey, orderId, amount, _productIds })
+    confirmPayment({ paymentKey, orderId })
       .then(() => setState({ status: 'success' }))
       .catch((e: unknown) => {
         const data = (e as { response?: { data?: { code?: string; message?: string } } })?.response?.data;
-        if (data?.code === 'PAY002') {
-          setState({ status: 'pay002', message: data.message ?? '이미 결제된 주문입니다.' });
+        const code = data?.code;
+        if (code === 'PAY002') {
+          setState({ status: 'pay002', message: data?.message ?? '이미 결제 진행·완료된 주문입니다.' });
+        } else if (code === 'PAY_FAILED') {
+          setState({ status: 'pay_failed', message: data?.message ?? '결제가 거절됐습니다. 카드사를 확인해주세요.' });
+        } else if (code === 'PAY007') {
+          setState({ status: 'error', message: '구매 권한이 없습니다.' });
+        } else if (code === 'PAY008') {
+          setState({ status: 'error', message: '주문 정보를 찾을 수 없습니다.' });
+        } else if (code === 'PAY009') {
+          setState({ status: 'error', message: '일시적 오류입니다. 잠시 후 다시 시도해주세요.' });
+        } else if (code === 'PAY010') {
+          setState({ status: 'error', message: '본인 주문이 아닙니다.' });
         } else {
           setState({ status: 'error', message: data?.message ?? '결제 확인 중 오류가 발생했습니다.' });
         }
@@ -89,6 +96,27 @@ function SuccessContent() {
               }}
             >
               마이페이지로
+            </button>
+          </>
+        )}
+
+        {state.status === 'pay_failed' && (
+          <>
+            <XCircle style={{ width: 48, height: 48, color: '#dc2626', margin: '0 auto 20px' }} />
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--ph-text)', marginBottom: 8 }}>결제가 거절됐어요</h2>
+            <p style={{ fontSize: 14, color: 'var(--ph-text-secondary)', marginBottom: 24 }}>
+              {state.message}
+            </p>
+            <button
+              onClick={() => router.back()}
+              style={{
+                background: 'var(--ph-primary)', color: '#fff', border: 'none',
+                borderRadius: 'var(--ph-radius-md)', padding: '12px 28px',
+                fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                fontFamily: 'var(--ph-font-family)',
+              }}
+            >
+              다시 시도하기
             </button>
           </>
         )}
