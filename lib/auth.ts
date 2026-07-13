@@ -20,7 +20,7 @@ api.interceptors.request.use((config) => {
 })
 
 let isRefreshing = false
-let pendingQueue: Array<(token: string) => void> = []
+let pendingQueue: Array<(token: string | null) => void> = []
 
 api.interceptors.response.use(
   (response) => response,
@@ -39,8 +39,12 @@ api.interceptors.response.use(
       }
 
       if (isRefreshing) {
-        return new Promise((resolve) => {
-          pendingQueue.push((token: string) => {
+        return new Promise((resolve, reject) => {
+          pendingQueue.push((token) => {
+            if (!token) {
+              reject(error)
+              return
+            }
             originalRequest.headers.Authorization = `Bearer ${token}`
             resolve(api(originalRequest))
           })
@@ -52,13 +56,18 @@ api.interceptors.response.use(
 
       try {
         const res = await api.post(`${API_BASE}/auth/token/refresh`, { refreshToken })
-        const { accessToken } = res.data.data as { accessToken: string }
-        setToken(accessToken)
+        const { accessToken, refreshToken: newRefreshToken } = res.data.data as {
+          accessToken: string
+          refreshToken?: string
+        }
+        setToken(accessToken, newRefreshToken)
         pendingQueue.forEach((cb) => cb(accessToken))
         pendingQueue = []
         originalRequest.headers.Authorization = `Bearer ${accessToken}`
         return api(originalRequest)
       } catch {
+        pendingQueue.forEach((cb) => cb(null))
+        pendingQueue = []
         logout()
         if (typeof window !== 'undefined') {
           window.location.href = '/'

@@ -18,7 +18,7 @@ interface AuthState {
   _hasHydrated: boolean
   login: (user: User, token: string, refreshToken?: string) => void
   logout: () => void
-  setToken: (token: string) => void
+  setToken: (token: string, refreshToken?: string) => void
   openLoginModal: () => void
   closeLoginModal: () => void
   setHasHydrated: (state: boolean) => void
@@ -48,7 +48,12 @@ export const useAuthStore = create<AuthState>()(
         }
         set({ user: null, token: null, refreshToken: null, isLoggedIn: false })
       },
-      setToken: (token) => set({ token }),
+      setToken: (token, refreshToken) => {
+        if (typeof document !== 'undefined') {
+          document.cookie = `token=${token}; path=/; max-age=86400`
+        }
+        set((state) => ({ token, refreshToken: refreshToken ?? state.refreshToken }))
+      },
       openLoginModal: () => set({ loginModalOpen: true }),
       closeLoginModal: () => set({ loginModalOpen: false }),
     }),
