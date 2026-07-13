@@ -137,7 +137,7 @@ export default function ShopPage() {
 
   const submitForReview = async (id: string) => {
     try {
-      await api.patch(`${API_BASE}/products/${id}/submit`)
+      await api.patch(`${API_BASE}/sellers/me/products/${id}/submit`)
       setMyListings((prev) => prev.map((p) => p.id === id ? { ...p, status: 'review' as const } : p))
     } catch {
       // 실패 무시
@@ -147,7 +147,7 @@ export default function ShopPage() {
   const isStopped = (id: string | number) => !!stopped[id];
   const stopSelling = async (id: string | number) => {
     try {
-      await api.delete(`${API_BASE}/products/${id}`);
+      await api.delete(`${API_BASE}/sellers/me/products/${id}`);
     } catch {
       // 실패해도 UI는 동일하게 처리
     } finally {

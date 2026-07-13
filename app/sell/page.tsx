@@ -105,7 +105,7 @@ export default function SellPage() {
     if (loading) return;
     setLoading(true);
     try {
-      await api.post(`${API_BASE}/products`, {
+      await api.post(`${API_BASE}/sellers/me/products`, {
         title,
         productType,
         model,

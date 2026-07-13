@@ -146,7 +146,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     if (saving) return;
     setSaving(true);
     try {
-      await api.put(`${API_BASE}/products/${id}`, {
+      await api.put(`${API_BASE}/sellers/me/products/${id}`, {
         title, productType, model,
         amount: Number(price),
         desc, content: body,
