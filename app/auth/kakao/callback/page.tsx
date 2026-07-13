@@ -86,17 +86,7 @@ function KakaoCallbackContent() {
       });
       const { access_token } = await tokenRes.json();
 
-      const userRes = await fetch('https://kapi.kakao.com/v2/user/me', {
-        headers: { Authorization: `Bearer ${access_token}` },
-      });
-      const kakaoUser = await userRes.json();
-
-      return {
-        oauthId: String(kakaoUser.id),
-        name: kakaoUser.kakao_account?.profile?.nickname ?? '사용자',
-        profileImage: kakaoUser.kakao_account?.profile?.profile_image_url ?? null,
-        email: kakaoUser.kakao_account?.email ?? null,
-      };
+      return { accessToken: access_token };
     };
 
     getKakaoPayload()

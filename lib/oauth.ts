@@ -9,10 +9,7 @@ export type OAuthUser = {
 }
 
 export type KakaoLoginRequest = {
-  oauthId: string
-  name: string
-  profileImage: string | null
-  email: string | null
+  accessToken: string
 }
 
 export type KakaoLoginResponse = {
