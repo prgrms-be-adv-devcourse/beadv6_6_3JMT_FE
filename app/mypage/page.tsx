@@ -642,9 +642,13 @@ function MyPageContent() {
                       padding: '5px 11px', background: 'var(--ph-secondary)', color: 'var(--ph-primary)',
                       borderRadius: 'var(--ph-radius-full)', fontSize: 13, fontWeight: 600,
                     }}>
-                      {(user.roles ? user.roles.includes('seller') : user.role === 'seller')
-                        ? <><Store style={{ width: 13, height: 13 }} />판매자 계정</>
-                        : <><User style={{ width: 13, height: 13 }} />구매자 계정</>}
+                      {(() => {
+                        const hasRole = (r: string) =>
+                          user.roles ? user.roles.includes(r) : user.role === r;
+                        if (hasRole('admin')) return <><ShieldCheck style={{ width: 13, height: 13 }} />관리자 계정</>;
+                        if (hasRole('seller')) return <><Store style={{ width: 13, height: 13 }} />판매자 계정</>;
+                        return <><User style={{ width: 13, height: 13 }} />구매자 계정</>;
+                      })()}
                     </div>
                   </div>
                   <Button variant="secondary" onClick={() => setTab('settings')} style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>
