@@ -4,15 +4,14 @@ import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { X, Upload } from 'lucide-react';
 import { useToast } from '@/store/useToastStore';
-import api from '@/lib/auth';
-import { API_BASE } from '@/lib/apiBase';
+import { uploadViaPresign, type UploadPurpose } from '@/lib/upload';
 
 interface Props {
   value?: string | null;
   onChange: (url: string | null) => void;
   height?: number;
   placeholder?: string;
-  productId?: string;
+  purpose?: UploadPurpose;
 }
 
 export default function ImageUpload({
@@ -20,7 +19,7 @@ export default function ImageUpload({
   onChange,
   height = 220,
   placeholder = '이미지를 클릭하거나 드래그해 업로드',
-  productId,
+  purpose = 'image',
 }: Props) {
   const [dragging, setDragging] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -41,11 +40,8 @@ export default function ImageUpload({
     }
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      if (productId) formData.append('productId', productId);
-      const { data } = await api.post(`${API_BASE}/sellers/me/products/images`, formData);
-      onChange(data.data.url);
+      const url = await uploadViaPresign(file, purpose);
+      onChange(url);
     } catch {
       showToast('이미지 업로드에 실패했어요. 다시 시도해 주세요');
     } finally {
