@@ -643,8 +643,7 @@ function MyPageContent() {
                       borderRadius: 'var(--ph-radius-full)', fontSize: 13, fontWeight: 600,
                     }}>
                       {(() => {
-                        const hasRole = (r: string) =>
-                          user.roles ? user.roles.includes(r) : user.role === r;
+                        const hasRole = (r: string) => authUser?.roles?.includes(r) ?? false;
                         if (hasRole('admin')) return <><ShieldCheck style={{ width: 13, height: 13 }} />관리자 계정</>;
                         if (hasRole('seller')) return <><Store style={{ width: 13, height: 13 }} />판매자 계정</>;
                         return <><User style={{ width: 13, height: 13 }} />구매자 계정</>;
