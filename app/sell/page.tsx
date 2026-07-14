@@ -8,6 +8,7 @@ import { ArrowLeft, Store, Eye, Images, Check, CheckCircle2, X } from 'lucide-re
 import FormField from '@/components/ui/FormField';
 import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
 import ImageUpload from '@/components/ui/ImageUpload';
+import FileUpload from '@/components/ui/FileUpload';
 import { useToast } from '@/store/useToastStore';
 import Label from '@/components/ui/Label';
 import Button from '@/components/ui/Button';
@@ -83,6 +84,8 @@ export default function SellPage() {
   const [price, setPrice] = useState('');
   const [desc, setDesc] = useState('');
   const [body, setBody] = useState('');
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [externalUrl, setExternalUrl] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [status, setStatus] = useState<null | 'saved' | 'submitted'>(null);
@@ -111,7 +114,9 @@ export default function SellPage() {
         model,
         amount: Number(price),
         desc,
-        content: body,
+        content: productType === 'PROMPT' ? body : null,
+        fileUrl: productType === 'PPT' || productType === 'EXCEL' ? fileUrl : null,
+        externalUrl: productType === 'NOTION' ? externalUrl : null,
         thumbnailUrl: thumbUrl,
         imageUrls: galleryUrls.filter((u): u is string => u !== null),
         tags,
@@ -134,7 +139,7 @@ export default function SellPage() {
   const submit = () => saveProduct(true);
 
   const cleanupAndLeave = async () => {
-    const uploadedUrls = [thumbUrl, ...galleryUrls].filter((u): u is string => u !== null);
+    const uploadedUrls = [thumbUrl, fileUrl, ...galleryUrls].filter((u): u is string => u !== null);
     if (uploadedUrls.length > 0) {
       await api.delete(`${API_BASE}/sellers/me/products/images`, { data: uploadedUrls }).catch(() => {});
     }
@@ -142,7 +147,7 @@ export default function SellPage() {
   };
 
   const handleBack = () => {
-    const uploadedUrls = [thumbUrl, ...galleryUrls].filter((u): u is string => u !== null);
+    const uploadedUrls = [thumbUrl, fileUrl, ...galleryUrls].filter((u): u is string => u !== null);
     const hasContent = title.trim() || uploadedUrls.length > 0;
     if (hasContent) {
       setLeaveDialogOpen(true);
@@ -223,20 +228,48 @@ export default function SellPage() {
             />
           </Card>
 
-          {/* 프롬프트 내용 카드 */}
+          {/* 유형별 산출물 카드 */}
           <Card padding="28px">
-            <FormField
-              label="프롬프트 내용"
-              hint={`${body.length}자`}
-              type="textarea"
-              value={body}
-              onChange={(v) => setBody(v)}
-              rows={9}
-              placeholder={'실제 판매할 프롬프트 본문을 입력하세요.\n\n예) 당신은 전문 카피라이터입니다. 아래 제품 정보를 바탕으로...\n- 타깃:\n- 톤앤매너:\n- 출력 형식:'}
-            />
-            <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Eye style={{ width: 14, height: 14 }} /> 구매 후 공개되는 실제 프롬프트 원문이에요.
-            </p>
+            {productType === 'PROMPT' && (
+              <>
+                <FormField
+                  label="프롬프트 내용"
+                  hint={`${body.length}자`}
+                  type="textarea"
+                  value={body}
+                  onChange={(v) => setBody(v)}
+                  rows={9}
+                  placeholder={'실제 판매할 프롬프트 본문을 입력하세요.\n\n예) 당신은 전문 카피라이터입니다. 아래 제품 정보를 바탕으로...\n- 타깃:\n- 톤앤매너:\n- 출력 형식:'}
+                />
+                <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Eye style={{ width: 14, height: 14 }} /> 구매 후 공개되는 실제 프롬프트 원문이에요.
+                </p>
+              </>
+            )}
+
+            {(productType === 'PPT' || productType === 'EXCEL') && (
+              <div>
+                <Label>산출물 파일</Label>
+                <FileUpload value={fileUrl} onChange={setFileUrl} productType={productType} />
+                <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Eye style={{ width: 14, height: 14 }} /> 구매 후 구매자가 다운로드하는 실제 파일이에요.
+                </p>
+              </div>
+            )}
+
+            {productType === 'NOTION' && (
+              <div>
+                <Label>노션 템플릿 링크</Label>
+                <Input
+                  value={externalUrl}
+                  onChange={(e) => setExternalUrl(e.target.value)}
+                  placeholder="https://www.notion.so/..."
+                />
+                <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Eye style={{ width: 14, height: 14 }} /> 구매 후 구매자에게 공유되는 노션 템플릿 링크예요.
+                </p>
+              </div>
+            )}
           </Card>
 
           {/* 태그 & 이미지 카드 */}
@@ -284,6 +317,7 @@ export default function SellPage() {
                   onChange={setThumbUrl}
                   height={220}
                   placeholder="썸네일을 클릭하거나 드래그해 업로드"
+                  purpose="thumbnail"
                 />
               </div>
 
