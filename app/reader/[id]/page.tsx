@@ -6,10 +6,10 @@ import Image from 'next/image';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { mapOrderToPrompt } from '@/lib/orderAdapters';
-import { downloadOrderProduct } from '@/lib/orders';
+import { downloadOrderProduct, getOrderContent } from '@/lib/orders';
 import {
   ArrowLeft, CalendarCheck, FileText, Lock, Download,
-  AlertTriangle, CheckCircle2, MessageCircle, Sparkles,
+  CheckCircle2, MessageCircle, Sparkles, ExternalLink,
 } from 'lucide-react';
 import { ICON_MAP } from '@/lib/iconMap';
 import { PRODUCT_TYPE_LABEL } from '@/lib/productTypes';
@@ -42,45 +42,6 @@ type Prompt = {
 };
 
 type FormatKey = 'txt' | 'md' | 'pdf';
-
-/* ── Prompt text builder ────────────────────────────────────────────── */
-
-const ROLE_BY_PRODUCT_TYPE: Record<string, string> = {
-  PROMPT: 'AI 프롬프트 전문가',
-  NOTION: '노션 템플릿 디자이너',
-  PPT:    'PPT 디자이너',
-  EXCEL:  '엑셀 자동화 전문가',
-};
-
-function buildPromptText(p: Prompt): string {
-  const catLabel = PRODUCT_TYPE_LABEL[p.productType] ?? '일반';
-  const role = ROLE_BY_PRODUCT_TYPE[p.productType] ?? '전문가';
-  return [
-    `당신은 ${role}입니다. 아래 지침에 따라 "${p.title}" 작업을 수행하세요.`,
-    ``,
-    `[목표]`,
-    p.desc,
-    ``,
-    `[입력 정보]`,
-    `- 주제 / 대상: {{여기에 작업 대상을 입력하세요}}`,
-    `- 톤앤매너: {{예: 신뢰감 있고 간결하게}}`,
-    `- 추가 제약: {{선택 사항}}`,
-    ``,
-    `[작업 단계]`,
-    `1. 입력 정보를 분석해 핵심 요구사항을 3가지로 요약합니다.`,
-    `2. ${catLabel} 관점에서 최적의 결과를 ${p.model} 기준으로 생성합니다.`,
-    `3. 결과를 바로 사용할 수 있는 형태로 정리하고, 대안 1가지를 함께 제안합니다.`,
-    ``,
-    `[출력 형식]`,
-    `- 핵심 결과: 가장 먼저, 군더더기 없이`,
-    `- 대안 제안: 한 줄 요약 + 사용하면 좋은 상황`,
-    `- 체크리스트: 결과를 검수할 때 확인할 항목 3가지`,
-    ``,
-    `[주의사항]`,
-    `- 추측이 필요한 부분은 가정한 내용을 명시하세요.`,
-    `- 사실 확인이 필요한 수치는 임의로 만들지 마세요.`,
-  ].join('\n');
-}
 
 /* ── Avatar ──────────────────────────────────────────────────────────── */
 
@@ -136,6 +97,7 @@ export default function ReaderPage() {
   const [downloaded, setDownloaded] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [myRating, setMyRating] = useState(0);
+  const [content, setContent] = useState<string | null>(null);
   const showToast = useToast();
 
   useEffect(() => {
@@ -151,6 +113,11 @@ export default function ReaderPage() {
         setP(found);
         if (found.downloaded) {
           setDownloaded(true);
+          if (found.orderId && found.orderProductId) {
+            getOrderContent(found.orderId, found.orderProductId)
+              .then((oc) => setContent(oc.content))
+              .catch(() => {});
+          }
         } else if (localStorage.getItem(`ph_downloaded_${id}`) === 'true') {
           // 서버에서 downloaded 응답이 내려오기 전 과도기 지원
           setDownloaded(true);
@@ -188,7 +155,9 @@ export default function ReaderPage() {
 
   if (!p) return null;
 
-  const text = buildPromptText(p);
+  const text = content ?? '';
+  const isFile = p.productType === 'PPT' || p.productType === 'EXCEL';
+  const isNotion = p.productType === 'NOTION';
   const safeName = (p.title || 'prompt').replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'prompt';
   const dateStr = new Date(p.purchasedAt || Date.now()).toLocaleDateString('ko-KR', {
     year: 'numeric', month: 'long', day: 'numeric',
@@ -231,9 +200,16 @@ export default function ReaderPage() {
     showToast(fmtLabel[format] + ' 파일을 다운로드했어요');
   };
 
+  const openFile = (url: string) => {
+    const a = document.createElement('a');
+    a.href = url; a.download = ''; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+  const openLink = (url: string) => window.open(url, '_blank', 'noopener');
+
   const confirmDownload = async () => {
     if (!p || !p.orderId || !p.orderProductId) {
-      // API 호출에 필요한 정보가 없을 경우 로컬 다운로드만 처리 (에러 상황 대비)
+      // API 호출에 필요한 정보가 없을 경우 로컬 처리만 (에러 상황 대비)
       setConfirmOpen(false);
       setDownloaded(true);
       if (id) localStorage.setItem(`ph_downloaded_${id}`, 'true');
@@ -241,18 +217,26 @@ export default function ReaderPage() {
     }
 
     try {
-      const res = await downloadOrderProduct(p.orderId, p.orderProductId);
-      if (res.data.success) {
-        setConfirmOpen(false);
-        setDownloaded(true);
-        setP((prev) => prev ? { ...prev, downloaded: true, isRefundable: false } : prev);
-        if (id) localStorage.setItem(`ph_downloaded_${id}`, 'true'); // 과도기적 호환용
-      } else {
-        showToast('다운로드 처리에 실패했어요. 다시 시도해 주세요');
-      }
-    } catch (e) {
-      showToast('다운로드 처리에 실패했어요. 다시 시도해 주세요');
+      // 실제 산출물(유형별: 본문 텍스트 / 파일 presigned URL / 외부 링크)을 조회
+      const oc = await getOrderContent(p.orderId, p.orderProductId);
+      setContent(oc.content);
+      await downloadOrderProduct(p.orderId, p.orderProductId);
+      setConfirmOpen(false);
+      setDownloaded(true);
+      setP((prev) => prev ? { ...prev, downloaded: true, isRefundable: false } : prev);
+      if (id) localStorage.setItem(`ph_downloaded_${id}`, 'true'); // 과도기적 호환용
+      if (isFile) openFile(oc.content);
+      else if (isNotion) openLink(oc.content);
+    } catch {
+      showToast('콘텐츠를 불러오지 못했어요. 다시 시도해 주세요');
     }
+  };
+
+  // 이미 다운로드한 산출물을 다시 받기/열기
+  const reopen = () => {
+    if (!content) { showToast('콘텐츠를 불러오는 중이에요. 잠시 후 다시 시도해 주세요'); return; }
+    if (isFile) openFile(content);
+    else if (isNotion) openLink(content);
   };
 
   const backLink = (
@@ -321,7 +305,7 @@ export default function ReaderPage() {
           <CalendarCheck style={{ width: 15, height: 15 }} /> 구매일 {dateStr}
         </div>
 
-        {/* Prompt text card */}
+        {/* 산출물 카드 */}
         <Card padding="0" style={{ marginTop: 28, overflow: 'hidden' }}>
           {/* Card header */}
           <div style={{
@@ -330,66 +314,80 @@ export default function ReaderPage() {
           }}>
             <div style={{ fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
               <FileText style={{ width: 17, height: 17, color: 'var(--ph-primary)' }} />
-              프롬프트 전문
+              {isFile ? '산출물 파일' : isNotion ? '노션 템플릿' : '프롬프트 전문'}
             </div>
 
             {downloaded ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Button variant="secondary" size="sm" onClick={() => doDownload('txt')}>
-                  <Download style={{ width: 14, height: 14 }} /> TXT
+              p.productType === 'PROMPT' ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Button variant="secondary" size="sm" onClick={() => doDownload('txt')}>
+                    <Download style={{ width: 14, height: 14 }} /> TXT
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => doDownload('md')}>
+                    <Download style={{ width: 14, height: 14 }} /> MD
+                  </Button>
+                  <Button variant="solid" size="sm" onClick={() => doDownload('pdf')}>
+                    <Download style={{ width: 14, height: 14 }} /> PDF
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="solid" size="sm" onClick={reopen}>
+                  {isNotion
+                    ? <><ExternalLink style={{ width: 15, height: 15 }} /> 노션에서 열기</>
+                    : <><Download style={{ width: 15, height: 15 }} /> 다시 다운로드</>}
                 </Button>
-                <Button variant="secondary" size="sm" onClick={() => doDownload('md')}>
-                  <Download style={{ width: 14, height: 14 }} /> MD
-                </Button>
-                <Button variant="solid" size="sm" onClick={() => doDownload('pdf')}>
-                  <Download style={{ width: 14, height: 14 }} /> PDF
-                </Button>
-              </div>
+              )
             ) : (
               <Button variant="solid" size="sm" onClick={() => setConfirmOpen(true)}>
-                <Download style={{ width: 15, height: 15 }} /> 다운로드
+                {isNotion
+                  ? <><ExternalLink style={{ width: 15, height: 15 }} /> 노션에서 열기</>
+                  : <><Download style={{ width: 15, height: 15 }} /> 다운로드</>}
               </Button>
             )}
           </div>
 
-          {/* Prompt text (blur until downloaded) */}
-          <div style={{ position: 'relative' }}>
-            <pre style={{
-              margin: 0, padding: '22px 20px',
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              fontSize: 14, lineHeight: 1.7,
-              color: 'var(--ph-text)',
-              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-              background: 'var(--ph-gray-50)',
-              filter: downloaded ? 'none' : 'blur(6px)',
-              userSelect: downloaded ? 'auto' : 'none',
-              transition: 'filter .25s ease',
-              minHeight: downloaded ? 'auto' : 180,
-            }}>
-              {text}
-            </pre>
-            {!downloaded && (
-              <div style={{
-                position: 'absolute', inset: 0,
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
-                gap: 10, textAlign: 'center', padding: 20,
+          {/* Body */}
+          {p.productType === 'PROMPT' ? (
+            <div style={{ position: 'relative' }}>
+              <pre style={{
+                margin: 0, padding: '22px 20px',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                fontSize: 14, lineHeight: 1.7,
+                color: 'var(--ph-text)',
+                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                background: 'var(--ph-gray-50)',
+                filter: downloaded ? 'none' : 'blur(6px)',
+                userSelect: downloaded ? 'auto' : 'none',
+                transition: 'filter .25s ease',
+                minHeight: downloaded ? 'auto' : 180,
               }}>
-                <div style={{
-                  width: 44, height: 44,
-                  borderRadius: 'var(--ph-radius-full)',
-                  background: 'rgba(255,255,255,0.92)',
-                  border: '1px solid var(--ph-border)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Lock style={{ width: 20, height: 20, color: 'var(--ph-text-secondary)' }} />
+                {text}
+              </pre>
+              {!downloaded && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, textAlign: 'center', padding: 20 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 'var(--ph-radius-full)', background: 'rgba(255,255,255,0.92)', border: '1px solid var(--ph-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Lock style={{ width: 20, height: 20, color: 'var(--ph-text-secondary)' }} />
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text)' }}>
+                    다운로드하면 프롬프트 전문을 확인할 수 있어요
+                  </div>
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text)' }}>
-                  다운로드하면 프롬프트 전문을 확인할 수 있어요
-                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ padding: '44px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center', background: 'var(--ph-gray-50)' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-surface)', border: '1px solid var(--ph-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {downloaded
+                  ? <CheckCircle2 style={{ width: 20, height: 20, color: 'var(--ph-primary)' }} />
+                  : <Lock style={{ width: 20, height: 20, color: 'var(--ph-text-secondary)' }} />}
               </div>
-            )}
-          </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ph-text)' }}>
+                {downloaded
+                  ? (isNotion ? '노션 템플릿 링크를 열었어요. 위 버튼으로 다시 열 수 있어요.' : '파일을 받았어요. 위 버튼으로 다시 받을 수 있어요.')
+                  : (isNotion ? '열면 판매자의 노션 템플릿으로 이동해요' : '다운로드하면 구매한 파일을 받을 수 있어요')}
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Star rating card */}

@@ -11,6 +11,7 @@ import {
 import FormField from '@/components/ui/FormField';
 import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
 import ImageUpload from '@/components/ui/ImageUpload';
+import FileUpload from '@/components/ui/FileUpload';
 import { useToast } from '@/store/useToastStore';
 import Label from '@/components/ui/Label';
 import Button from '@/components/ui/Button';
@@ -31,6 +32,8 @@ type Prompt = {
   amount: number;
   desc: string;
   content: string;
+  fileUrl?: string | null;
+  externalUrl?: string | null;
   status?: string;
   thumbnailUrl?: string | null;
   imageUrls?: string[];
@@ -110,6 +113,8 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   const [price, setPrice] = useState(prompt.amount === 0 ? '0' : String(prompt.amount));
   const [desc, setDesc] = useState(prompt.desc);
   const [body, setBody] = useState(prompt.content);
+  const [fileUrl, setFileUrl] = useState<string | null>(prompt.fileUrl ?? null);
+  const [externalUrl, setExternalUrl] = useState(prompt.externalUrl ?? '');
   const [tags, setTags] = useState<string[]>(prompt.tags ?? []);
   const [tagInput, setTagInput] = useState('');
   const [thumbUrl, setThumbUrl] = useState<string | null>(prompt.thumbnailUrl ?? null);
@@ -149,7 +154,10 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
       await api.put(`${API_BASE}/sellers/me/products/${id}`, {
         title, productType, model,
         amount: Number(price),
-        desc, content: body,
+        desc,
+        content: productType === 'PROMPT' ? body : null,
+        fileUrl: productType === 'PPT' || productType === 'EXCEL' ? fileUrl : null,
+        externalUrl: productType === 'NOTION' ? externalUrl : null,
         thumbnailUrl: thumbUrl,
         imageUrls: galleryUrls.filter((u): u is string => u !== null),
         tags,
@@ -178,7 +186,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   };
 
   const cleanupAndCancel = async () => {
-    const tempUrls = [thumbUrl, ...galleryUrls].filter((u): u is string => !!u && u.includes('/temp/'));
+    const tempUrls = [thumbUrl, fileUrl, ...galleryUrls].filter((u): u is string => !!u && u.includes('/temp/'));
     if (tempUrls.length > 0) {
       await api.delete(`${API_BASE}/sellers/me/products/images`, { data: tempUrls }).catch(() => {});
     }
@@ -272,20 +280,48 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
             />
           </Card>
 
-          {/* 프롬프트 내용 카드 */}
+          {/* 유형별 산출물 카드 */}
           <Card padding="28px">
-            <FormField
-              label="프롬프트 내용"
-              hint={`${body.length}자`}
-              type="textarea"
-              value={body}
-              onChange={(v) => setBody(v)}
-              rows={9}
-              placeholder={'실제 판매할 프롬프트 본문을 입력하세요.\n\n예) 당신은 전문 카피라이터입니다...'}
-            />
-            <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Eye style={{ width: 14, height: 14 }} /> 구매 후 공개되는 실제 프롬프트 원문이에요.
-            </p>
+            {productType === 'PROMPT' && (
+              <>
+                <FormField
+                  label="프롬프트 내용"
+                  hint={`${body.length}자`}
+                  type="textarea"
+                  value={body}
+                  onChange={(v) => setBody(v)}
+                  rows={9}
+                  placeholder={'실제 판매할 프롬프트 본문을 입력하세요.\n\n예) 당신은 전문 카피라이터입니다...'}
+                />
+                <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Eye style={{ width: 14, height: 14 }} /> 구매 후 공개되는 실제 프롬프트 원문이에요.
+                </p>
+              </>
+            )}
+
+            {(productType === 'PPT' || productType === 'EXCEL') && (
+              <div>
+                <Label>산출물 파일</Label>
+                <FileUpload value={fileUrl} onChange={setFileUrl} productType={productType} />
+                <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Eye style={{ width: 14, height: 14 }} /> 구매 후 구매자가 다운로드하는 실제 파일이에요.
+                </p>
+              </div>
+            )}
+
+            {productType === 'NOTION' && (
+              <div>
+                <Label>노션 템플릿 링크</Label>
+                <Input
+                  value={externalUrl}
+                  onChange={(e) => setExternalUrl(e.target.value)}
+                  placeholder="https://www.notion.so/..."
+                />
+                <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Eye style={{ width: 14, height: 14 }} /> 구매 후 구매자에게 공유되는 노션 템플릿 링크예요.
+                </p>
+              </div>
+            )}
           </Card>
 
           {/* 태그 & 이미지 카드 */}
@@ -328,7 +364,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
               {/* 대표 썸네일 */}
               <div>
                 <Label hint="권장 4:3 · 최대 5MB">대표 썸네일</Label>
-                <ImageUpload value={thumbUrl} onChange={setThumbUrl} height={220} placeholder="썸네일을 클릭하거나 드래그해 업로드" />
+                <ImageUpload value={thumbUrl} onChange={setThumbUrl} height={220} placeholder="썸네일을 클릭하거나 드래그해 업로드" purpose="thumbnail" />
               </div>
 
               {/* 소개 이미지 */}
@@ -484,6 +520,8 @@ export default function EditPage() {
           amount: d.amount,
           desc: d.desc ?? '',
           content: d.content ?? '',
+          fileUrl: d.fileUrl ?? null,
+          externalUrl: d.externalUrl ?? null,
           status: d.status,
           thumbnailUrl: d.thumbnailUrl ?? null,
           imageUrls: d.imageUrls ?? [],
