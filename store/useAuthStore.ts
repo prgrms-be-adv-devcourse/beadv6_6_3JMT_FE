@@ -24,6 +24,9 @@ interface AuthState {
   setHasHydrated: (state: boolean) => void
 }
 
+// RT 만료(7일)와 동일하게 맞춤 — 짧으면 RT가 살아있어도 middleware가 먼저 로그아웃 처리해버림
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -36,8 +39,8 @@ export const useAuthStore = create<AuthState>()(
       setHasHydrated: (state) => set({ _hasHydrated: state }),
       login: (user, token, refreshToken) => {
         if (typeof document !== 'undefined') {
-          document.cookie = `token=${token}; path=/; max-age=86400`
-          document.cookie = `roles=${user.roles.join(',')}; path=/; max-age=86400`
+          document.cookie = `token=${token}; path=/; max-age=${COOKIE_MAX_AGE}`
+          document.cookie = `roles=${user.roles.join(',')}; path=/; max-age=${COOKIE_MAX_AGE}`
         }
         set({ user, token, refreshToken: refreshToken ?? null, isLoggedIn: true })
       },
@@ -50,7 +53,7 @@ export const useAuthStore = create<AuthState>()(
       },
       setToken: (token, refreshToken) => {
         if (typeof document !== 'undefined') {
-          document.cookie = `token=${token}; path=/; max-age=86400`
+          document.cookie = `token=${token}; path=/; max-age=${COOKIE_MAX_AGE}`
         }
         set((state) => ({ token, refreshToken: refreshToken ?? state.refreshToken }))
       },
