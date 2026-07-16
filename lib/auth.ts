@@ -7,6 +7,12 @@ const api = axios.create({
   baseURL: typeof window !== 'undefined' ? '' : process.env.NEXT_PUBLIC_API_URL,
 })
 
+// interceptor 없는 별도 인스턴스: refresh 요청 자체가 401을 받아도 아래 response
+// interceptor를 다시 타지 않게 해서, isRefreshing 대기열과의 데드락을 막는다.
+const refreshClient = axios.create({
+  baseURL: typeof window !== 'undefined' ? '' : process.env.NEXT_PUBLIC_API_URL,
+})
+
 api.interceptors.request.use((config) => {
   const { token, user } = useAuthStore.getState()
   if (token) {
@@ -55,7 +61,7 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
-        const res = await api.post(`${API_BASE}/auth/token/refresh`, { refreshToken })
+        const res = await refreshClient.post(`${API_BASE}/auth/token/refresh`, { refreshToken })
         const { accessToken, refreshToken: newRefreshToken } = res.data.data as {
           accessToken: string
           refreshToken?: string
