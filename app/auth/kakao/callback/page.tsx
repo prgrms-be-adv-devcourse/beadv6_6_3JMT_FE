@@ -103,8 +103,9 @@ function KakaoCallbackContent() {
         login({ ...user, roles, provider: 'kakao' }, accessToken, refreshToken);
         router.replace(isAdminFlow ? '/admin' : '/');
       })
-      .catch(() => {
-        showToast('카카오 로그인에 실패했습니다. 다시 시도해주세요.');
+      .catch((err: unknown) => {
+        const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        showToast(message ?? '카카오 로그인에 실패했습니다. 다시 시도해주세요.');
         router.replace(isAdminFlow ? '/admin/login' : '/');
       });
   }, [searchParams, login, router, showToast]);
