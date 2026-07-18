@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { directRoutingHeaders } from '@/lib/directRouting'
 import { useAuthStore } from '@/store/useAuthStore'
+import { useToastStore } from '@/store/useToastStore'
 import { API_BASE } from '@/lib/apiBase'
 
 const api = axios.create({
@@ -71,9 +72,16 @@ api.interceptors.response.use(
         pendingQueue = []
         originalRequest.headers.Authorization = `Bearer ${accessToken}`
         return api(originalRequest)
-      } catch {
+      } catch (refreshErr) {
         pendingQueue.forEach((cb) => cb(null))
         pendingQueue = []
+        // A006/A012/A013 등 refresh 실패 사유를 백엔드 message 그대로 안내
+        // (예: RT 재사용 감지, 세션 무효화 시 무음 로그아웃되지 않도록)
+        const message = (refreshErr as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message
+        if (message) {
+          useToastStore.getState().showToast(message)
+        }
         logout()
         if (typeof window !== 'undefined') {
           window.location.href = '/'
