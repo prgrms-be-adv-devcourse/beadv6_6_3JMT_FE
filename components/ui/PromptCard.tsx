@@ -9,8 +9,10 @@ import { ICON_MAP } from '@/lib/iconMap';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
 import { useCartStore } from '@/store/useCartStore';
+import { useToast } from '@/store/useToastStore';
 import { won } from '@/lib/utils';
 import { addCartItem } from '@/lib/cart';
+import { addWishlist, removeWishlist, getWishlistIdForProduct } from '@/lib/wishlists';
 
 /* ── 공유 Prompt 타입 ────────────────────────────────────────────── */
 
@@ -145,8 +147,9 @@ export default function PromptCard({
 }: PromptCardProps) {
   const [hovered, setHovered] = useState(false);
   const { isLoggedIn, openLoginModal } = useAuthStore();
-  const { items: wishItems, toggle } = useWishStore();
+  const { items: wishItems, toggle, upsertItem: upsertWishItem } = useWishStore();
   const { addItem, upsertItem } = useCartStore();
+  const showToast = useToast();
 
   const isWished = wishItems.some((i) => i.id === String(p.id));
   const isClickable = !disabled && (!!onOpen || !!onClick);
@@ -157,10 +160,26 @@ export default function PromptCard({
     if (onClick) onClick();
   };
 
-  const onWish = (e: React.MouseEvent) => {
+  const onWish = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isLoggedIn) { openLoginModal(); return; }
-    toggle({ id: String(p.id), title: p.title, amount: p.amount, thumbnailUrl: p.thumbnail_url ?? null });
+    const wasWished = isWished;
+    const wishlistId = wishItems.find((i) => i.id === String(p.id))?.wishlistId;
+    const item = { id: String(p.id), title: p.title, amount: p.amount, thumbnailUrl: p.thumbnail_url ?? null };
+    toggle(item); // 낙관적 업데이트
+    try {
+      if (wasWished) {
+        const id = wishlistId ?? (await getWishlistIdForProduct(p.id));
+        if (id) await removeWishlist(id);
+      } else {
+        const data = await addWishlist(p.id);
+        upsertWishItem({ ...item, wishlistId: data.wishlistId });
+      }
+    } catch (err: unknown) {
+      toggle(item); // 실패 시 롤백
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showToast(message ?? '찜 처리에 실패했어요. 다시 시도해주세요.');
+    }
   };
 
   const onCart = (e: React.MouseEvent) => {

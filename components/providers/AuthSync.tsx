@@ -28,17 +28,16 @@ export default function AuthSync() {
     }
     api.get(`${API_BASE}/wishlists`)
       .then((res) => {
-        const items: { productId: string; product: { id: string; title: string; amount: number; thumbnail_url?: string | null } | null }[] =
+        const items: { wishlistId: string; productId: string; title: string; price: number; thumbnailUrl: string | null }[] =
           res.data.data ?? [];
         setItems(
-          items
-            .filter((w) => w.product)
-            .map((w) => ({
-              id: String(w.product!.id),
-              title: w.product!.title,
-              amount: w.product!.amount,
-              thumbnailUrl: w.product!.thumbnail_url ?? null,
-            }))
+          items.map((w) => ({
+            id: String(w.productId),
+            title: w.title,
+            amount: w.price,
+            thumbnailUrl: w.thumbnailUrl ?? null,
+            wishlistId: w.wishlistId,
+          }))
         );
       })
       .catch(() => {});
