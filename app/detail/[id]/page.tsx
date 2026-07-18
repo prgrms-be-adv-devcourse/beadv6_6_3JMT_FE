@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
 import { useCartStore } from '@/store/useCartStore';
+import { useToast } from '@/store/useToastStore';
 import {
   ArrowLeft, Star,
   CheckCircle2, ShoppingCart, Check, History,
@@ -217,6 +218,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
   const { isLoggedIn, openLoginModal } = useAuthStore();
   const { items: wishItems, toggle } = useWishStore();
   const { items: cartItems, addItem, upsertItem } = useCartStore();
+  const showToast = useToast();
   const [showVersions, setShowVersions] = useState(false);
   const [purchased, setPurchased] = useState(false);
   const [wishlistId, setWishlistId] = useState<string | null>(null);
@@ -267,8 +269,10 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
         const data = await addWishlist(p.id);
         setWishlistId(data.wishlistId ?? null);
       }
-    } catch {
+    } catch (err: unknown) {
       toggle(item); // 실패 시 롤백
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showToast(message ?? '찜 처리에 실패했어요. 다시 시도해주세요.');
     }
   };
 
