@@ -20,7 +20,7 @@ import {
   ShieldCheck, Info, Clock, XCircle,
 } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
-import PaymentTable from '@/components/ui/PaymentTable';
+import OrderList from '@/components/ui/OrderList';
 import { won } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -557,7 +557,7 @@ function MyPageContent() {
     { id: 'profile',   label: '프로필',         icon: User        },
     { id: 'purchased', label: '구매한 프롬프트', icon: ShoppingBag },
     { id: 'wishlist',  label: '찜한 프롬프트',   icon: Heart       },
-    { id: 'payments',  label: '결제 내역',       icon: Receipt     },
+    { id: 'payments',  label: '주문 내역',       icon: Receipt     },
     { id: 'settings',  label: '설정',            icon: Settings    },
   ];
 
@@ -804,24 +804,23 @@ function MyPageContent() {
             </div>
           )}
 
-          {/* ── 결제 내역 탭 ── */}
+          {/* ── 주문 내역 탭 ── */}
           {tab === 'payments' && (
             <div>
-              <SectionTitle sub="결제한 내역과 환불 상태를 확인하세요.">결제 내역</SectionTitle>
+              <SectionTitle sub="주문한 내역과 환불 상태를 확인하세요.">주문 내역</SectionTitle>
               {loadingPayments ? (
                 <TableSkeleton />
               ) : payments.length === 0 ? (
                 <EmptyState
                   icon={Receipt}
-                  text="아직 결제 내역이 없어요."
+                  text="아직 주문 내역이 없어요."
                   cta="프롬프트 둘러보기"
                   onCta={() => router.push('/browse')}
                 />
               ) : (
                 <>
-                  <PaymentTable
+                  <OrderList
                     payments={payments}
-                    showRefundColumn
                     onRefund={(paymentId) => setRefundTargetId(paymentId)}
                   />
                   {paymentsHasNext && (

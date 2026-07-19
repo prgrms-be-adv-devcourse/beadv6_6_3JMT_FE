@@ -31,7 +31,7 @@ components/
 | `ImageUpload` | `value`, `onChange`, `height`, `placeholder` |
 | `ImageCarousel` | `slides`, `thumbnailUrl` |
 | `PromptCard` | `p`, `showActions`, `showStatus`, `onOpen`, `onClick` |
-| `PaymentTable` | `payments`, `showRefundColumn`, `onRefund` |
+| `OrderList` | `payments`, `onRefund` |
 | `StarRate` | `value`, `onRate`, `disabled` |
 | `Toast` | — (useToast 훅으로 사용) |
 | `Logo` | — |
