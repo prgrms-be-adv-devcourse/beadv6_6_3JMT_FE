@@ -38,7 +38,7 @@ function ItemRefundCell({
   onRefund: (paymentId: string) => void;
 }) {
   if (item.paymentStatus === 'REFUNDED') {
-    return <span className="text-ph-caption text-ph-text-muted">—</span>;
+    return null;
   }
   if (item.paymentStatus === 'REFUNDING') {
     return (
@@ -56,7 +56,6 @@ function ItemRefundCell({
   }
   return (
     <div className="flex flex-col items-end gap-1">
-      <span className="text-ph-caption text-ph-text-muted">—</span>
       {item.downloaded && (
         <p
           className="m-0 text-[11px] leading-tight text-ph-error text-right"
@@ -81,7 +80,7 @@ export default function OrderList({ payments, onRefund }: OrderListProps) {
         <span>주문 번호</span>
         <span>주문일</span>
         <span>주문 금액</span>
-        <span>상태</span>
+        <span className="text-center">상태</span>
         <span />
       </div>
       {orders.map((order) => {
@@ -95,7 +94,7 @@ export default function OrderList({ payments, onRefund }: OrderListProps) {
               <span className="font-bold text-ph-text">{order.orderId}</span>
               <span className="text-ph-text-secondary">{formatDate(order.paidAt)}</span>
               <span className="font-bold text-ph-text">{won(order.amount)}</span>
-              <span>
+              <span className="text-center">
                 <span
                   className={`inline-block text-ph-caption font-medium px-ph-12 py-ph-4 rounded-ph-full ${ORDER_STATUS_CLASS[order.status]}`}
                 >
@@ -120,7 +119,7 @@ export default function OrderList({ payments, onRefund }: OrderListProps) {
                     >
                       <div className="col-span-2 pr-3 text-ph-body-sm font-medium">{item.title}</div>
                       <div className="text-ph-body-sm text-ph-text-secondary">{won(item.amount)}</div>
-                      <div>
+                      <div className="text-center">
                         <span
                           className={`inline-block text-xs font-medium px-2.5 py-0.5 rounded-ph-full ${meta.className}`}
                         >
