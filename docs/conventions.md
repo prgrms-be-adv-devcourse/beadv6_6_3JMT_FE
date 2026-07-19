@@ -94,7 +94,7 @@ export const CATEGORIES = [
 | `ImageUpload` | `@/components/ui/ImageUpload` | `value`, `onChange`, `height`, `placeholder` |
 | `ImageCarousel` | `@/components/ui/ImageCarousel` | `slides`, `thumbnailUrl` |
 | `PromptCard` | `@/components/ui/PromptCard` | `p`, `showActions`, `showStatus`, `onOpen`, `onClick` |
-| `PaymentTable` | `@/components/ui/PaymentTable` | `payments`, `showRefundColumn`, `onRefund` |
+| `OrderList` | `@/components/ui/OrderList` | `payments`, `onRefund` |
 | `StarRate` | `@/components/ui/StarRate` | `value`, `onRate`, `disabled` |
 | `Toast` | `@/components/ui/Toast` | — (useToast 훅으로 사용) |
 | `Logo` | `@/components/ui/Logo` | — |
