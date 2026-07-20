@@ -43,6 +43,7 @@ type Prompt = {
   badge?: string;
   desc: string;
   thumbnail_url?: string | null;
+  imageUrls?: string[];
   versions?: Version[];
   features?: string[];
 };
@@ -286,9 +287,12 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
 
   const gallery: CarouselSlide[] = [
     { caption: '대표 이미지', icon: p.icon, tint: 'var(--ph-secondary)' },
-    { caption: '예시 결과 1', icon: 'image',     tint: 'var(--ph-gray-50)' },
-    { caption: '예시 결과 2', icon: p.icon,      tint: 'var(--ph-secondary)' },
-    { caption: '사용 가이드', icon: 'book-open', tint: 'var(--ph-gray-50)' },
+    ...(p.imageUrls ?? []).map((url, i) => ({
+      caption: `소개 이미지 ${i + 1}`,
+      icon: 'image',
+      tint: i % 2 === 0 ? 'var(--ph-gray-50)' : 'var(--ph-secondary)',
+      imageUrl: url,
+    })),
   ];
 
   return (

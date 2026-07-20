@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { ICON_MAP } from '@/lib/iconMap';
 
-export type CarouselSlide = { caption: string; icon: string; tint: string };
+export type CarouselSlide = { caption: string; icon: string; tint: string; imageUrl?: string };
 
 function SlideIcon({ name, style }: { name: string; style?: React.CSSProperties }) {
   const C = ICON_MAP[name];
@@ -65,6 +65,9 @@ export default function ImageCarousel({ slides, thumbnailUrl }: Props) {
         </div>
       );
     }
+    if (s.imageUrl) {
+      return <Image src={s.imageUrl} alt={s.caption} fill style={{ objectFit: 'cover' }} />;
+    }
     return (
       <div style={{ height: '100%', background: s.tint, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, transition: 'background .2s ease' }}>
         <SlideIcon name={s.icon} style={{ width: 84, height: 84, color: 'var(--ph-primary)', opacity: 0.85 }} />
@@ -80,6 +83,9 @@ export default function ImageCarousel({ slides, thumbnailUrl }: Props) {
     }
     if (k === 0 && thumbnailUrl === null) {
       return <Image src="/images/promy-character.png" alt={sl.caption} width={28} height={28} style={{ objectFit: 'contain', opacity: 0.8 }} />;
+    }
+    if (sl.imageUrl) {
+      return <Image src={sl.imageUrl} alt={sl.caption} fill style={{ objectFit: 'cover' }} />;
     }
     return <SlideIcon name={sl.icon} style={{ width: 22, height: 22, color: 'var(--ph-primary)', opacity: 0.8 }} />;
   };
