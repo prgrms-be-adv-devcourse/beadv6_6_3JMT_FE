@@ -148,7 +148,7 @@ export default function PromptCard({
   const [hovered, setHovered] = useState(false);
   const { isLoggedIn, openLoginModal } = useAuthStore();
   const { items: wishItems, toggle, upsertItem: upsertWishItem } = useWishStore();
-  const { addItem, upsertItem } = useCartStore();
+  const { addItem, upsertItem, removeItem } = useCartStore();
   const showToast = useToast();
 
   const isWished = wishItems.some((i) => i.id === String(p.id));
@@ -192,7 +192,10 @@ export default function PromptCard({
       .then((saved) => {
         if (saved) upsertItem(saved);
       })
-      .catch(() => {});
+      .catch(() => {
+        removeItem(productId);
+        showToast('장바구니 담기에 실패했습니다.');
+      });
   };
 
   /* detail 페이지 관련 카드는 gray-100, 나머지는 gray-50 */

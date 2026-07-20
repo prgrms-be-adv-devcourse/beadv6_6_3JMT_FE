@@ -218,7 +218,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
   const router = useRouter();
   const { isLoggedIn, openLoginModal } = useAuthStore();
   const { items: wishItems, toggle } = useWishStore();
-  const { items: cartItems, addItem, upsertItem } = useCartStore();
+  const { items: cartItems, addItem, upsertItem, removeItem } = useCartStore();
   const showToast = useToast();
   const [showVersions, setShowVersions] = useState(false);
   const [purchased, setPurchased] = useState(false);
@@ -254,7 +254,10 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
       .then((saved) => {
         if (saved) upsertItem(saved);
       })
-      .catch(() => {});
+      .catch(() => {
+        removeItem(productId);
+        showToast('장바구니 담기에 실패했습니다.');
+      });
   };
 
   const onWish = async () => {
