@@ -9,6 +9,7 @@ import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { deleteUserMe, updateUserMe } from '@/lib/users';
 import { getWishlists, type WishlistItem } from '@/lib/wishlists';
+import { getProductsByIds } from '@/lib/products';
 import { getPaymentHistory, requestRefund as apiRequestRefund } from '@/lib/payments';
 import { getOrders } from '@/lib/orders';
 import { mapOrderToPrompt } from '@/lib/orderAdapters';
@@ -461,20 +462,29 @@ function MyPageContent() {
         setLoadingPayments(false);
       });
     getWishlists()
-      .then((items: WishlistItem[]) => {
-        setWishlist(items.map((item) => ({
-          id:            item.productId,
-          title:         item.title,
-          thumbnail_url: item.thumbnailUrl,
-          amount:        item.price,
-          seller:        item.sellerNickname,
-          rating:        item.averageRating,
-          salesCount:    item.salesCount,
-          productType:   '',
-          icon:          '',
-          model:         item.model,
-          desc:          '',
-        })));
+      .then(async (items: WishlistItem[]) => {
+        const productIds = items.map((item) => item.productId);
+        const products = await getProductsByIds(productIds);
+        const productMap = new Map(products.map((p) => [p.productId, p]));
+        const resolved: Prompt[] = [];
+        for (const item of items) {
+          const product = productMap.get(item.productId);
+          if (!product) continue;
+          resolved.push({
+            id:            item.productId,
+            title:         product.title,
+            thumbnail_url: product.thumbnailUrl,
+            amount:        product.amount,
+            seller:        '',
+            rating:        product.averageRating,
+            salesCount:    product.salesCount,
+            productType:   product.productType,
+            icon:          '',
+            model:         product.model,
+            desc:          '',
+          });
+        }
+        setWishlist(resolved);
       })
       .catch(() => {})
       .finally(() => setLoadingWishlist(false));
