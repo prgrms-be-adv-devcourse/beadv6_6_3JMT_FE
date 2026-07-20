@@ -136,7 +136,7 @@ export default function ReaderPage() {
 
   const handleRate = async (n: number) => {
     try {
-      await api.post(`${API_BASE}/products/${id}/rating`, { rating: n });
+      await api.post(`${API_BASE}/products/${id}/reviews`, { rating: n });
       setMyRating(n);
       localStorage.setItem(`ph_rating_${id}`, String(n));
       showToast(`${n}점 별점을 남겼어요`);
