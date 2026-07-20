@@ -76,19 +76,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!token || pathname === '/admin/login') return
     const load = async () => {
       try {
-        const [appliesRes, productsRes, paymentsRes] = await Promise.all([
+        const [appliesRes, productsRes] = await Promise.all([
           api.get(`${API_BASE}/admin/sellers/applies`),
           api.get(`${API_BASE}/admin/products`, { params: { status: 'review' } }),
-          api.get(`${API_BASE}/admin/payments`),
         ])
         const applies = appliesRes.data.data ?? []
         const products = productsRes.data.data ?? []
-        const payments = paymentsRes.data.data ?? []
-        setBadges({
+        setBadges((prev) => ({
+          ...prev,
           sellers: applies.filter((a: { status: string }) => a.status === 'pending').length,
           products: products.filter((p: { status: string }) => p.status === 'review').length,
-          settlements: payments.filter((p: { status: string }) => p.status === 'PENDING_APPROVAL').length,
-        })
+        }))
       } catch {
         // 뱃지 집계 실패는 무시 (레이아웃 동작에 영향 없음)
       }
