@@ -8,13 +8,14 @@ import { X, Check, SearchX } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
 import Tag from '@/components/ui/Tag';
 import { PRODUCT_TYPES } from '@/lib/productTypes';
+import { getSellerNames } from '@/lib/sellers';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
 type Prompt = {
   id: string; title: string; icon: string; model: string;
   amount: number; originalAmount?: number; rating: number; salesCount: number;
-  seller: string; badge?: string; desc: string;
+  seller: string; sellerId?: string; badge?: string; desc: string;
 };
 
 const PRODUCT_TYPE_FILTERS = [{ id: 'all', label: '전체' }, ...PRODUCT_TYPES];
@@ -49,7 +50,15 @@ function BrowseScreen() {
     api.get(`${API_BASE}/products`, {
       params: { q: query || undefined, productType: productType !== 'all' ? productType : undefined, sort: sortParam },
     })
-      .then((res) => setList(res.data.data ?? []))
+      .then(async (res) => {
+        const products: Prompt[] = res.data.data ?? [];
+        const sellerIds = products.map((p) => p.sellerId).filter((id): id is string => !!id);
+        if (sellerIds.length === 0) { setList(products); return; }
+        const sellerNames = await getSellerNames(sellerIds);
+        setList(products.map((p) => (
+          p.sellerId ? { ...p, seller: sellerNames[p.sellerId] ?? '탈퇴한 판매자' } : p
+        )));
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [query, productType, sort]);

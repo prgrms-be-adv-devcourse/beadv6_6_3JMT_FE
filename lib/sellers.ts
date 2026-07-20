@@ -28,3 +28,33 @@ export async function getSellerApplyStatus(): Promise<{ status: string }> {
   )
   return res.data.data
 }
+
+interface SellerBatchItem {
+  sellerId: string
+  sellerName: string | null
+}
+
+const SELLER_BATCH_MAX = 30
+
+export async function getSellerNames(sellerIds: string[]): Promise<Record<string, string | null>> {
+  const unique = Array.from(new Set(sellerIds))
+  const chunks: string[][] = []
+  for (let i = 0; i < unique.length; i += SELLER_BATCH_MAX) {
+    chunks.push(unique.slice(i, i + SELLER_BATCH_MAX))
+  }
+
+  const responses = await Promise.all(
+    chunks.map((chunk) =>
+      api.post<{ success: boolean; data: { sellers: SellerBatchItem[] }; message: string }>(
+        `${API_BASE}/sellers/batch`,
+        { sellerIds: chunk },
+      ),
+    ),
+  )
+
+  const map: Record<string, string | null> = {}
+  responses.forEach((res) => {
+    res.data.data.sellers.forEach((s) => { map[s.sellerId] = s.sellerName })
+  })
+  return map
+}
