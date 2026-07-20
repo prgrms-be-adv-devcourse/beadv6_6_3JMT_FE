@@ -25,7 +25,3 @@ export async function addCartItem(productId: string): Promise<CartItem | null> {
 export async function removeCartItem(cartProductId: string): Promise<void> {
   await api.delete(`${API_BASE}/cart/products/${cartProductId}`)
 }
-
-export async function clearCartItems(): Promise<void> {
-  await api.delete(`${API_BASE}/cart`)
-}

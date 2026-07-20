@@ -9,9 +9,11 @@ import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { deleteUserMe, updateUserMe } from '@/lib/users';
 import { getWishlists, type WishlistItem } from '@/lib/wishlists';
-import { getPayments, requestRefund as apiRequestRefund } from '@/lib/payments';
+import { getPaymentHistory, requestRefund as apiRequestRefund } from '@/lib/payments';
+import { getOrders } from '@/lib/orders';
 import { mapOrderToPrompt } from '@/lib/orderAdapters';
-import { MyOrderItem, PaymentItem as ApiPaymentItem } from '@/types/api/orders';
+import { mapPaymentHistory } from '@/lib/paymentAdapters';
+import { OrderListItem, PaymentItem as ApiPaymentItem } from '@/types/api/orders';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';
 import {
@@ -389,6 +391,7 @@ function MyPageContent() {
   const [refunds, setRefunds] = useState<Record<string, 'requested' | 'refunded'>>({});
   const [refundTargetId, setRefundTargetId] = useState<string | null>(null);
   const [purchased, setPurchased] = useState<Prompt[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderListItem[]>([]);
   const [wishlist, setWishlist] = useState<Prompt[]>([]);
   const [payments, setPayments] = useState<ApiPaymentItem[]>([]);
   const [paymentsPage, setPaymentsPage] = useState(1);
@@ -444,21 +447,19 @@ function MyPageContent() {
     if (!_hasHydrated) return;
     if (!isLoggedIn) { openLoginModal(); return; }
     fetchUser();
-    api.get(`${API_BASE}/orders`)
-      .then((res) => {
-        const orders: MyOrderItem[] = res.data.data ?? [];
+    Promise.all([getOrders(), getPaymentHistory(1)])
+      .then(([orders, paymentHistory]) => {
+        setOrderItems(orders);
         setPurchased(orders.map(mapOrderToPrompt).filter((item): item is Prompt => item !== null));
-      })
-      .catch(() => {})
-      .finally(() => setLoadingPurchased(false));
-    getPayments(1)
-      .then(({ data, meta }) => {
-        setPayments(data);
+        setPayments(mapPaymentHistory(paymentHistory.data, orders));
         setPaymentsPage(1);
-        setPaymentsHasNext(meta.hasNext);
+        setPaymentsHasNext(paymentHistory.meta.hasNext);
       })
       .catch(() => {})
-      .finally(() => setLoadingPayments(false));
+      .finally(() => {
+        setLoadingPurchased(false);
+        setLoadingPayments(false);
+      });
     getWishlists()
       .then((items: WishlistItem[]) => {
         setWishlist(items.map((item) => ({
@@ -513,27 +514,28 @@ function MyPageContent() {
     }
   };
   const handleRefund = async (paymentId: string) => {
+    const paymentItem = payments.find((p) => p.paymentId === paymentId);
+    if (!paymentItem) return;
+
     try {
-      await apiRequestRefund(paymentId);
+      await apiRequestRefund({ paymentId, orderProductIds: paymentItem.orderProductIds });
       setPayments((prev) =>
         prev.map((p) => p.paymentId === paymentId ? { ...p, paymentStatus: 'REFUNDING', isRefundable: false } : p)
       );
       // 구매 탭 잠금 오버레이 동기화: orderId로 해당 purchased 항목 찾아 overlay 표시
-      const paymentItem = payments.find((p) => p.paymentId === paymentId);
-      if (paymentItem) {
-        const purchasedItem = purchased.find((p) => p.orderId === paymentItem.orderId);
-        if (purchasedItem) {
-          setRefunds((r) => ({ ...r, [purchasedItem.id]: 'requested' as const }));
-        }
+      const purchasedItem = purchased.find((p) => p.orderId === paymentItem.orderId);
+      if (purchasedItem) {
+        setRefunds((r) => ({ ...r, [purchasedItem.id]: 'requested' as const }));
       }
     } catch (ex: unknown) {
-      const code = (ex as { response?: { data?: { code?: string } } })?.response?.data?.code;
-      const messages: Record<string, string> = {
-        PAY004: '이미 환불 처리된 결제예요',
-        PAY006: '본인 결제 건이 아니에요',
-        PAY005: '결제 정보를 찾을 수 없어요',
+      const response = (ex as { response?: { status?: number } })?.response;
+      const messages: Record<number, string> = {
+        400: '환불할 상품을 다시 확인해 주세요.',
+        403: '본인이 구매한 상품만 환불할 수 있어요.',
+        404: '주문 상품을 찾을 수 없어요.',
+        409: '이미 다운로드했거나 환불할 수 없는 상품이에요.',
       };
-      showToast(messages[code ?? ''] ?? '환불 신청에 실패했어요. 다시 시도해주세요');
+      showToast(messages[response?.status ?? 0] ?? '환불 신청에 실패했어요. 다시 시도해주세요');
     }
   };
 
@@ -542,8 +544,8 @@ function MyPageContent() {
     setLoadingMorePayments(true);
     try {
       const nextPage = paymentsPage + 1;
-      const { data, meta } = await getPayments(nextPage);
-      setPayments((prev) => [...prev, ...data]);
+      const { data, meta } = await getPaymentHistory(nextPage);
+      setPayments((prev) => [...prev, ...mapPaymentHistory(data, orderItems)]);
       setPaymentsPage(nextPage);
       setPaymentsHasNext(meta.hasNext);
     } catch {

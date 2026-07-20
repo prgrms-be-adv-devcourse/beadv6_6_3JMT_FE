@@ -1,23 +1,27 @@
 import api from '@/lib/auth'
-import { PaymentItem, PaginationMeta } from '@/types/api/orders'
+import { PaginationMeta, PaymentHistoryItem } from '@/types/api/orders'
 import { API_BASE } from '@/lib/apiBase'
 
 export async function confirmPayment(params: {
   paymentKey: string
   orderId: string
+  amount: number
 }): Promise<{ paymentId: string }> {
   const res = await api.post(`${API_BASE}/payments/confirm`, params)
   return res.data.data as { paymentId: string }
 }
 
-export async function getPayments(
+export async function getPaymentHistory(
   page = 1,
   size = 20,
-): Promise<{ data: PaymentItem[]; meta: PaginationMeta }> {
-  const res = await api.get(`${API_BASE}/orders/payments`, { params: { page, size } })
+): Promise<{ data: PaymentHistoryItem[]; meta: PaginationMeta }> {
+  const res = await api.get(`${API_BASE}/payments`, { params: { page, size } })
   return { data: res.data.data, meta: res.data.meta }
 }
 
-export async function requestRefund(paymentId: string): Promise<void> {
-  await api.post(`${API_BASE}/payments/${paymentId}/refund`, null)
+export async function requestRefund(params: {
+  paymentId: string
+  orderProductIds: string[]
+}): Promise<void> {
+  await api.post(`${API_BASE}/orders/refunds`, params)
 }

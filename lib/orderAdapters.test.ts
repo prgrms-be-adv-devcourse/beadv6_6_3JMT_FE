@@ -54,6 +54,47 @@ test('mapOrderToPrompt converts real order-service flat orders', () => {
   assert.equal(prompt?.priceLabel, '구매 완료')
 })
 
+test('mapOrderToPrompt keeps v2 download and refund flags', () => {
+  const prompt = mapOrderToPrompt({
+    orderId: 'order-1',
+    orderProductId: 'order-product-1',
+    productId: 'product-1',
+    orderStatus: 'COMPLETED',
+    orderProductStatus: 'PAID',
+    downloaded: true,
+    isRefundable: false,
+    productType: 'PROMPT',
+    title: 'Prompt',
+    model: null,
+    rating: null,
+    paidAt: '2026-07-18T10:00:00',
+    createdAt: '2026-07-18T09:50:00',
+    product: null,
+  })
+
+  assert.equal(prompt?.downloaded, true)
+  assert.equal(prompt?.isRefundable, false)
+})
+
+test('mapOrderToPrompt excludes fully refunded v2 orders and products', () => {
+  assert.equal(mapOrderToPrompt({
+    orderId: 'order-1',
+    orderProductId: 'order-product-1',
+    productId: 'product-1',
+    orderStatus: 'ALL_REFUNDED',
+    orderProductStatus: 'REFUNDED',
+    downloaded: false,
+    isRefundable: false,
+    productType: 'PROMPT',
+    title: 'Refunded prompt',
+    model: null,
+    rating: null,
+    paidAt: '2026-07-18T10:00:00',
+    createdAt: '2026-07-18T09:50:00',
+    product: null,
+  }), null)
+})
+
 test('hasPurchasedProduct supports both mocked and real order shapes', () => {
   assert.equal(
     hasPurchasedProduct([

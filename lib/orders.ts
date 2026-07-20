@@ -1,22 +1,23 @@
 import api from '@/lib/auth'
-import { CreateOrderResult } from '@/types/api/orders'
+import type {
+  CreateOrderProduct,
+  CreateOrderResponseData,
+  CreateOrderResult,
+  OrderListItem,
+} from '@/types/api/orders'
 import { API_BASE } from '@/lib/apiBase'
+import { buildCreateOrderRequest, mapCreateOrderResponse } from './orderContracts'
 
-type CreateOrderSingle = { productId: string }
-type CreateOrderCart = { productIds: string[] }
-type CreateOrderParams = CreateOrderSingle | CreateOrderCart
+export { buildCreateOrderRequest, mapCreateOrderResponse } from './orderContracts'
 
-function normalizeCreateOrderParams(params: CreateOrderParams): CreateOrderCart {
-  if ('productId' in params) {
-    return { productIds: [params.productId] }
-  }
-
-  return { productIds: params.productIds }
+export async function createOrder(products: CreateOrderProduct[]): Promise<CreateOrderResult> {
+  const res = await api.post(`${API_BASE}/orders`, buildCreateOrderRequest(products))
+  return mapCreateOrderResponse(res.data.data as CreateOrderResponseData)
 }
 
-export async function createOrder(params: CreateOrderParams): Promise<CreateOrderResult> {
-  const res = await api.post(`${API_BASE}/orders`, normalizeCreateOrderParams(params))
-  return res.data.data as CreateOrderResult
+export async function getOrders(): Promise<OrderListItem[]> {
+  const res = await api.get(`${API_BASE}/orders`)
+  return (res.data.data ?? []) as OrderListItem[]
 }
 
 export async function downloadOrderProduct(orderId: string, orderProductId: string) {

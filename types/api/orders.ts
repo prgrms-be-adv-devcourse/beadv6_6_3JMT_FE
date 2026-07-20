@@ -31,11 +31,21 @@ export interface ProductInfo {
   priceLabel?: string;
 }
 
+export type OrderStatus =
+  | 'CREATED'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'PARTIAL_REFUNDED'
+  | 'ALL_REFUNDED'
+
+export type OrderProductStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED'
+
 export interface MyOrderItem {
   orderId: string;
   orderProductId?: string;
   productId?: string;
-  orderStatus?: string;
+  orderStatus?: OrderStatus | 'PENDING' | 'PAID' | 'CANCELED' | 'REFUNDED';
+  orderProductStatus?: OrderProductStatus;
   downloaded: boolean;
   isRefundable: boolean;
   productType?: string;
@@ -45,31 +55,75 @@ export interface MyOrderItem {
   paidAt?: string | null;
   createdAt?: string;
   purchasedAt?: string;
-  product: ProductInfo | null;
+  product?: ProductInfo | null;
 }
 
-export interface CreateOrderResult {
+export interface OrderListItem {
   orderId: string;
-}
-
-export type PaymentStatus = 'PAID' | 'REFUNDING' | 'REFUNDED';
-
-export interface PaymentItem {
-  orderId: string;
-  orderProductId?: string;
-  paymentId: string;
-  paymentStatus: PaymentStatus;
+  orderProductId: string;
+  productId: string;
+  orderStatus: OrderStatus;
+  orderProductStatus: OrderProductStatus;
   downloaded: boolean;
   isRefundable: boolean;
   productType: string;
   title: string;
+  model: string | null;
+  rating: number | null;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface CreateOrderProduct {
+  productId: string;
+  productTitle: string;
+}
+
+export interface CreateOrderRequest {
+  products: CreateOrderProduct[];
+}
+
+export interface CreateOrderResponseData {
+  totalAmount: number;
+  order: {
+    orderId: string;
+  };
+}
+
+export interface CreateOrderResult {
+  orderId: string;
+  totalAmount: number;
+}
+
+export type PaymentStatus = 'PAID' | 'REFUNDING' | 'PARTIAL_REFUNDED' | 'ALL_REFUNDED';
+
+export interface PaymentHistoryItem {
+  orderId: string;
+  paymentId: string;
+  paymentStatus: Exclude<PaymentStatus, 'REFUNDING'>;
   amount: number;
   paidAt: string;
 }
 
+export interface PaymentItem extends Omit<PaymentHistoryItem, 'paymentStatus'> {
+  paymentStatus: PaymentStatus;
+  orderProductIds: string[];
+  downloaded: boolean;
+  isRefundable: boolean;
+  title: string;
+}
+
+export interface AdminOrderSellerSummary {
+  sellerId: string;
+  sellerNickname: string;
+  productCount: number;
+  orderAmount: number;
+}
+
 export interface AdminOrder {
   orderId: string;
-  sellerNickname: string;
+  sellerCount: number;
+  sellers: AdminOrderSellerSummary[];
   productTitle: string;
   totalOrderCount: number;
   totalOrderAmount: number;

@@ -6,7 +6,7 @@ import Image from 'next/image';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { mapOrderToPrompt } from '@/lib/orderAdapters';
-import { downloadOrderProduct, getOrderContent } from '@/lib/orders';
+import { downloadOrderProduct, getOrderContent, getOrders } from '@/lib/orders';
 import {
   ArrowLeft, CalendarCheck, FileText, Lock, Download,
   CheckCircle2, MessageCircle, Sparkles, ExternalLink,
@@ -102,9 +102,9 @@ export default function ReaderPage() {
 
   useEffect(() => {
     if (!id) { router.push('/mypage'); return; }
-    api.get(`${API_BASE}/orders`)
-      .then((res) => {
-        const products = (res.data.data ?? []).map(mapOrderToPrompt).filter(Boolean) as Prompt[];
+    getOrders()
+      .then((orders) => {
+        const products = orders.map(mapOrderToPrompt).filter(Boolean) as Prompt[];
         const found = products.find((product) => String(product.id) === String(id));
         if (!found) {
           router.push('/mypage');

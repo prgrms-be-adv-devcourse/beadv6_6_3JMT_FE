@@ -89,15 +89,16 @@ function CheckoutContent() {
     setError(null);
     setLoading(true);
     try {
-      const orderParams = isSingle
-        ? { productId: items[0].productId }
-        : { productIds: items.map((i) => i.productId) };
-      const { orderId } = await createOrder(orderParams);
+      const orderProducts = items.map((item) => ({
+        productId: item.productId,
+        productTitle: item.title,
+      }));
+      const { orderId, totalAmount } = await createOrder(orderProducts);
 
       // MSW용: 결제창이 팝업으로 열려 sessionStorage가 격리될 수 있으므로 localStorage 사용
       localStorage.setItem(
         '_mock_pending_order',
-        JSON.stringify({ orderId, productIds: items.map((i) => i.productId) })
+        JSON.stringify({ orderId, productIds: items.map((i) => i.productId), amount: totalAmount })
       );
 
       if (!isSingle) clearCart();
@@ -111,16 +112,17 @@ function CheckoutContent() {
 
       await payment.requestPayment({
         method: 'CARD',
-        amount: { currency: 'KRW', value: total },
+        amount: { currency: 'KRW', value: totalAmount },
         orderId,
         orderName,
         successUrl: `${window.location.origin}/checkout/success`,
         failUrl: `${window.location.origin}/checkout/fail`,
       });
     } catch (e: unknown) {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        '주문 처리 중 오류가 발생했습니다.';
+      const response = (e as { response?: { status?: number; data?: { message?: string } } })?.response;
+      const msg = response?.status === 503
+        ? '주문 서비스를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.'
+        : response?.data?.message ?? '주문 요청을 처리하지 못했습니다.';
       setError(msg);
       setLoading(false);
     }

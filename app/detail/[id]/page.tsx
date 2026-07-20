@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { hasPurchasedProduct } from '@/lib/orderAdapters';
+import { getOrders } from '@/lib/orders';
 import { addCartItem } from '@/lib/cart';
 import { getWishlistIdForProduct, addWishlist, removeWishlist } from '@/lib/wishlists';
 import Image from 'next/image';
@@ -228,9 +229,9 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
 
   useEffect(() => {
     if (!isLoggedIn) return;
-    api.get(`${API_BASE}/orders`)
-      .then((res) => {
-        if (hasPurchasedProduct(res.data.data ?? [], p.id)) setPurchased(true);
+    getOrders()
+      .then((orders) => {
+        if (hasPurchasedProduct(orders, p.id)) setPurchased(true);
       })
       .catch(() => {});
     getWishlistIdForProduct(p.id)

@@ -17,20 +17,23 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const paymentKey = searchParams.get('paymentKey') ?? '';
   const orderId = searchParams.get('orderId') ?? '';
+  const amount = Number(searchParams.get('amount') ?? '');
+  const invalidPayment = !paymentKey || !orderId || !Number.isFinite(amount) || amount <= 0;
 
-  const [state, setState] = useState<ConfirmState>({ status: 'loading' });
+  const [state, setState] = useState<ConfirmState>(() => (
+    invalidPayment
+      ? { status: 'error', message: '잘못된 결제 정보입니다.' }
+      : { status: 'loading' }
+  ));
   const confirmedRef = useRef(false);
 
   useEffect(() => {
     if (confirmedRef.current) return;
     confirmedRef.current = true;
 
-    if (!paymentKey || !orderId) {
-      setState({ status: 'error', message: '잘못된 결제 정보입니다.' });
-      return;
-    }
+    if (invalidPayment) return;
 
-    confirmPayment({ paymentKey, orderId })
+    confirmPayment({ paymentKey, orderId, amount })
       .then(() => setState({ status: 'success' }))
       .catch((e: unknown) => {
         const data = (e as { response?: { data?: { code?: string; message?: string } } })?.response?.data;

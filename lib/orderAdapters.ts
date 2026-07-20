@@ -12,7 +12,14 @@ function normalizeModel(model?: string | null): string {
 }
 
 export function isActivePurchasedOrder(order: MyOrderItem): boolean {
-  return order.orderStatus !== 'REFUNDED'
+  if (order.orderProductStatus) {
+    return (
+      (order.orderStatus === 'COMPLETED' || order.orderStatus === 'PARTIAL_REFUNDED') &&
+      order.orderProductStatus === 'PAID'
+    )
+  }
+
+  return order.orderStatus !== 'REFUNDED' && order.orderStatus !== 'ALL_REFUNDED'
 }
 
 export function mapOrderToPrompt(order: MyOrderItem): PromptLike | null {

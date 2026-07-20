@@ -7,16 +7,17 @@ import { API_BASE } from '@/lib/apiBase'
 import { SectionCard } from '@/components/admin/SectionCard'
 import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { StatusBadge } from '@/components/admin/Badge'
+import { formatAdminOrderSellers } from '@/lib/adminOrderAdapters'
 
 import { AdminOrder } from '@/types/api/orders'
 
 const FILTER_OPTIONS = [
   { value: 'all', label: '전체' },
-  { value: 'PENDING', label: '대기' },
-  { value: 'PAID', label: '완료' },
+  { value: 'CREATED', label: '생성' },
+  { value: 'COMPLETED', label: '결제 완료' },
   { value: 'FAILED', label: '실패' },
-  { value: 'CANCELED', label: '취소' },
-  { value: 'REFUNDED', label: '환불' },
+  { value: 'PARTIAL_REFUNDED', label: '부분 환불' },
+  { value: 'ALL_REFUNDED', label: '전체 환불' },
 ]
 
 export default function AdminOrdersPage() {
@@ -85,7 +86,7 @@ export default function AdminOrdersPage() {
                       <span className="text-[12.5px] text-ph-text-muted">{order.orderId}</span>
                     </Td>
                     <Td>
-                      <Identity name={order.sellerNickname} />
+                      <Identity name={formatAdminOrderSellers(order)} />
                     </Td>
                     <Td>
                       <span className="block max-w-[200px] truncate">{order.productTitle}</span>
