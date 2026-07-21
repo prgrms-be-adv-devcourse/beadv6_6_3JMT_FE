@@ -516,7 +516,7 @@ export default function EditPage() {
           id: d.productId,
           title: d.title,
           productType: d.productType ?? 'PROMPT',
-          model: d.model,
+          model: d.model ?? '',
           amount: d.amount,
           desc: d.desc ?? '',
           content: d.content ?? '',
