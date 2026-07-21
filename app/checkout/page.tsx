@@ -70,7 +70,7 @@ function CheckoutContent() {
         if (cartItems.length === 0) router.replace('/shop');
       })
       .finally(() => setCartReady(true));
-  }, [cartItems.length, isSingle, router, setCartItems, user]);
+  }, [isSingle, router, setCartItems, user]);
 
   const items: LineItem[] = isSingle ? (singleItem ? [singleItem] : []) : cartItems;
   const total = items.reduce((s, i) => s + i.amount, 0);

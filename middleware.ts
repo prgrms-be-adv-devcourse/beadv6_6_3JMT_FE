@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const AUTH_REQUIRED = ['/sell', '/shop', '/mypage', '/reader', '/edit', '/apply', '/checkout']
-const SELLER_REQUIRED = ['/sell', '/shop', '/edit']
+const SELLER_REQUIRED = ['/sell', '/edit']
 const ADMIN_REQUIRED = ['/admin']
 
 export function middleware(request: NextRequest) {
