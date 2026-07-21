@@ -54,10 +54,17 @@ function BrowseScreen() {
         const products: Prompt[] = res.data.data ?? [];
         const sellerIds = products.map((p) => p.sellerId).filter((id): id is string => !!id);
         if (sellerIds.length === 0) { setList(products); return; }
-        const sellerNames = await getSellerNames(sellerIds);
-        setList(products.map((p) => (
-          p.sellerId ? { ...p, seller: sellerNames[p.sellerId] ?? '탈퇴한 판매자' } : p
-        )));
+        
+        try {
+          const sellerNames = await getSellerNames(sellerIds);
+          setList(products.map((p) => (
+            p.sellerId ? { ...p, seller: sellerNames[p.sellerId] ?? p.seller ?? '탈퇴한 판매자' } : p
+          )));
+        } catch (e) {
+          // If the batch seller API fails (e.g. 404), fallback to the original products list
+          // which might already contain the 'seller' field.
+          setList(products);
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
