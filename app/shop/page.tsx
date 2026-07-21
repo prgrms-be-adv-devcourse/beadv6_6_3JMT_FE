@@ -24,6 +24,10 @@ import {
   type SellerSettlementSummary,
   type SettlementDisplayStatus,
 } from '@/lib/settlements';
+import {
+  getSellerProductSummary,
+  type SellerProductSummary,
+} from '@/lib/products';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -65,7 +69,8 @@ export default function ShopPage() {
   const [settlementFilter, setSettlementFilter] = useState<SettlementFilter>('all');
   const [settlementHasNext, setSettlementHasNext] = useState(false);
   const [loadingMoreSettlements, setLoadingMoreSettlements] = useState(false);
-  const [summary, setSummary] = useState<SellerSettlementSummary | null>(null);
+  const [productSummary, setProductSummary] = useState<SellerProductSummary | null>(null);
+  const [settlementSummary, setSettlementSummary] = useState<SellerSettlementSummary | null>(null);
   const [requestingId, setRequestingId] = useState<string | null>(null);
 
   // 정산 내역 (상태 필터 + 0-base 페이징). append=true면 "더 보기"로 누적
@@ -86,11 +91,16 @@ export default function ShopPage() {
       .finally(() => setLoadingMoreSettlements(false));
   };
 
-  // 상단 통계 카드 = 정산 서비스 요약 엔드포인트(실데이터)
+  const loadProductSummary = () => {
+    getSellerProductSummary()
+      .then(setProductSummary)
+      .catch(() => setProductSummary(null));
+  };
+
   const loadSettlementSummary = () => {
     getSellerSettlementSummary()
-      .then(setSummary)
-      .catch(() => setSummary(null));
+      .then(setSettlementSummary)
+      .catch(() => setSettlementSummary(null));
   };
 
   useEffect(() => {
@@ -115,6 +125,7 @@ export default function ShopPage() {
         setMyListings(products);
       });
     loadSettlements('all', 0, false);
+    loadProductSummary();
     loadSettlementSummary();
   }, []);
 
@@ -174,12 +185,12 @@ export default function ShopPage() {
     { id: 'stopped',  label: `판매중단 ${myListings.filter((p) => p.status === 'stopped' || isStopped(p.id)).length}` },
   ];
 
-  // 통계 카드 4개 — 정산 서비스 요약 엔드포인트(실데이터)
+  // 상품 통계와 정산 금액은 각 서비스의 공개 API에서 독립적으로 조회한다.
   const cards = [
-    { label: '등록 프롬프트', value: `${(summary?.registeredPromptCount ?? 0).toLocaleString('ko-KR')}개`, icon: Layers },
-    { label: '누적 판매',     value: `${(summary?.totalSalesCount ?? 0).toLocaleString('ko-KR')}회`,       icon: ShoppingBag },
-    { label: '누적 수익',     value: won(summary?.totalRevenueAmount ?? 0),                                 icon: Wallet },
-    { label: '누적 정산 수익', value: won(summary?.totalSettlementAmount ?? 0),                              icon: Banknote },
+    { label: '등록 프롬프트', value: `${(productSummary?.productCount ?? 0).toLocaleString('ko-KR')}개`, icon: Layers },
+    { label: '누적 판매',     value: `${(productSummary?.salesCount ?? 0).toLocaleString('ko-KR')}회`,   icon: ShoppingBag },
+    { label: '누적 수익',     value: won(settlementSummary?.totalRevenueAmount ?? 0),                   icon: Wallet },
+    { label: '누적 정산 수익', value: won(settlementSummary?.totalSettlementAmount ?? 0),                icon: Banknote },
   ];
 
   // 정산 목록은 server-side 필터링 → settlements를 그대로 렌더링

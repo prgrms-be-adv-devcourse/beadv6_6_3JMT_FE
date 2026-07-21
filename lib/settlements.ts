@@ -135,8 +135,6 @@ export async function runAdminSettlementAction(
 /* === 판매자 정산 조회 === */
 
 export interface SellerSettlementSummary {
-  registeredPromptCount: number
-  totalSalesCount: number
   totalRevenueAmount: number
   totalSettlementAmount: number
 }
@@ -188,13 +186,11 @@ function toSellerItem(raw: Record<string, unknown>): SellerSettlementItem {
   }
 }
 
-// GET /api/v2/sellers/me/settlements/summary — 내 상점 요약 지표
+// GET /api/v2/sellers/me/settlements/summary — 판매자 정산 금액 요약
 export async function getSellerSettlementSummary(): Promise<SellerSettlementSummary> {
   const res = await api.get(`${API_BASE}/sellers/me/settlements/summary`)
   const d = res.data?.data ?? {}
   return {
-    registeredPromptCount: Number(d.registeredPromptCount ?? 0),
-    totalSalesCount: Number(d.totalSalesCount ?? 0),
     totalRevenueAmount: Number(d.totalRevenueAmount ?? 0),
     totalSettlementAmount: Number(d.totalSettlementAmount ?? 0),
   }
