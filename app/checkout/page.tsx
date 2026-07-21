@@ -34,8 +34,9 @@ function CheckoutContent() {
   const [tossPayments, setTossPayments] = useState<any>(null);
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY) {
-      loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY)
+    const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_Poxy1XQL8Rww4qXxPenL37nO5Wml';
+    if (clientKey) {
+      loadTossPayments(clientKey)
         .then(setTossPayments)
         .catch(console.error);
     }
