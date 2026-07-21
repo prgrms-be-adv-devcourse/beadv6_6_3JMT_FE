@@ -20,7 +20,7 @@ export function groupOrders(payments: PaymentItem[]): GroupedOrder[] {
 
   return Array.from(grouped.entries()).map(([orderId, items]) => {
     const allPaid = items.every((it) => it.paymentStatus === 'PAID');
-    const allRefunded = items.every((it) => it.paymentStatus === 'REFUNDED');
+    const allRefunded = items.every((it) => it.paymentStatus === 'ALL_REFUNDED');
     const status: OrderStatus = allPaid ? '결제완료' : allRefunded ? '전체 환불' : '부분 환불';
 
     return {

@@ -11,10 +11,10 @@ function item(overrides: Partial<PaymentItem>): PaymentItem {
     paymentStatus: 'PAID',
     downloaded: false,
     isRefundable: true,
-    productType: 'PROMPT',
     title: 'Prompt A',
     amount: 5000,
     paidAt: '2026-06-28T10:00:00',
+    orderProductIds: [],
     ...overrides,
   }
 }
@@ -56,7 +56,7 @@ test('groupOrders: 다중 아이템, 일부 REFUNDING → 부분 환불', () => 
 test('groupOrders: 다중 아이템, 일부 REFUNDED → 부분 환불', () => {
   const result = groupOrders([
     item({ orderId: 'ORD-1', paymentId: 'pay-1', paymentStatus: 'PAID', amount: 6000 }),
-    item({ orderId: 'ORD-1', paymentId: 'pay-2', paymentStatus: 'REFUNDED', amount: 4000 }),
+    item({ orderId: 'ORD-1', paymentId: 'pay-2', paymentStatus: 'ALL_REFUNDED', amount: 4000 }),
   ])
 
   assert.equal(result[0].status, '부분 환불')
@@ -64,8 +64,8 @@ test('groupOrders: 다중 아이템, 일부 REFUNDED → 부분 환불', () => {
 
 test('groupOrders: 다중 아이템, 전부 REFUNDED → 전체 환불', () => {
   const result = groupOrders([
-    item({ orderId: 'ORD-1', paymentId: 'pay-1', paymentStatus: 'REFUNDED', amount: 6000 }),
-    item({ orderId: 'ORD-1', paymentId: 'pay-2', paymentStatus: 'REFUNDED', amount: 4000 }),
+    item({ orderId: 'ORD-1', paymentId: 'pay-1', paymentStatus: 'ALL_REFUNDED', amount: 6000 }),
+    item({ orderId: 'ORD-1', paymentId: 'pay-2', paymentStatus: 'ALL_REFUNDED', amount: 4000 }),
   ])
 
   assert.equal(result[0].status, '전체 환불')
