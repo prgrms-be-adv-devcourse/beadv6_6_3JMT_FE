@@ -4,13 +4,13 @@ import axios from 'axios'
 import { API_BASE } from '@/lib/apiBase'
 
 export async function getCartItems(): Promise<CartItem[]> {
-  const res = await api.get(`${API_BASE}/cart/products`)
+  const res = await api.get(`${API_BASE}/cart`)
   return mapCartResponseToItems(res.data.data)
 }
 
 export async function addCartItem(productId: string): Promise<CartItem | null> {
   try {
-    const res = await api.post(`${API_BASE}/cart/products`, { productId })
+    const res = await api.post(`${API_BASE}/cart`, { productId })
     return mapCartResponseToItems([res.data.data])[0] ?? null
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 409) {
@@ -23,5 +23,5 @@ export async function addCartItem(productId: string): Promise<CartItem | null> {
 }
 
 export async function removeCartItem(cartProductId: string): Promise<void> {
-  await api.delete(`${API_BASE}/cart/products/${cartProductId}`)
+  await api.delete(`${API_BASE}/cart/${cartProductId}`)
 }
