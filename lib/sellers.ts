@@ -46,7 +46,7 @@ export async function getSellerNames(sellerIds: string[]): Promise<Record<string
   const responses = await Promise.all(
     chunks.map((chunk) =>
       api.post<{ success: boolean; data: { sellers: SellerBatchItem[] }; message: string }>(
-        `${API_BASE}/sellers/batch`,
+        `${API_BASE}/sellers/products`,
         { sellerIds: chunk },
       ),
     ),

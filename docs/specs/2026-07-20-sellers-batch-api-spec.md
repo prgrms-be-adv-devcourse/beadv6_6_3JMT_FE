@@ -1,9 +1,10 @@
-# POST /api/v2/sellers/batch — 판매자 이름 배치 조회 API 스펙
+# POST /api/v2/sellers/products — 판매자 이름 배치 조회 API 스펙
 
 - 작성일: 2026-07-20
 - 담당: user-service
 - 배경: `/browse`(상품 목록 조회) 프론트 명세 변경. Client가 `GET /products` 응답에서 `sellerId` 목록을 추출한 뒤, User 서비스에 2차로 판매자 이름을 배치 조회한다.
 - 수정: `sellerId` 타입을 정수 → UUID string으로 정정 (실제 도메인 모델(`user.user_id`, `SellerInfoResult.sellerId`, gRPC 배치 조회)이 전부 UUID string이라는 점을 user-service 담당자가 확인함. 최초 문서의 `[1, 2, 3]` 예시는 그릴링 다이어그램의 단순 placeholder였음).
+- 수정(2026-07-21): 엔드포인트 경로를 `POST /sellers/batch` → `POST /sellers/products`로 변경 (API 명칭 변경).
 
 ## 시퀀스 (waterfall)
 
@@ -12,19 +13,19 @@ Client -> GET /api/v2/products (요청 데이터 없음)
        <- productList [{ productId, salesCount, sellerId, onSale, productDetail, ... }]
           (Product 서비스는 내부적으로 review 서비스에서 average review를 받아 병합)
 
-Client -> POST /api/v2/sellers/batch (productList에서 추출한 sellerId 목록)
+Client -> POST /api/v2/sellers/products (productList에서 추출한 sellerId 목록)
        <- sellerName 목록
 ```
 
-`/products` 응답이 온 뒤에만 `/sellers/batch`를 호출한다(순차 호출, 병렬 아님). Product가 sellerName을 비정규화해서 들고 있는 방식은 검토했으나 채택하지 않음 — 이 구조를 그대로 확정.
+`/products` 응답이 온 뒤에만 `/sellers/products`를 호출한다(순차 호출, 병렬 아님). Product가 sellerName을 비정규화해서 들고 있는 방식은 검토했으나 채택하지 않음 — 이 구조를 그대로 확정.
 
 ## 엔드포인트
 
 ```
-POST /api/v2/sellers/batch
+POST /api/v2/sellers/products
 ```
 
-기존 `POST /seller`(판매자 등록), `GET /sellers/apply-status`(신청 상태 조회, 인증 필요)와 이름이 겹치지 않도록 `/sellers/batch`로 경로를 분리했다.
+기존 `POST /seller`(판매자 등록), `GET /sellers/apply-status`(신청 상태 조회, 인증 필요)와 이름이 겹치지 않도록 `/sellers/products`로 경로를 분리했다.
 
 ### 인증
 
