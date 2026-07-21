@@ -61,4 +61,4 @@ className="tabular-nums"
 | 유형 변경 select | 현재 규모가 작아 row 내 인라인 유지 |
 
 ## 주의 사항
-- `handleRoleChange`와 `handleStatusChange` 모두 동일한 `PUT /api/v1/admin/users/:id` 엔드포인트 사용 (body 키만 다름)
+- `handleRoleChange`는 `PATCH /api/v2/admin/users/:id/role`, `handleStatusChange`는 `PATCH /api/v2/admin/users/:id/status` — 서로 다른 서브 리소스 엔드포인트 사용 (스펙: `docs/specs/2026-07-21-admin-users-role-api-spec.md`)

@@ -40,13 +40,19 @@ export async function getAdminUsers(params?: GetAdminUsersParams): Promise<GetAd
   return { data: res.data.data, meta: res.data.meta }
 }
 
-export async function updateAdminUser(
+export interface UpdateAdminUserRoleResponse {
+  id: string
+  role: AdminUser['role']
+  updatedAt: string
+}
+
+export async function updateAdminUserRole(
   userId: string,
-  body: { role?: 'buyer' | 'seller' },
-): Promise<AdminUser> {
-  const res = await api.put<{ success: boolean; data: AdminUser; message: string }>(
-    `${API_BASE}/admin/users/${userId}`,
-    body,
+  role: 'buyer' | 'seller',
+): Promise<UpdateAdminUserRoleResponse> {
+  const res = await api.patch<{ success: boolean; data: UpdateAdminUserRoleResponse; message: string }>(
+    `${API_BASE}/admin/users/${userId}/role`,
+    { role },
   )
   return res.data.data
 }

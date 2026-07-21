@@ -5,7 +5,7 @@ import { SectionCard } from '@/components/admin/SectionCard'
 import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { StatusBadge } from '@/components/admin/Badge'
 import { CircleCheck, CirclePause, CircleX } from 'lucide-react'
-import { type AdminUser, getAdminUsers, updateAdminUser, updateAdminUserStatus } from '@/lib/adminUsers'
+import { type AdminUser, getAdminUsers, updateAdminUserRole, updateAdminUserStatus } from '@/lib/adminUsers'
 
 type UserStatus = AdminUser['status']
 
@@ -41,7 +41,7 @@ export default function AdminUsersPage() {
   async function handleRoleChange(userId: string, newRole: 'buyer' | 'seller') {
     setChanging(userId)
     try {
-      await updateAdminUser(userId, { role: newRole })
+      await updateAdminUserRole(userId, newRole)
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)))
     } finally {
       setChanging(null)
