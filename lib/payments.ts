@@ -20,8 +20,10 @@ export async function getPaymentHistory(
 }
 
 export async function requestRefund(params: {
-  paymentId: string
+  orderId: string
   orderProductIds: string[]
 }): Promise<void> {
-  await api.post(`${API_BASE}/orders/refunds`, params)
+  await api.post(`${API_BASE}/orders/${params.orderId}/refund`, {
+    orderProductIds: params.orderProductIds,
+  })
 }
