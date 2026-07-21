@@ -76,15 +76,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!token || pathname === '/admin/login') return
     const load = async () => {
       try {
-        const [appliesRes, productsRes] = await Promise.all([
-          api.get(`${API_BASE}/admin/sellers/applies`),
-          api.get(`${API_BASE}/admin/products`, { params: { status: 'review' } }),
-        ])
-        const applies = appliesRes.data.data ?? []
+        const productsRes = await api.get(`${API_BASE}/admin/products`, { params: { status: 'review' } })
         const products = productsRes.data.data ?? []
         setBadges((prev) => ({
           ...prev,
-          sellers: applies.filter((a: { status: string }) => a.status === 'pending').length,
           products: products.filter((p: { status: string }) => p.status === 'review').length,
         }))
       } catch {

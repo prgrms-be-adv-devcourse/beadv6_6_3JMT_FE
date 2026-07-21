@@ -8,9 +8,6 @@ import {
   TrendingUp,
   TrendingDown,
   Wallet,
-  Check,
-  X,
-  CheckCircle2,
   ClipboardCheck,
   Sparkles,
 } from 'lucide-react'
@@ -18,12 +15,9 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getAdminUserStats } from '@/lib/adminUsers'
 import { getAdminDashboardStats, getAdminMonthlyOrders, getAdminWeeklyOrders } from '@/lib/adminStats'
-import { getAdminSellerApplies, approveSellerApply, rejectSellerApply } from '@/lib/adminSellers'
-import type { SellerApply } from '@/lib/adminSellers'
 import { getAdminProducts } from '@/lib/adminProducts'
 import type { AdminProduct } from '@/lib/adminProducts'
 import { SectionCard, LinkAction } from '@/components/admin/SectionCard'
-import { Identity } from '@/components/admin/DataTable'
 import { ICON_MAP } from '@/lib/iconMap'
 
 interface SalesPoint {
@@ -51,21 +45,6 @@ function wonShort(n: number) {
   if (n >= 1e8) return `₩${(n / 1e8).toFixed(1)}억`
   if (n >= 1e4) return `₩${Math.round(n / 1e4).toLocaleString('ko-KR')}만`
   return `₩${n.toLocaleString('ko-KR')}`
-}
-
-const CATEGORY_LABEL: Record<string, string> = {
-  writing: '글쓰기',
-  marketing: '마케팅',
-  image: '이미지 생성',
-  coding: '코딩',
-  chatbot: '챗봇',
-  data: '데이터 분석',
-}
-
-function mmdd(iso: string) {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
 /* ── KPI 카드 ── */
@@ -219,16 +198,13 @@ export default function AdminDashboardPage() {
   const { token } = useAuthStore()
   const router = useRouter()
   const [stats, setStats] = useState<Stats | null>(null)
-  const [applies, setApplies] = useState<SellerApply[]>([])
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [loading, setLoading] = useState(true)
-  const [acting, setActing] = useState<string | null>(null)
 
   const load = async () => {
     try {
-      const [statsData, appliesData, productsData, monthData, weekendData] = await Promise.all([
+      const [statsData, productsData, monthData, weekendData] = await Promise.all([
         getAdminDashboardStats().catch(() => null),
-        getAdminSellerApplies().catch(() => null),
         getAdminProducts({ status: 'review' }).catch(() => null),
         getAdminMonthlyOrders().catch(() => null),
         getAdminWeeklyOrders().catch(() => null),
@@ -251,7 +227,6 @@ export default function AdminDashboardPage() {
           }
         }) || statsData?.sales7d || []
       })
-      setApplies(appliesData ?? [])
       setProducts(productsData ?? [])
     } finally {
       setLoading(false)
@@ -263,27 +238,9 @@ export default function AdminDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
 
-  const actSellerApp = async (id: string, action: 'approve' | 'reject') => {
-    setActing(id)
-    try {
-      if (action === 'approve') {
-        await approveSellerApply(id)
-      } else {
-        await rejectSellerApply(id)
-      }
-      setApplies((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, status: action === 'approve' ? 'approved' : 'rejected' } : a)),
-      )
-    } finally {
-      setActing(null)
-    }
-  }
-
   const sales = stats?.sales7d ?? []
   const weekTotal = sales.reduce((s, d) => s + d.count, 0)
   const weekRevenue = sales.reduce((s, d) => s + d.revenue, 0)
-  const pendingApps = applies.filter((a) => a.status === 'pending').slice(0, 4)
-  const pendingAppsCount = applies.filter((a) => a.status === 'pending').length
   const reviewProducts = products.filter((p) => p.status === 'review').slice(0, 4)
   const reviewCount = products.filter((p) => p.status === 'review').length
 
@@ -346,76 +303,37 @@ export default function AdminDashboardPage() {
         )}
       </SectionCard>
 
-      {/* 하단 반반: 최근 판매자 신청 + 검수 대기 상품 */}
-      <div className="grid grid-cols-1 gap-[20px] lg:grid-cols-2">
-        <SectionCard
-          title="최근 판매자 신청"
-          sub={`${pendingAppsCount}건 승인 대기`}
-          action={<LinkAction onClick={() => router.push('/admin/sellers')}>전체 보기</LinkAction>}
-          bodyStyle={{ padding: pendingApps.length ? '6px 0' : 0 }}
-        >
-          {loading ? null : pendingApps.length === 0 ? (
-            <AdminEmpty Icon={CheckCircle2} title="처리할 신청이 없어요" sub="모든 판매자 신청을 검토했습니다." />
-          ) : (
-            pendingApps.map((a, i) => (
-              <div
-                key={a.id}
-                className="flex items-center gap-[12px] px-[22px] py-[13px]"
-                style={{ borderTop: i ? '1px solid var(--ph-border)' : 'none' }}
-              >
-                <div className="min-w-0 flex-1">
-                  <Identity
-                    name={a.userName}
-                    sub={a.categories.map((c) => CATEGORY_LABEL[c] ?? c).join(', ') || a.email}
-                    size={38}
-                  />
-                </div>
-                <span className="whitespace-nowrap text-[12.5px] text-ph-text-muted">{mmdd(a.appliedAt)}</span>
-                <div className="flex gap-[6px]">
-                  <RowBtn tone="solid" onClick={() => actSellerApp(a.id, 'approve')} disabled={acting === a.id}>
-                    <Check size={15} />승인
-                  </RowBtn>
-                  <RowBtn tone="danger" onClick={() => actSellerApp(a.id, 'reject')} disabled={acting === a.id}>
-                    <X size={15} />반려
-                  </RowBtn>
+      <SectionCard
+        title="검수 대기 상품"
+        sub={`${reviewCount}건 검수 대기`}
+        action={<LinkAction onClick={() => router.push('/admin/products')}>전체 보기</LinkAction>}
+        bodyStyle={{ padding: reviewProducts.length ? '6px 0' : 0 }}
+      >
+        {loading ? null : reviewProducts.length === 0 ? (
+          <AdminEmpty Icon={ClipboardCheck} title="검수할 상품이 없어요" sub="모든 등록 상품을 검토했습니다." />
+        ) : (
+          reviewProducts.map((p, i) => (
+            <div
+              key={p.id}
+              className="flex items-center gap-[12px] px-[22px] py-[13px]"
+              style={{ borderTop: i ? '1px solid var(--ph-border)' : 'none' }}
+            >
+              <span className="inline-flex h-[40px] w-[40px] flex-shrink-0 items-center justify-center rounded-ph-md bg-ph-secondary text-ph-primary">
+                <CategoryIcon slug={p.icon} style={{ width: 19, height: 19 }} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[14px] font-semibold text-ph-text">{p.title}</div>
+                <div className="text-[12.5px] text-ph-text-muted">
+                  {p.seller} · {p.model}
                 </div>
               </div>
-            ))
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title="검수 대기 상품"
-          sub={`${reviewCount}건 검수 대기`}
-          action={<LinkAction onClick={() => router.push('/admin/products')}>전체 보기</LinkAction>}
-          bodyStyle={{ padding: reviewProducts.length ? '6px 0' : 0 }}
-        >
-          {loading ? null : reviewProducts.length === 0 ? (
-            <AdminEmpty Icon={ClipboardCheck} title="검수할 상품이 없어요" sub="모든 등록 상품을 검토했습니다." />
-          ) : (
-            reviewProducts.map((p, i) => (
-              <div
-                key={p.id}
-                className="flex items-center gap-[12px] px-[22px] py-[13px]"
-                style={{ borderTop: i ? '1px solid var(--ph-border)' : 'none' }}
-              >
-                <span className="inline-flex h-[40px] w-[40px] flex-shrink-0 items-center justify-center rounded-ph-md bg-ph-secondary text-ph-primary">
-                  <CategoryIcon slug={p.icon} style={{ width: 19, height: 19 }} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] font-semibold text-ph-text">{p.title}</div>
-                  <div className="text-[12.5px] text-ph-text-muted">
-                    {p.seller} · {p.model}
-                  </div>
-                </div>
-                <RowBtn tone="blue" onClick={() => router.push('/admin/products')}>
-                  검수
-                </RowBtn>
-              </div>
-            ))
-          )}
-        </SectionCard>
-      </div>
+              <RowBtn tone="blue" onClick={() => router.push('/admin/products')}>
+                검수
+              </RowBtn>
+            </div>
+          ))
+        )}
+      </SectionCard>
     </div>
   )
 }

@@ -73,28 +73,3 @@ export async function rejectSellerRegister(
   )
   return res.data.data
 }
-
-export interface SellerApply {
-  id: string
-  userId: string
-  userName: string
-  email: string
-  categories: string[]
-  appliedAt: string
-  status: 'pending' | 'approved' | 'rejected'
-}
-
-export async function getAdminSellerApplies(): Promise<SellerApply[]> {
-  const res = await api.get<{ success: boolean; data: SellerApply[]; message: string }>(
-    `${API_BASE}/admin/sellers/applies`,
-  )
-  return res.data.data
-}
-
-export async function approveSellerApply(id: string): Promise<void> {
-  await api.put(`${API_BASE}/admin/sellers/${id}/approve`, {})
-}
-
-export async function rejectSellerApply(id: string): Promise<void> {
-  await api.put(`${API_BASE}/admin/sellers/${id}/reject`, {})
-}
