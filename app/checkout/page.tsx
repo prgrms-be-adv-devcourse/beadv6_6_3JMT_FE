@@ -34,7 +34,7 @@ function CheckoutContent() {
   const [tossPayments, setTossPayments] = useState<any>(null);
 
   useEffect(() => {
-    const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_Poxy1XQL8Rww4qXxPenL37nO5Wml';
+    const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
     if (clientKey) {
       loadTossPayments(clientKey)
         .then(setTossPayments)
@@ -123,7 +123,10 @@ function CheckoutContent() {
       let paymentInstance = tossPayments;
       if (!paymentInstance) {
         try {
-          const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_Poxy1XQL8Rww4qXxPenL37nO5Wml';
+          const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+          if (!clientKey) {
+            throw new Error("결제 클라이언트 키가 설정되지 않았습니다.");
+          }
           paymentInstance = await loadTossPayments(clientKey);
           setTossPayments(paymentInstance);
         } catch (err) {
