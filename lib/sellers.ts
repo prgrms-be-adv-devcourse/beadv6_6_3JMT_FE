@@ -58,3 +58,20 @@ export async function getSellerNames(sellerIds: string[]): Promise<Record<string
   })
   return map
 }
+
+export interface SellerProfile {
+  sellerName: string
+  profileImageUrl: string | null
+}
+
+export async function getSellerProfile(sellerId: string): Promise<SellerProfile | null> {
+  try {
+    const res = await api.get<{ success: boolean; data: SellerProfile; message: string }>(
+      `${API_BASE}/sellers/product`,
+      { params: { sellerId } },
+    )
+    return res.data.data
+  } catch {
+    return null
+  }
+}

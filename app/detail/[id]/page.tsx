@@ -8,6 +8,7 @@ import { hasPurchasedProduct } from '@/lib/orderAdapters';
 import { getOrders } from '@/lib/orders';
 import { addCartItem } from '@/lib/cart';
 import { getWishlistIdForProduct, addWishlist, removeWishlist } from '@/lib/wishlists';
+import { getSellerProfile } from '@/lib/sellers';
 import Image from 'next/image';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
@@ -497,8 +498,14 @@ export default function DetailPage() {
       api.get(`${API_BASE}/products/${id}`),
       api.get(`${API_BASE}/products/${id}/related`),
     ])
-      .then(([pRes, rRes]) => {
-        setProduct(pRes.data.data);
+      .then(async ([pRes, rRes]) => {
+        const p: Prompt = pRes.data.data;
+        if (p.sellerId) {
+          const profile = await getSellerProfile(p.sellerId);
+          p.seller = profile?.sellerName ?? '탈퇴한 판매자';
+          p.sellerProfileImageUrl = profile?.profileImageUrl ?? null;
+        }
+        setProduct(p);
         setRelated(rRes.data.data ?? []);
       })
       .catch(() => {})
