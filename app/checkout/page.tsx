@@ -64,10 +64,10 @@ function CheckoutContent() {
     getCartItems()
       .then((items) => {
         setCartItems(items);
-        if (items.length === 0) router.replace('/shop');
+        if (items.length === 0) router.replace('/browse');
       })
       .catch(() => {
-        if (cartItems.length === 0) router.replace('/shop');
+        if (cartItems.length === 0) router.replace('/browse');
       })
       .finally(() => setCartReady(true));
   }, [isSingle, router, setCartItems, user]);
