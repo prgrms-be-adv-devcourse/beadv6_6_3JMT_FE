@@ -112,6 +112,13 @@ function CheckoutContent() {
 
       if (!isSingle) clearCart();
 
+      // 무료(0원) 상품인 경우 토스페이먼츠를 거치지 않고 바로 마이페이지로 이동합니다.
+      // 백엔드 createOrder에서 이미 COMPLETED 처리됨
+      if (totalAmount === 0) {
+        window.location.href = `${window.location.origin}/mypage?tab=purchased`;
+        return;
+      }
+
       if (!tossPayments) {
         throw new Error("결제 모듈이 초기화되지 않았습니다. 잠시 후 다시 시도해 주세요.");
       }
