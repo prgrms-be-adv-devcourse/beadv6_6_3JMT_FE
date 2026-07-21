@@ -14,6 +14,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useToast } from '@/store/useToastStore';
+import { useDirectBuyStore } from '@/store/useDirectBuyStore';
 import {
   ArrowLeft, Star,
   CheckCircle2, ShoppingCart, Check, History,
@@ -244,6 +245,16 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
   const onBuy = () => {
     if (!isLoggedIn) { openLoginModal(); return; }
     if (purchased) return;
+    
+    useDirectBuyStore.getState().setItem({
+      id: String(p.id),
+      productId: String(p.id),
+      cartProductId: String(p.id),
+      title: p.title,
+      amount: p.amount,
+      thumbnailUrl: p.thumbnail_url ?? null,
+    });
+    
     router.push(`/checkout?id=${p.id}`);
   };
 

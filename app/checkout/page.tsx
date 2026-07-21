@@ -6,8 +6,7 @@ import Image from 'next/image';
 import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import api from '@/lib/auth';
-import { API_BASE } from '@/lib/apiBase';
+import { useDirectBuyStore } from '@/store/useDirectBuyStore';
 import { createOrder } from '@/lib/orders';
 import { getCartItems, removeCartItem } from '@/lib/cart';
 import { ShoppingCart, Trash2, ArrowLeft, CreditCard } from 'lucide-react';
@@ -26,8 +25,7 @@ function CheckoutContent() {
   const { items: cartItems, setItems: setCartItems, removeItem, clearCart } = useCartStore();
   const user = useAuthStore((s) => s.user);
 
-  const [singleItem, setSingleItem] = useState<LineItem | null>(null);
-  const [fetchErr, setFetchErr] = useState(false);
+  const singleItem = useDirectBuyStore((s) => s.item);
   const [cartReady, setCartReady] = useState(isSingle);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,23 +40,12 @@ function CheckoutContent() {
     }
   }, []);
 
+  // 새로고침 등으로 메모리 스토어가 비어있을 경우 상품 상세로 돌려보냄
   useEffect(() => {
-    if (isSingle) {
-      api.get(`${API_BASE}/products/${productId}`)
-        .then((res) => {
-          const d = res.data.data;
-          setSingleItem({
-            id: String(d.id),
-            productId: String(d.id),
-            cartProductId: String(d.id),
-            title: d.title,
-            amount: d.amount,
-            thumbnailUrl: d.thumbnail_url ?? null,
-          });
-        })
-        .catch(() => setFetchErr(true));
+    if (isSingle && !singleItem) {
+      router.replace(`/detail/${productId}`);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isSingle, singleItem, productId, router]);
 
   useEffect(() => {
     if (isSingle) {
@@ -163,27 +150,7 @@ function CheckoutContent() {
     }
   };
 
-  /* 상품 조회 실패 */
-  if (fetchErr) {
-    return (
-      <div style={{ maxWidth: 680, margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
-        <p style={{ fontSize: 16, color: 'var(--ph-text-secondary)', marginBottom: 24 }}>
-          상품 정보를 불러올 수 없어요.
-        </p>
-        <button
-          onClick={() => router.back()}
-          style={{
-            background: 'var(--ph-primary)', color: '#fff', border: 'none',
-            borderRadius: 'var(--ph-radius-md)', padding: '12px 24px',
-            fontSize: 15, fontWeight: 700, cursor: 'pointer',
-            fontFamily: 'var(--ph-font-family)',
-          }}
-        >
-          뒤로 가기
-        </button>
-      </div>
-    );
-  }
+
 
   /* 단건 상품 로딩 중 */
   if ((isSingle && !singleItem) || (!isSingle && !cartReady)) {
