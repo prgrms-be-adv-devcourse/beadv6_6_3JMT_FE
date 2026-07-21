@@ -181,7 +181,7 @@ function toSellerItem(raw: Record<string, unknown>): SellerSettlementItem {
     adjustmentAmount: Number(raw.adjustmentAmount ?? 0),
     payoutAmount: Number(raw.payoutAmount ?? 0),
     status: raw.status as SettlementDisplayStatus,
-    statusLabel: String(raw.displayStatus ?? ''),
+    statusLabel: String(raw.statusLabel ?? ''),
     canRequestPayout: actions.some((a) => a.type === 'REQUEST_PAYOUT'),
   }
 }
