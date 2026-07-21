@@ -187,7 +187,7 @@ export default function ShopPage() {
 
   // 상품 통계와 정산 금액은 각 서비스의 공개 API에서 독립적으로 조회한다.
   const cards = [
-    { label: '등록 프롬프트', value: `${(productSummary?.productCount ?? 0).toLocaleString('ko-KR')}개`, icon: Layers },
+    { label: '등록 상품', value: `${(productSummary?.productCount ?? 0).toLocaleString('ko-KR')}개`, icon: Layers },
     { label: '누적 판매',     value: `${(productSummary?.salesCount ?? 0).toLocaleString('ko-KR')}회`,   icon: ShoppingBag },
     { label: '누적 수익',     value: won(settlementSummary?.totalRevenueAmount ?? 0),                   icon: Wallet },
     { label: '누적 정산 수익', value: won(settlementSummary?.totalSettlementAmount ?? 0),                icon: Banknote },
@@ -248,7 +248,7 @@ export default function ShopPage() {
       {/* ── 탭 ── */}
       <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--ph-border)', marginTop: 36 }}>
         {([
-          { id: 'listings', label: '내 프롬프트', icon: Layers },
+          { id: 'listings', label: '내 상품', icon: Layers },
           { id: 'settlements', label: '정산 내역', icon: Receipt },
         ] as { id: ActiveTab; label: string; icon: React.ComponentType<{ style?: React.CSSProperties }> }[]).map(({ id, label, icon: Icon }) => (
           <button
@@ -272,10 +272,10 @@ export default function ShopPage() {
         ))}
       </div>
 
-      {/* ── 내 프롬프트 탭 ── */}
+      {/* ── 내 상품 탭 ── */}
       {activeTab === 'listings' && (
         <section style={{ marginTop: 28, paddingBottom: 80 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 16px' }}>내 프롬프트</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 16px' }}>내 상품</h2>
 
           {/* 상태 필터 탭 */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
