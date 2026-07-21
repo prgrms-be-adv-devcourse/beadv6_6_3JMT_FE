@@ -120,11 +120,22 @@ function CheckoutContent() {
         return;
       }
 
-      if (!tossPayments) {
+      let paymentInstance = tossPayments;
+      if (!paymentInstance) {
+        try {
+          const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_Poxy1XQL8Rww4qXxPenL37nO5Wml';
+          paymentInstance = await loadTossPayments(clientKey);
+          setTossPayments(paymentInstance);
+        } catch (err) {
+          throw new Error("결제 모듈을 불러오지 못했습니다. 광고 차단 프로그램(AdBlock 등)을 사용 중이시라면 잠시 꺼주세요.");
+        }
+      }
+
+      if (!paymentInstance) {
         throw new Error("결제 모듈이 초기화되지 않았습니다. 잠시 후 다시 시도해 주세요.");
       }
 
-      const payment = tossPayments.payment({ customerKey: user.id });
+      const payment = paymentInstance.payment({ customerKey: user.id });
 
       const orderName = isSingle
         ? items[0].title
