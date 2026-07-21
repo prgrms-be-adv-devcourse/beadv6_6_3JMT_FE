@@ -528,7 +528,7 @@ function MyPageContent() {
     if (!paymentItem) return;
 
     try {
-      await apiRequestRefund({ orderId: paymentItem.orderId, orderProductIds: paymentItem.orderProductIds });
+      await apiRequestRefund({ paymentId: paymentItem.paymentId, orderProductIds: paymentItem.orderProductIds });
       setPayments((prev) =>
         prev.map((p) => p.paymentId === paymentId ? { ...p, paymentStatus: 'REFUNDING', isRefundable: false } : p)
       );
