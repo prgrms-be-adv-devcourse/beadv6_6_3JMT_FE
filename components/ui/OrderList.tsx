@@ -22,7 +22,7 @@ const ORDER_STATUS_CLASS: Record<GroupedOrder['status'], string> = {
 
 const ITEM_STATUS: Record<PaymentItem['paymentStatus'], { label: string; className: string }> = {
   PAID: { label: '결제완료', className: 'bg-ph-secondary text-ph-primary' },
-  REFUNDING: { label: '환불 신청 중', className: 'bg-[rgba(217,45,32,0.10)] text-ph-error' },
+  REFUNDING: { label: '환불 신청 중', className: 'bg-ph-warning-bg text-ph-warning' },
   PARTIAL_REFUNDED: { label: '부분 환불', className: 'bg-[#fdeceb] text-ph-error' },
   ALL_REFUNDED: { label: '환불 완료', className: 'bg-ph-gray-100 text-ph-text-secondary' },
 };

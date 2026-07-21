@@ -14,6 +14,8 @@
   --ph-gray-400: #8b95a1;
   --ph-gray-600: #4e5968;
   --ph-blue-hover: #1957bd;
+  --ph-yellow: #a05a06;
+  --ph-yellow-pale: #fdf1de;
 
   /* Semantic colors */
   --ph-background: var(--ph-white);
@@ -31,6 +33,8 @@
   --ph-border: var(--ph-gray-line);
   --ph-border-strong: var(--ph-black);
   --ph-error: var(--ph-red);
+  --ph-warning: var(--ph-yellow);
+  --ph-warning-bg: var(--ph-yellow-pale);
 
   /* Typography */
   --ph-font-family: "Pretendard Variable", "Pretendard", -apple-system,
@@ -133,6 +137,8 @@
   --color-ph-border: var(--ph-border);
   --color-ph-border-strong: var(--ph-border-strong);
   --color-ph-error: var(--ph-error);
+  --color-ph-warning: var(--ph-warning);
+  --color-ph-warning-bg: var(--ph-warning-bg);
 
   /* Font family */
   --font-family-ph: var(--ph-font-family);
