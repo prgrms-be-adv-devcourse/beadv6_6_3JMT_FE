@@ -335,7 +335,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
             <Avatar name={p.seller} size={48} imageUrl={p.sellerProfileImageUrl} />
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>{p.seller}</div>
-              <div style={{ color: 'var(--ph-text-muted)', fontSize: 14 }}>검증된 크리에이터 · 프롬프트 {p.sellerProductCount ?? 0}개</div>
+              <div style={{ color: 'var(--ph-text-muted)', fontSize: 14 }}>검증된 크리에이터</div>
             </div>
           </Card>
         </div>
