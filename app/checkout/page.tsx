@@ -31,6 +31,15 @@ function CheckoutContent() {
   const [cartReady, setCartReady] = useState(isSingle);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tossPayments, setTossPayments] = useState<any>(null);
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY) {
+      loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY)
+        .then(setTossPayments)
+        .catch(console.error);
+    }
+  }, []);
 
   useEffect(() => {
     if (isSingle) {
@@ -103,7 +112,10 @@ function CheckoutContent() {
 
       if (!isSingle) clearCart();
 
-      const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!);
+      if (!tossPayments) {
+        throw new Error("결제 모듈이 초기화되지 않았습니다. 잠시 후 다시 시도해 주세요.");
+      }
+
       const payment = tossPayments.payment({ customerKey: user.id });
 
       const orderName = isSingle
@@ -118,11 +130,12 @@ function CheckoutContent() {
         successUrl: `${window.location.origin}/checkout/success`,
         failUrl: `${window.location.origin}/checkout/fail`,
       });
-    } catch (e: unknown) {
-      const response = (e as { response?: { status?: number; data?: { message?: string } } })?.response;
+    } catch (e: any) {
+      console.error('Checkout error:', e);
+      const response = e?.response;
       const msg = response?.status === 503
         ? '주문 서비스를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.'
-        : response?.data?.message ?? '주문 요청을 처리하지 못했습니다.';
+        : response?.data?.message ?? e?.message ?? '주문 요청을 처리하지 못했습니다.';
       setError(msg);
       setLoading(false);
     }
