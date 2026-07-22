@@ -224,7 +224,7 @@ export default function ShopPage() {
           <p style={{ fontSize: 16, color: 'var(--ph-text-secondary)', margin: '8px 0 0' }}>{user?.name ?? '판매자'}님의 판매 현황이에요</p>
         </div>
         <Button variant="solid" size="lg" onClick={() => router.push('/sell')}>
-          <Plus style={{ width: 17, height: 17 }} /> 새 프롬프트 등록
+          <Plus style={{ width: 17, height: 17 }} /> 새 상품 등록
         </Button>
       </div>
 
@@ -299,7 +299,7 @@ export default function ShopPage() {
 
           <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Info style={{ width: 14, height: 14, flexShrink: 0 }} />
-            새로 등록한 프롬프트는 관리자 검수를 거쳐 승인되면 판매가 시작돼요. 판매를 중단하면 다시 등록할 수 없어요.
+            새로 등록한 상품은 관리자 검수를 거쳐 승인되면 판매가 시작돼요. 판매를 중단하면 다시 등록할 수 없어요.
           </p>
 
           <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
