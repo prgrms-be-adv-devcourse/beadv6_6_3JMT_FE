@@ -19,8 +19,9 @@ import {
 } from '@/lib/checkoutContracts';
 import { ShoppingCart, Trash2, ArrowLeft, CreditCard } from 'lucide-react';
 import { won } from '@/lib/utils';
+import { hasSelfPurchaseItem, SELF_PURCHASE_MESSAGE } from '@/lib/purchasePolicy';
 
-type LineItem = { id: string; productId: string; cartProductId: string; title: string; amount: number; thumbnailUrl: string | null };
+type LineItem = { id: string; productId: string; cartProductId: string; title: string; amount: number; thumbnailUrl: string | null; sellerId?: string };
 
 /* ─── 실제 결제 콘텐츠 (useSearchParams 사용 → Suspense 필요) ─── */
 
@@ -81,6 +82,7 @@ function CheckoutContent() {
 
   const items: LineItem[] = isSingle ? (singleItem ? [singleItem] : []) : cartItems;
   const total = items.reduce((s, i) => s + i.amount, 0);
+  const hasOwnProduct = hasSelfPurchaseItem(user?.id, items);
 
   const handleRemoveCartItem = async (cartProductId: string) => {
     try {
@@ -93,6 +95,10 @@ function CheckoutContent() {
 
   const handleOrder = async () => {
     if (submissionLockedRef.current || loading || items.length === 0 || !user) return;
+    if (hasOwnProduct) {
+      setError(SELF_PURCHASE_MESSAGE);
+      return;
+    }
     submissionLockedRef.current = true;
     setError(null);
     setLoading(true);
@@ -302,7 +308,7 @@ function CheckoutContent() {
         </div>
 
         {/* 에러 메시지 */}
-        {error && (
+        {(hasOwnProduct || error) && (
           <div style={{
             padding: '12px 16px',
             background: '#fef2f2',
@@ -312,28 +318,30 @@ function CheckoutContent() {
             fontSize: 13,
             marginBottom: 16,
           }}>
-            {error}
+            {hasOwnProduct ? SELF_PURCHASE_MESSAGE : error}
           </div>
         )}
 
         {/* 결제 버튼 */}
         <button
           onClick={handleOrder}
-          disabled={loading || items.length === 0 || paymentBlocked}
+          disabled={loading || items.length === 0 || paymentBlocked || hasOwnProduct}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             width: '100%', height: 52, border: 'none',
             borderRadius: 'var(--ph-radius-lg)',
-            background: (loading || items.length === 0 || paymentBlocked) ? 'var(--ph-text-muted)' : 'var(--ph-primary)',
+            background: (loading || items.length === 0 || paymentBlocked || hasOwnProduct) ? 'var(--ph-text-muted)' : 'var(--ph-primary)',
             color: '#fff',
             fontFamily: 'var(--ph-font-family)',
             fontSize: 16, fontWeight: 700,
-            cursor: (loading || items.length === 0 || paymentBlocked) ? 'not-allowed' : 'pointer',
+            cursor: (loading || items.length === 0 || paymentBlocked || hasOwnProduct) ? 'not-allowed' : 'pointer',
             transition: 'background 0.2s',
           }}
         >
           <CreditCard style={{ width: 20, height: 20 }} />
-          {loading
+          {hasOwnProduct
+            ? SELF_PURCHASE_MESSAGE
+            : loading
             ? '처리 중...'
             : total === 0
             ? '무료로 받기'

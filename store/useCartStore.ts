@@ -8,6 +8,7 @@ interface CartItem {
   title: string
   amount: number
   thumbnailUrl: string | null
+  sellerId?: string
 }
 
 interface CartState {
