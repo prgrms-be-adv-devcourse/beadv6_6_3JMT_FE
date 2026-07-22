@@ -55,7 +55,7 @@ export default function ImageCarousel({ slides, thumbnailUrl }: Props) {
   /* 메인 슬라이드 콘텐츠 */
   const renderMain = () => {
     if (idx === 0 && thumbnailUrl) {
-      return <Image src={thumbnailUrl} alt={s.caption} fill style={{ objectFit: 'cover' }} />;
+      return <div style={{ position: 'relative', height: '100%', background: 'var(--ph-gray-50)' }}><Image src={thumbnailUrl} alt={s.caption} fill style={{ objectFit: 'contain' }} /></div>;
     }
     if (idx === 0 && thumbnailUrl === null) {
       return (
@@ -66,7 +66,7 @@ export default function ImageCarousel({ slides, thumbnailUrl }: Props) {
       );
     }
     if (s.imageUrl) {
-      return <Image src={s.imageUrl} alt={s.caption} fill style={{ objectFit: 'cover' }} />;
+      return <div style={{ position: 'relative', height: '100%', background: 'var(--ph-gray-50)' }}><Image src={s.imageUrl} alt={s.caption} fill style={{ objectFit: 'contain' }} /></div>;
     }
     return (
       <div style={{ height: '100%', background: s.tint, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, transition: 'background .2s ease' }}>
@@ -79,13 +79,13 @@ export default function ImageCarousel({ slides, thumbnailUrl }: Props) {
   /* 썸네일 스트립 한 칸 콘텐츠 */
   const renderThumb = (sl: CarouselSlide, k: number) => {
     if (k === 0 && thumbnailUrl) {
-      return <Image src={thumbnailUrl} alt={sl.caption} fill style={{ objectFit: 'cover' }} />;
+      return <div style={{ position: 'absolute', inset: 0, background: 'var(--ph-gray-50)' }}><Image src={thumbnailUrl} alt={sl.caption} fill style={{ objectFit: 'contain' }} /></div>;
     }
     if (k === 0 && thumbnailUrl === null) {
       return <Image src="/images/promy-character.png" alt={sl.caption} width={28} height={28} style={{ objectFit: 'contain', opacity: 0.8 }} />;
     }
     if (sl.imageUrl) {
-      return <Image src={sl.imageUrl} alt={sl.caption} fill style={{ objectFit: 'cover' }} />;
+      return <div style={{ position: 'absolute', inset: 0, background: 'var(--ph-gray-50)' }}><Image src={sl.imageUrl} alt={sl.caption} fill style={{ objectFit: 'contain' }} /></div>;
     }
     return <SlideIcon name={sl.icon} style={{ width: 22, height: 22, color: 'var(--ph-primary)', opacity: 0.8 }} />;
   };
