@@ -4,6 +4,13 @@
 관리자 전용 대시보드. 판매자 신청 승인, 주문/상품/유저/정산 관리 기능 제공.
 `components/admin/*` (SectionCard, DataTable, Badge) 공통 컴포넌트 이미 적용 완료.
 
+대시보드는 `GET /api/v2/admin/home` 단일 응답으로 회원 KPI, 월간·최근 7일 거래,
+정산 승인 대기, 검수 대기 상품 미리보기를 렌더링한다.
+
+- 홈 요청 실패를 정상 통계 `0`으로 대체하지 않고 전체 오류 상태와 재시도를 제공한다.
+- 검수 대기 전체 건수는 `pendingProducts.totalCount`, 목록은 `pendingProducts.items`를 사용한다.
+- 홈 화면에서는 기존 분리 통계 API를 호출하지 않는다.
+
 ## 서브 라우트
 
 | 경로 | 페이지 |

@@ -103,7 +103,7 @@ function Avatar({ name, size = 40, imageUrl }: { name: string; size?: number; im
       alt={name}
       width={size}
       height={size}
-      style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+      style={{ width: size, height: size, aspectRatio: '1 / 1', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
     />
   ) : (
     <div
@@ -320,7 +320,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
       {/* Main grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 48, alignItems: 'start' }}>
         {/* Left column */}
-        <div>
+        <div style={{ minWidth: 0 }}>
           <ImageCarousel slides={gallery} thumbnailUrl={p.thumbnail_url} />
 
           <div style={{ display: 'flex', gap: 8, marginTop: 28 }}>

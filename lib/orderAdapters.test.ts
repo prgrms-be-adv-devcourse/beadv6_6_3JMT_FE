@@ -1,7 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { hasPurchasedProduct, mapOrderToPrompt } from './orderAdapters.ts'
+import {
+  composePurchasedPrompts,
+  hasPurchasedProduct,
+  mapOrderToPrompt,
+} from './orderAdapters.ts'
 
 test('mapOrderToPrompt keeps legacy mocked nested product orders', () => {
   const prompt = mapOrderToPrompt({
@@ -180,4 +184,99 @@ test('mapOrderToPrompt keeps paid products while an order refund is requested', 
   })
 
   assert.equal(prompt?.id, 'product-1')
+})
+
+test('composePurchasedPrompts enriches cards with product and seller data', () => {
+  const prompt = mapOrderToPrompt({
+    orderId: 'order-1',
+    orderProductId: 'order-product-1',
+    productId: 'product-1',
+    orderStatus: 'COMPLETED',
+    orderProductStatus: 'PAID',
+    downloaded: true,
+    isRefundable: false,
+    productType: 'PROMPT',
+    title: '주문 시점 제목',
+    model: null,
+    rating: null,
+    paidAt: '2026-07-22T10:00:00',
+    createdAt: '2026-07-22T09:50:00',
+    product: null,
+  })
+
+  assert.ok(prompt)
+
+  const [card] = composePurchasedPrompts(
+    [prompt],
+    [{
+      productId: 'product-1',
+      sellerId: 'seller-1',
+      title: '최신 상품 제목',
+      amount: 12000,
+      thumbnailUrl: '/prompt.png',
+      productType: 'IMAGE',
+      model: 'GPT-5',
+      salesCount: 31,
+      averageRating: 4.8,
+      status: 'ON_SALE',
+    }],
+    { 'seller-1': '판매자 이름' },
+  )
+
+  assert.deepEqual(card, {
+    ...prompt,
+    title: '최신 상품 제목',
+    amount: 12000,
+    thumbnail_url: '/prompt.png',
+    productType: 'IMAGE',
+    model: 'GPT-5',
+    rating: 4.8,
+    salesCount: 31,
+    sellerId: 'seller-1',
+    seller: '판매자 이름',
+  })
+  assert.equal(card.orderId, 'order-1')
+  assert.equal(card.orderProductId, 'order-product-1')
+  assert.equal(card.downloaded, true)
+  assert.equal(card.isRefundable, false)
+})
+
+test('composePurchasedPrompts keeps order fallback for missing product and seller', () => {
+  const prompt = mapOrderToPrompt({
+    orderId: 'order-1',
+    productId: 'product-1',
+    downloaded: false,
+    isRefundable: true,
+    orderStatus: 'COMPLETED',
+    orderProductStatus: 'PAID',
+    productType: 'PROMPT',
+    title: '기존 제목',
+    model: null,
+    rating: null,
+    paidAt: '2026-07-22T10:00:00',
+    createdAt: '2026-07-22T09:50:00',
+    product: null,
+  })
+
+  assert.ok(prompt)
+  assert.deepEqual(composePurchasedPrompts([prompt], [], {}), [prompt])
+
+  const [card] = composePurchasedPrompts(
+    [prompt],
+    [{
+      productId: 'product-1',
+      sellerId: 'missing-seller',
+      title: '최신 제목',
+      amount: 1000,
+      thumbnailUrl: null,
+      productType: 'PROMPT',
+      model: 'Claude',
+      salesCount: 1,
+      averageRating: 5,
+      status: 'ON_SALE',
+    }],
+    { 'missing-seller': null },
+  )
+
+  assert.equal(card.seller, 'PromptHub')
 })

@@ -1,10 +1,15 @@
 import type { MyOrderItem, ProductInfo } from '../types/api/orders'
+import type { ProductByIdsItem } from './products.ts'
 
 type PromptLike = ProductInfo & {
   orderProductId?: string
   priceLabel?: string
   downloaded?: boolean
   isRefundable?: boolean
+}
+
+export type PurchasedPrompt = PromptLike & {
+  sellerId?: string
 }
 
 function normalizeModel(model?: string | null): string {
@@ -61,6 +66,32 @@ export function mapOrderToPrompt(order: MyOrderItem): PromptLike | null {
     downloaded: order.downloaded,
     isRefundable: order.isRefundable,
   }
+}
+
+export function composePurchasedPrompts(
+  prompts: PurchasedPrompt[],
+  products: ProductByIdsItem[],
+  sellerNames: Record<string, string | null>,
+): PurchasedPrompt[] {
+  const productById = new Map(products.map((product) => [product.productId, product]))
+
+  return prompts.map((prompt) => {
+    const product = productById.get(prompt.id)
+    if (!product) return prompt
+
+    return {
+      ...prompt,
+      title: product.title,
+      productType: product.productType,
+      model: normalizeModel(product.model),
+      amount: product.amount,
+      rating: product.averageRating,
+      salesCount: product.salesCount,
+      seller: sellerNames[product.sellerId] ?? prompt.seller,
+      sellerId: product.sellerId,
+      thumbnail_url: product.thumbnailUrl,
+    }
+  })
 }
 
 export function hasPurchasedProduct(orders: MyOrderItem[], productId: string): boolean {

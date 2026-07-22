@@ -16,7 +16,7 @@ export type SellerRegister = {
 export interface GetSellerRegistersParams {
   page?: number
   size?: number
-  status?: 'pending' | 'approved' | 'rejected' | 'ALL'
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL'
 }
 
 export interface GetSellerRegistersResponse {
@@ -39,6 +39,11 @@ export async function getSellerRegisters(
     meta: GetSellerRegistersResponse['meta']
   }>(`${API_BASE}/admin/sellers/register`, { params })
   return { data: res.data.data, meta: res.data.meta }
+}
+
+export async function getPendingSellerRegisterCount(): Promise<number> {
+  const result = await getSellerRegisters({ status: 'PENDING', page: 1, size: 1 })
+  return result.meta.total
 }
 
 export type ApproveSellerRegisterResponse = {

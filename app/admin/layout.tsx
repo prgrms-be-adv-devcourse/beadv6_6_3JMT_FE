@@ -21,6 +21,8 @@ import {
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/auth'
 import { API_BASE } from '@/lib/apiBase'
+import { ADMIN_SELLER_REGISTERS_CHANGED_EVENT } from '@/lib/adminSellerEvents'
+import { getPendingSellerRegisterCount } from '@/lib/adminSellers'
 
 type BadgeKey = 'sellers' | 'products' | 'settlements'
 
@@ -70,18 +72,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!token || pathname === '/admin/login') return
     const load = async () => {
-      try {
-        const productsRes = await api.get(`${API_BASE}/admin/products`, { params: { status: 'review' } })
-        const products = productsRes.data.data ?? []
-        setBadges((prev) => ({
-          ...prev,
-          products: products.filter((p: { status: string }) => p.status === 'review').length,
-        }))
-      } catch {
-        // 뱃지 집계 실패는 무시 (레이아웃 동작에 영향 없음)
-      }
+      const [sellersResult, productsResult] = await Promise.allSettled([
+        getPendingSellerRegisterCount(),
+        api.get(`${API_BASE}/admin/products`, { params: { status: 'review' } }),
+      ])
+
+      setBadges((prev) => {
+        const next = { ...prev }
+
+        if (sellersResult.status === 'fulfilled') {
+          next.sellers = sellersResult.value
+        }
+
+        if (productsResult.status === 'fulfilled') {
+          const products = productsResult.value.data.data ?? []
+          next.products = products.filter((product: { status: string }) => product.status === 'review').length
+        }
+
+        return next
+      })
     }
-    load()
+
+    const refreshSellerBadges = () => void load()
+
+    void load()
+    window.addEventListener(ADMIN_SELLER_REGISTERS_CHANGED_EVENT, refreshSellerBadges)
+
+    return () => {
+      window.removeEventListener(ADMIN_SELLER_REGISTERS_CHANGED_EVENT, refreshSellerBadges)
+    }
   }, [token, pathname])
 
   // 로그인 페이지는 사이드바 없이 렌더링

@@ -9,12 +9,12 @@ import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { deleteUserMe, updateUserMe } from '@/lib/users';
 import { getWishlists } from '@/lib/wishlists';
-import { getProductsByIds, getProductsForOrders } from '@/lib/products';
-import { getWishlistSellerNames } from '@/lib/sellers';
+import { getProductsByIds, getProductsForOrders, type ProductByIdsItem } from '@/lib/products';
+import { getOrderProductSellerNames, getWishlistSellerNames } from '@/lib/sellers';
 import { composeWishlistCards } from '@/lib/wishlistComposition';
 import { requestRefund as apiRequestRefund } from '@/lib/payments';
 import { getOrders } from '@/lib/orders';
-import { mapOrderToPrompt } from '@/lib/orderAdapters';
+import { composePurchasedPrompts, mapOrderToPrompt } from '@/lib/orderAdapters';
 import { groupOrders, markRefundRequested } from '@/lib/orderGrouping';
 import { OrderListItem } from '@/types/api/orders';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
@@ -310,17 +310,22 @@ function MyPageContent() {
       setOrderItems(orders);
       const prompts = orders.map(mapOrderToPrompt).filter((item): item is Prompt => item !== null);
 
+      let products: ProductByIdsItem[] = [];
       try {
-        const products = await getProductsForOrders(prompts.map((p) => p.id));
-        const sellerIdByProductId = new Map(products.map((p) => [p.productId, p.sellerId]));
-        prompts.forEach((p) => {
-          p.sellerId = sellerIdByProductId.get(p.id);
-        });
+        products = await getProductsForOrders(prompts.map((prompt) => prompt.id));
       } catch {
-        // 상품 배치 조회 실패는 주문 조회 실패와 구분하고 sellerId만 비워둔다.
+        setPurchased(prompts);
+        return;
       }
 
-      setPurchased(prompts);
+      let sellerNames: Record<string, string | null> = {};
+      try {
+        sellerNames = await getOrderProductSellerNames(products.map((product) => product.sellerId));
+      } catch {
+        // 판매자 조회 실패는 상품 정보 반영을 막지 않는다.
+      }
+
+      setPurchased(composePurchasedPrompts(prompts, products, sellerNames));
     } catch {
       setOrderItems([]);
       setPurchased([]);

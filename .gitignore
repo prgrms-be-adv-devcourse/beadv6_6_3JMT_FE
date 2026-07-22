@@ -44,6 +44,7 @@ next-env.d.ts
 
 .mcp.json
 .playwright-mcp
+/.worktrees/
 
 # Claude Code local instructions (do not push to remote)
 CLAUDE.md
