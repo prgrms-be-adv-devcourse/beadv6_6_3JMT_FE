@@ -24,6 +24,7 @@ import { ICON_MAP } from '@/lib/iconMap';
 import ImageCarousel, { type CarouselSlide } from '@/components/ui/ImageCarousel';
 import PromptCard from '@/components/ui/PromptCard';
 import { won } from '@/lib/utils';
+import { isSelfPurchase, SELF_PURCHASE_MESSAGE } from '@/lib/purchasePolicy';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 
@@ -219,7 +220,7 @@ function CircleBtn({
 
 function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
   const router = useRouter();
-  const { isLoggedIn, openLoginModal } = useAuthStore();
+  const { isLoggedIn, user, openLoginModal } = useAuthStore();
   const { items: wishItems, toggle } = useWishStore();
   const { items: cartItems, addItem, upsertItem, removeItem } = useCartStore();
   const showToast = useToast();
@@ -229,6 +230,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
 
   const inWish = wishItems.some((i) => i.id === String(p.id));
   const inCart = cartItems.some((i) => i.productId === String(p.id));
+  const ownProduct = isSelfPurchase(user?.id, p.sellerId);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -244,6 +246,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
 
   const onBuy = () => {
     if (!isLoggedIn) { openLoginModal(); return; }
+    if (ownProduct) { showToast(SELF_PURCHASE_MESSAGE); return; }
     if (purchased) return;
     
     useDirectBuyStore.getState().setItem({
@@ -253,6 +256,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
       title: p.title,
       amount: p.amount,
       thumbnailUrl: p.thumbnail_url ?? null,
+      sellerId: p.sellerId,
     });
     
     router.push(`/checkout?id=${p.id}`);
@@ -260,8 +264,9 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
 
   const onCart = () => {
     if (!isLoggedIn) { openLoginModal(); return; }
+    if (ownProduct) { showToast(SELF_PURCHASE_MESSAGE); return; }
     const productId = String(p.id);
-    const item = { id: productId, productId, cartProductId: productId, title: p.title, amount: p.amount, thumbnailUrl: p.thumbnail_url ?? null };
+    const item = { id: productId, productId, cartProductId: productId, title: p.title, amount: p.amount, thumbnailUrl: p.thumbnail_url ?? null, sellerId: p.sellerId };
     addItem(item);
     void addCartItem(productId)
       .then((saved) => {
@@ -367,7 +372,9 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
               <PriceTag p={p} size={32} purchased={purchased} />
             </div>
             <div style={{ color: 'var(--ph-text-muted)', fontSize: 14, marginTop: 4 }}>
-              {purchased
+              {ownProduct
+                ? SELF_PURCHASE_MESSAGE
+                : purchased
                 ? '이미 보유한 프롬프트예요'
                 : p.amount === 0
                 ? '무료 제공 · 구매 없이 바로 사용'
@@ -380,9 +387,11 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
                 size="lg"
                 fullWidth
                 onClick={onBuy}
-                disabled={purchased}
+                disabled={purchased || ownProduct}
               >
-                {purchased
+                {ownProduct
+                  ? SELF_PURCHASE_MESSAGE
+                  : purchased
                   ? p.amount === 0 ? '받기 완료 ✓' : '구매 완료 ✓'
                   : p.amount === 0 ? '무료로 받기' : '프롬프트 구매하기'}
               </Button>
@@ -395,6 +404,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
                       size="lg"
                       fullWidth
                       onClick={onCart}
+                      disabled={ownProduct}
                     >
                       {inCart
                         ? <><Check style={{ width: 17, height: 17 }} /> 담긴</>

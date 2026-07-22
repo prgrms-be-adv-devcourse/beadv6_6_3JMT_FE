@@ -127,6 +127,7 @@ test('mapCartResponseToItems maps backend cart response products', () => {
           productTitle: 'Prompt',
           productAmount: 1000,
           thumbnailUrl: '/thumb.png',
+          sellerId: 'seller-1',
         },
       ],
     }),
@@ -138,6 +139,7 @@ test('mapCartResponseToItems maps backend cart response products', () => {
         title: 'Prompt',
         amount: 1000,
         thumbnailUrl: '/thumb.png',
+        sellerId: 'seller-1',
       },
     ],
   )

@@ -7,6 +7,7 @@ interface LineItem {
   title: string;
   amount: number;
   thumbnailUrl: string | null;
+  sellerId?: string;
 }
 
 interface DirectBuyState {
