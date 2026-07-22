@@ -29,6 +29,16 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Checkout payment configuration
+
+Paid Checkout requires `NEXT_PUBLIC_TOSS_CLIENT_KEY`.
+
+- Local development: copy `.env.local.example` to `.env.local` and set the Toss client key locally.
+- Vercel Production: add `NEXT_PUBLIC_TOSS_CLIENT_KEY` in Project Settings → Environment Variables.
+- Vercel Preview: add the same variable only when Preview Checkout must be tested.
+- Redeploy after changing the variable. Next.js inlines `NEXT_PUBLIC_*` values during `next build`, so an existing deployment does not pick up a later value automatically.
+- Never hardcode the key in TypeScript, checked-in environment files, or documentation.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
