@@ -35,6 +35,7 @@ components/
 | `StarRate` | `value`, `onRate`, `disabled` |
 | `Toast` | — (useToast 훅으로 사용) |
 | `Logo` | — |
+| `SettlementAmountBreakdown` | `grossAmount`, `feeAmount`, `refundAmount`, `payoutAmount`, `className` |
 
 **리팩토링 후 추가 예정** (현재 각 page.tsx에 중복 선언):
 

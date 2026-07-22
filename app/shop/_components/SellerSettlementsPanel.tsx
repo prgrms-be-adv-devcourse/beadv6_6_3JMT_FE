@@ -4,6 +4,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { Banknote, ChevronDown, RefreshCw } from 'lucide-react'
 import { StatusBadge } from '@/components/admin/Badge'
 import { Table, Td, Th, Tr } from '@/components/admin/DataTable'
+import { SettlementAmountBreakdown } from '@/components/ui/SettlementAmountBreakdown'
 import { SETTLEMENT_STATUS_FILTERS, type SettlementFilter } from '@/lib/constants'
 import {
   getSellerSettlementDetail,
@@ -295,38 +296,52 @@ export default function SellerSettlementsPanel({
                                 return (
                                   <div
                                     key={weekly.settlementId}
-                                    className="grid gap-ph-12 rounded-ph-sm border border-ph-border bg-ph-surface px-ph-16 py-3 md:grid-cols-[1.3fr_.7fr_.8fr_1fr_auto] md:items-center"
+                                    className="rounded-ph-sm border border-ph-border bg-ph-surface px-ph-16 py-3"
                                   >
-                                    <span className="text-ph-caption text-ph-text-secondary">
-                                      {settlementPeriodLabel(weekly.periodStart, weekly.periodEnd)}
-                                    </span>
-                                    <span className="text-ph-caption text-ph-text-secondary">
-                                      판매 {weekly.salesCount.toLocaleString('ko-KR')}건
-                                    </span>
-                                    <strong className="text-ph-caption">
-                                      {won(weekly.payoutAmount)}
-                                    </strong>
-                                    <StatusBadge
-                                      status={weekly.status}
-                                      label={weekly.statusLabel}
+                                    <div className="flex flex-wrap items-center justify-between gap-ph-12">
+                                      <div className="flex flex-wrap items-center gap-x-ph-16 gap-y-ph-8">
+                                        <span className="text-ph-caption font-semibold text-ph-text-secondary">
+                                          {settlementPeriodLabel(
+                                            weekly.periodStart,
+                                            weekly.periodEnd,
+                                          )}
+                                        </span>
+                                        <span className="text-ph-caption text-ph-text-muted">
+                                          판매 {weekly.salesCount.toLocaleString('ko-KR')}건
+                                        </span>
+                                      </div>
+                                      <div className="flex flex-wrap items-center gap-ph-8">
+                                        <StatusBadge
+                                          status={weekly.status}
+                                          label={weekly.statusLabel}
+                                        />
+                                        {payoutAction && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              requestPayout(
+                                                weekly.settlementId,
+                                                item.settlementMonth,
+                                              )
+                                            }
+                                            disabled={requestingId === weekly.settlementId}
+                                            className="inline-flex h-8 items-center justify-center gap-ph-2xs rounded-ph-sm bg-ph-primary px-3 text-[12.5px] font-semibold text-ph-on-accent disabled:opacity-40"
+                                          >
+                                            <Banknote size={14} />
+                                            {requestingId === weekly.settlementId
+                                              ? '처리 중…'
+                                              : payoutAction.label}
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <SettlementAmountBreakdown
+                                      grossAmount={weekly.grossAmount}
+                                      feeAmount={weekly.feeAmount}
+                                      refundAmount={weekly.refundAmount}
+                                      payoutAmount={weekly.payoutAmount}
+                                      className="mt-ph-12 border-t border-ph-border pt-ph-12"
                                     />
-                                    {payoutAction ? (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          requestPayout(weekly.settlementId, item.settlementMonth)
-                                        }
-                                        disabled={requestingId === weekly.settlementId}
-                                        className="inline-flex h-8 items-center justify-center gap-ph-2xs rounded-ph-sm bg-ph-primary px-3 text-[12.5px] font-semibold text-ph-on-accent disabled:opacity-40"
-                                      >
-                                        <Banknote size={14} />
-                                        {requestingId === weekly.settlementId
-                                          ? '처리 중…'
-                                          : payoutAction.label}
-                                      </button>
-                                    ) : (
-                                      <span />
-                                    )}
                                   </div>
                                 )
                               })}

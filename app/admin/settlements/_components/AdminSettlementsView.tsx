@@ -18,6 +18,7 @@ import { StatusBadge } from '@/components/admin/Badge'
 import { Identity, Table, Td, Th, Tr } from '@/components/admin/DataTable'
 import { SectionCard } from '@/components/admin/SectionCard'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { SettlementAmountBreakdown } from '@/components/ui/SettlementAmountBreakdown'
 import { SETTLEMENT_STATUS_FILTERS, type SettlementFilter } from '@/lib/constants'
 import {
   getAdminSettlementDetail,
@@ -29,6 +30,7 @@ import {
   type AdminMonthlySettlement,
   type AdminSettlementAction,
   type AdminSettlementDetail,
+  type SettlementAction,
   type SettlementDisplayStatus,
   type SettlementSummaryCard,
   type WeeklySettlement,
@@ -81,6 +83,12 @@ function RowButton({
 
 function detailKey(sellerId: string, settlementMonth: string) {
   return `${sellerId}:${settlementMonth}`
+}
+
+function isAdminSettlementAction(
+  action: SettlementAction,
+): action is SettlementAction & { type: AdminSettlementAction } {
+  return action.type !== 'REQUEST_PAYOUT'
 }
 
 interface CancelTarget {
@@ -545,50 +553,66 @@ export default function AdminSettlementsView() {
                               </div>
                             ) : detail?.weeklySettlements.length ? (
                               <div className="flex flex-col gap-ph-8">
-                                {detail.weeklySettlements.map((weekly) => (
-                                  <div
-                                    key={weekly.settlementId}
-                                    className="grid gap-ph-12 rounded-ph-sm border border-ph-border bg-ph-white px-ph-16 py-3 xl:grid-cols-[1.1fr_.5fr_.7fr_.7fr_2fr] xl:items-center"
-                                  >
-                                    <span className="text-ph-caption text-ph-text-secondary">
-                                      {settlementPeriodLabel(weekly.periodStart, weekly.periodEnd)}
-                                    </span>
-                                    <span className="text-ph-caption text-ph-text-secondary">
-                                      판매 {weekly.salesCount.toLocaleString('ko-KR')}건
-                                    </span>
-                                    <strong className="text-ph-caption">
-                                      {won(weekly.payoutAmount)}
-                                    </strong>
-                                    <StatusBadge
-                                      status={weekly.status}
-                                      label={weekly.statusLabel}
-                                    />
-                                    <div className="flex flex-wrap justify-end gap-ph-2xs">
-                                      {weekly.availableActions.length === 0 ? (
-                                        <span className="text-[12.5px] text-ph-text-muted">
-                                          처리할 액션 없음
-                                        </span>
-                                      ) : (
-                                        weekly.availableActions.map((action) => {
-                                          if (action.type === 'REQUEST_PAYOUT') return null
-                                          const actionType: AdminSettlementAction = action.type
-                                          const meta = ACTION_META[actionType]
-                                          const Icon = meta.Icon
-                                          return (
-                                            <RowButton
-                                              key={actionType}
-                                              tone={meta.tone}
-                                              disabled={actingId === weekly.settlementId}
-                                              onClick={() => handleAction(item, weekly, actionType)}
-                                            >
-                                              <Icon size={14} /> {action.label}
-                                            </RowButton>
-                                          )
-                                        })
-                                      )}
+                                {detail.weeklySettlements.map((weekly) => {
+                                  const adminActions =
+                                    weekly.availableActions.filter(isAdminSettlementAction)
+                                  return (
+                                    <div
+                                      key={weekly.settlementId}
+                                      className="rounded-ph-sm border border-ph-border bg-ph-white px-ph-16 py-3"
+                                    >
+                                      <div className="flex flex-wrap items-center justify-between gap-ph-12">
+                                        <div className="flex flex-wrap items-center gap-x-ph-16 gap-y-ph-8">
+                                          <span className="text-ph-caption font-semibold text-ph-text-secondary">
+                                            {settlementPeriodLabel(
+                                              weekly.periodStart,
+                                              weekly.periodEnd,
+                                            )}
+                                          </span>
+                                          <span className="text-ph-caption text-ph-text-muted">
+                                            판매 {weekly.salesCount.toLocaleString('ko-KR')}건
+                                          </span>
+                                          <StatusBadge
+                                            status={weekly.status}
+                                            label={weekly.statusLabel}
+                                          />
+                                        </div>
+                                        <div className="flex flex-wrap justify-end gap-ph-2xs">
+                                          {adminActions.length === 0 ? (
+                                            <span className="text-[12.5px] text-ph-text-muted">
+                                              처리할 액션 없음
+                                            </span>
+                                          ) : (
+                                            adminActions.map((action) => {
+                                              const actionType: AdminSettlementAction = action.type
+                                              const meta = ACTION_META[actionType]
+                                              const Icon = meta.Icon
+                                              return (
+                                                <RowButton
+                                                  key={actionType}
+                                                  tone={meta.tone}
+                                                  disabled={actingId === weekly.settlementId}
+                                                  onClick={() =>
+                                                    handleAction(item, weekly, actionType)
+                                                  }
+                                                >
+                                                  <Icon size={14} /> {action.label}
+                                                </RowButton>
+                                              )
+                                            })
+                                          )}
+                                        </div>
+                                      </div>
+                                      <SettlementAmountBreakdown
+                                        grossAmount={weekly.grossAmount}
+                                        feeAmount={weekly.feeAmount}
+                                        refundAmount={weekly.refundAmount}
+                                        payoutAmount={weekly.payoutAmount}
+                                        className="mt-ph-12 border-t border-ph-border pt-ph-12"
+                                      />
                                     </div>
-                                  </div>
-                                ))}
+                                  )
+                                })}
                               </div>
                             ) : detail ? (
                               <div className="py-6 text-center text-ph-caption text-ph-text-muted">
