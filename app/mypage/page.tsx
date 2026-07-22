@@ -12,11 +12,10 @@ import { getWishlists } from '@/lib/wishlists';
 import { getProductsByIds } from '@/lib/products';
 import { getWishlistSellerNames } from '@/lib/sellers';
 import { composeWishlistCards } from '@/lib/wishlistComposition';
-import { getPaymentHistory, requestRefund as apiRequestRefund } from '@/lib/payments';
+import { requestRefund as apiRequestRefund } from '@/lib/payments';
 import { getOrders } from '@/lib/orders';
 import { mapOrderToPrompt } from '@/lib/orderAdapters';
-import { mapPaymentHistory } from '@/lib/paymentAdapters';
-import { OrderListItem, PaymentItem as ApiPaymentItem } from '@/types/api/orders';
+import { PaymentItem as ApiPaymentItem } from '@/types/api/orders';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';
 import {
@@ -247,12 +246,8 @@ function MyPageContent() {
   const [refunds, setRefunds] = useState<Record<string, 'requested' | 'refunded'>>({});
   const [refundTargetId, setRefundTargetId] = useState<string | null>(null);
   const [purchased, setPurchased] = useState<Prompt[]>([]);
-  const [orderItems, setOrderItems] = useState<OrderListItem[]>([]);
   const [wishlist, setWishlist] = useState<Prompt[]>([]);
   const [payments, setPayments] = useState<ApiPaymentItem[]>([]);
-  const [paymentsPage, setPaymentsPage] = useState(1);
-  const [paymentsHasNext, setPaymentsHasNext] = useState(false);
-  const [loadingMorePayments, setLoadingMorePayments] = useState(false);
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const [loadingPurchased, setLoadingPurchased] = useState(true);
@@ -304,13 +299,9 @@ function MyPageContent() {
     if (!_hasHydrated) return;
     if (!isLoggedIn) { openLoginModal(); return; }
     fetchUser();
-    Promise.all([getOrders(), getPaymentHistory(1)])
-      .then(([orders, paymentHistory]) => {
-        setOrderItems(orders);
+    getOrders()
+      .then((orders) => {
         setPurchased(orders.map(mapOrderToPrompt).filter((item): item is Prompt => item !== null));
-        setPayments(mapPaymentHistory(paymentHistory.data, orders));
-        setPaymentsPage(1);
-        setPaymentsHasNext(paymentHistory.meta.hasNext);
       })
       .catch(() => {})
       .finally(() => {
@@ -393,22 +384,6 @@ function MyPageContent() {
         409: '이미 다운로드했거나 환불할 수 없는 상품이에요.',
       };
       showToast(messages[response?.status ?? 0] ?? '환불 신청에 실패했어요. 다시 시도해주세요');
-    }
-  };
-
-  const handleLoadMorePayments = async () => {
-    if (loadingMorePayments || !paymentsHasNext) return;
-    setLoadingMorePayments(true);
-    try {
-      const nextPage = paymentsPage + 1;
-      const { data, meta } = await getPaymentHistory(nextPage);
-      setPayments((prev) => [...prev, ...mapPaymentHistory(data, orderItems)]);
-      setPaymentsPage(nextPage);
-      setPaymentsHasNext(meta.hasNext);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingMorePayments(false);
     }
   };
 
@@ -684,23 +659,10 @@ function MyPageContent() {
                   onCta={() => router.push('/browse')}
                 />
               ) : (
-                <>
-                  <OrderList
-                    payments={payments}
-                    onRefund={(paymentId) => setRefundTargetId(paymentId)}
-                  />
-                  {paymentsHasNext && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
-                      <Button
-                        variant="secondary"
-                        onClick={handleLoadMorePayments}
-                        disabled={loadingMorePayments}
-                      >
-                        {loadingMorePayments ? '불러오는 중...' : '더 보기'}
-                      </Button>
-                    </div>
-                  )}
-                </>
+                <OrderList
+                  payments={payments}
+                  onRefund={(paymentId) => setRefundTargetId(paymentId)}
+                />
               )}
             </div>
           )}
