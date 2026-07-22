@@ -82,7 +82,7 @@ export default function AdminProductsPage() {
         productId: string
         title: string
         productType: string
-        sellerId: string
+        sellerNickname: string
         model?: string
         amount: number
         status: string
@@ -93,7 +93,7 @@ export default function AdminProductsPage() {
           id: p.productId,
           title: p.title,
           productType: p.productType,
-          seller: p.sellerId,
+          seller: p.sellerNickname,
           model: p.model,
           amount: p.amount,
           status: toLocalStatus(p.status),
@@ -324,7 +324,6 @@ export default function AdminProductsPage() {
                 <div className="text-[22px] font-bold text-ph-text">
                   {sel.amount === 0 ? '무료' : won(sel.amount)}
                 </div>
-                <div className="mt-[2px] text-[12.5px] text-ph-text-muted">#{sel.id}</div>
               </div>
             </div>
 
