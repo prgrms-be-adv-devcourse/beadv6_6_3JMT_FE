@@ -38,9 +38,11 @@ api.interceptors.response.use(
       const { refreshToken, setToken, logout } = useAuthStore.getState()
 
       if (!refreshToken) {
-        logout()
-        if (typeof window !== 'undefined') {
-          window.location.href = '/'
+        if (useAuthStore.getState().isLoggedIn) {
+          logout()
+          if (typeof window !== 'undefined') {
+            window.location.href = '/'
+          }
         }
         return Promise.reject(error)
       }
