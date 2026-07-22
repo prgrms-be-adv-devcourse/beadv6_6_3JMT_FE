@@ -30,7 +30,12 @@ test('preparePaidOrder rejects a missing client key before creating an order', a
         return { orderId: 'order-1' }
       },
     }),
-    { message: '결제 설정이 완료되지 않았습니다.' },
+    (error: unknown) => {
+      assert.ok(error instanceof CheckoutStageError)
+      assert.equal(error.stage, 'payment_setup')
+      assert.equal(error.message, '결제 설정이 완료되지 않았습니다.')
+      return true
+    },
   )
 
   assert.equal(loadCalls, 0)
@@ -52,7 +57,12 @@ test('preparePaidOrder rejects SDK load failure before creating an order', async
         return { orderId: 'order-1' }
       },
     }),
-    { message: '결제 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.' },
+    (error: unknown) => {
+      assert.ok(error instanceof CheckoutStageError)
+      assert.equal(error.stage, 'payment_setup')
+      assert.equal(error.message, '결제 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      return true
+    },
   )
 
   assert.equal(orderCalls, 0)
