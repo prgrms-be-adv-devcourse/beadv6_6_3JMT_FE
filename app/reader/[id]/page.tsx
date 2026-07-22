@@ -457,9 +457,10 @@ export default function ReaderPage() {
         open={confirmOpen}
         title="다운로드 전 확인"
         description="다운로드 후에는 환불 처리가 불가합니다. 계속하시겠습니까?"
-        iconBg="var(--ph-secondary)"
-        iconColor="var(--ph-primary)"
+        iconBg="var(--ph-warning-bg)"
+        iconColor="var(--ph-error)"
         confirmLabel="다운로드 진행"
+        confirmVariant="danger"
         onConfirm={confirmDownload}
         onCancel={() => setConfirmOpen(false)}
       />
