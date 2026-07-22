@@ -505,21 +505,21 @@ export default function DetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([
+    Promise.allSettled([
       api.get(`${API_BASE}/products/${id}`),
       api.get(`${API_BASE}/products/${id}/recommends`),
     ])
-      .then(async ([pRes, rRes]) => {
-        const p: Prompt = pRes.data.data;
+      .then(async ([pResult, rResult]) => {
+        if (pResult.status !== 'fulfilled') return;
+        const p: Prompt = pResult.value.data.data;
         if (p.sellerId) {
           const profile = await getSellerProfile(p.sellerId);
           p.seller = profile?.sellerName ?? '탈퇴한 판매자';
           p.sellerProfileImageUrl = profile?.profileImageUrl ?? null;
         }
         setProduct(p);
-        setRelated(rRes.data.data ?? []);
+        setRelated(rResult.status === 'fulfilled' ? (rResult.value.data.data ?? []) : []);
       })
-      .catch(() => {})
       .finally(() => setLoading(false));
   }, [id]);
 
