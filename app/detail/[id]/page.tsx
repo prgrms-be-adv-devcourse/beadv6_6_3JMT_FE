@@ -507,7 +507,7 @@ export default function DetailPage() {
     if (!id) return;
     Promise.all([
       api.get(`${API_BASE}/products/${id}`),
-      api.get(`${API_BASE}/products/${id}/related`),
+      api.get(`${API_BASE}/products/${id}/recommends`),
     ])
       .then(async ([pRes, rRes]) => {
         const p: Prompt = pRes.data.data;
