@@ -49,7 +49,7 @@ export interface MyOrderItem {
   orderProductStatus?: OrderProductStatus;
   downloaded: boolean;
   isRefundable: boolean;
-  productType?: string;
+  productType?: string | null;
   title?: string;
   model?: string | null;
   rating?: number | null;
@@ -59,8 +59,33 @@ export interface MyOrderItem {
   product?: ProductInfo | null;
 }
 
+export interface OrderListProductResponse {
+  orderProductId: string;
+  productId: string;
+  orderProductStatus: OrderProductStatus;
+  amount: number;
+  isRefundable: boolean;
+  downloaded: boolean;
+  productType?: string | null;
+  title: string;
+  model?: string | null;
+  rating?: number | null;
+}
+
+export interface OrderListResponse {
+  orderId: string;
+  orderNumber: string;
+  orderStatus: OrderStatus;
+  totalAmount: number;
+  products: OrderListProductResponse[];
+  paidAt?: string | null;
+  createdAt: string;
+}
+
 export interface OrderListItem {
   orderId: string;
+  orderNumber?: string;
+  orderTotalAmount?: number;
   orderProductId: string;
   productId: string;
   amount: number;
@@ -68,11 +93,11 @@ export interface OrderListItem {
   orderProductStatus: OrderProductStatus;
   downloaded: boolean;
   isRefundable: boolean;
-  productType: string;
+  productType?: string | null;
   title: string;
-  model: string | null;
-  rating: number | null;
-  paidAt: string | null;
+  model?: string | null;
+  rating?: number | null;
+  paidAt?: string | null;
   createdAt: string;
 }
 

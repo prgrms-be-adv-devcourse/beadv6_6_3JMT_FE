@@ -4,11 +4,12 @@ import type {
   CreateOrderResponseData,
   CreateOrderResult,
   OrderListItem,
+  OrderListResponse,
 } from '@/types/api/orders'
 import { API_BASE } from '@/lib/apiBase'
-import { buildCreateOrderRequest, mapCreateOrderResponse } from './orderContracts'
+import { buildCreateOrderRequest, mapCreateOrderResponse, mapOrderListResponse } from './orderContracts'
 
-export { buildCreateOrderRequest, mapCreateOrderResponse } from './orderContracts'
+export { buildCreateOrderRequest, mapCreateOrderResponse, mapOrderListResponse } from './orderContracts'
 
 export async function createOrder(products: CreateOrderProduct[]): Promise<CreateOrderResult> {
   const res = await api.post(`${API_BASE}/orders`, buildCreateOrderRequest(products))
@@ -17,7 +18,7 @@ export async function createOrder(products: CreateOrderProduct[]): Promise<Creat
 
 export async function getOrders(): Promise<OrderListItem[]> {
   const res = await api.get(`${API_BASE}/orders`)
-  return (res.data.data ?? []) as OrderListItem[]
+  return mapOrderListResponse((res.data.data ?? []) as OrderListResponse[])
 }
 
 export async function downloadOrderProduct(orderId: string, orderProductId: string) {

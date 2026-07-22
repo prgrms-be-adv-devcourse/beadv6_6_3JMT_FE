@@ -80,17 +80,21 @@ export function groupOrders(orderItems: OrderListItem[]): GroupedOrder[] {
     const paidAt = items.find((item) => item.paidAt)?.paidAt ?? first.createdAt;
     const firstTitle = first.title || '주문 상품';
     const titleSummary = items.length > 1 ? `${firstTitle} 외 ${items.length - 1}건` : firstTitle;
-    const orderNumber = (first as unknown as { orderNumber?: string }).orderNumber;
+    const orderNumber = first.orderNumber;
+    const lineAmount = items.reduce((sum, item) => {
+      const amt = Number.isFinite(item.amount) ? item.amount : 0;
+      return sum + amt;
+    }, 0);
+    const amount = typeof first.orderTotalAmount === 'number' && Number.isFinite(first.orderTotalAmount)
+      ? first.orderTotalAmount
+      : lineAmount;
 
     return {
       orderId: first.orderId,
       orderNumber,
       titleSummary,
       paidAt,
-      amount: items.reduce((sum, item) => {
-        const amt = Number.isFinite(item.amount) ? item.amount : 0;
-        return sum + amt;
-      }, 0),
+      amount,
       status: ORDER_STATUS_LABEL[first.orderStatus] ?? '결제 대기',
       items: items.map((item) => ({
         orderProductId: item.orderProductId,

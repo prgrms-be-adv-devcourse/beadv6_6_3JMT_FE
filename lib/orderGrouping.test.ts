@@ -43,6 +43,15 @@ test('groupOrders builds order history and total from order items only', () => {
   assert.deepEqual(result[0].items.map((item) => item.amount), [6000, 9000])
 })
 
+test('groupOrders uses the backend order total when it is available', () => {
+  const [result] = groupOrders([
+    orderProduct({ amount: 6000, orderTotalAmount: 12000 }),
+    orderProduct({ orderProductId: 'line-2', amount: 6000, orderTotalAmount: 12000 }),
+  ])
+
+  assert.equal(result.amount, 12000)
+})
+
 test('groupOrders preserves the order API order and groups repeated order ids', () => {
   const result = groupOrders([
     orderProduct({ orderId: 'order-2', orderProductId: 'line-2' }),
