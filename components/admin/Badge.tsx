@@ -31,7 +31,7 @@ export function Badge({ tone = 'blue', soft = true, children, style, className }
   const p = soft ? PALETTE[tone].soft : PALETTE[tone].filled
   return (
     <span
-      className={`inline-flex items-center rounded-ph-full text-[13px] font-semibold leading-none ${className ?? ''}`}
+      className={`inline-flex items-center rounded-ph-full text-ph-caption font-semibold leading-none ${className ?? ''}`}
       style={{ padding: '5px 9px', ...p, ...style }}
     >
       {children}
@@ -64,6 +64,7 @@ const STATUS: Record<string, { label: string; tone: Tone; soft: boolean; dot: st
   APPROVED: { label: '승인', tone: 'blue', soft: true, dot: '#1b64da' },
   PAYOUT_REQUESTED: { label: '지급 신청', tone: 'blue', soft: true, dot: '#1b64da' },
   PAYOUT_ON_HOLD: { label: '지급 보류', tone: 'error', soft: true, dot: '#d92d20' },
+  CANCELLED: { label: '취소', tone: 'neutral', soft: true, dot: '#8b95a1' },
   // 레거시 정산 상태 코드 (호환용)
   PENDING_APPROVAL: { label: '대기', tone: 'neutral', soft: true, dot: '#8b95a1' },
   SETTLEMENT_ON_HOLD: { label: '승인 보류', tone: 'error', soft: true, dot: '#d92d20' },
@@ -72,8 +73,15 @@ const STATUS: Record<string, { label: string; tone: Tone; soft: boolean; dot: st
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
   const s = STATUS[status] ?? STATUS.pending
   return (
-    <Badge tone={s.tone} soft={s.soft} style={{ gap: 6, padding: '5px 10px', whiteSpace: 'nowrap' }}>
-      <span className="inline-block h-[6px] w-[6px] rounded-full" style={{ background: s.dot }} />
+    <Badge
+      tone={s.tone}
+      soft={s.soft}
+      style={{ gap: 6, padding: '5px 10px', whiteSpace: 'nowrap' }}
+    >
+      <span
+        className="inline-block h-[6px] w-[6px] rounded-ph-full"
+        style={{ background: s.dot }}
+      />
       {label ?? s.label}
     </Badge>
   )

@@ -72,11 +72,11 @@
 | `--ph-label-sm-size` | 14px | `text-ph-label-sm` | 작은 레이블 |
 | `--ph-caption-size` | **0.8125rem** (13px) | `text-ph-caption` | 캡션·보조 텍스트·뱃지 |
 
-> **임의값 변환 가이드** (토큰 없는 비표준 크기 — rem으로 표기)
-> - 13.5px → `text-[0.84375rem]`
-> - 12.5px → `text-[0.78125rem]`
+> **임의값 변환 가이드** (토큰 없는 비표준 크기 — px로 표기)
+> - 13.5px → `text-[13.5px]`
+> - 12.5px → `text-[12.5px]`
 > - 12px → Tailwind 기본 `text-xs` (0.75rem)
-> - 11.5px → `text-[0.71875rem]`
+> - 11.5px → `text-[11.5px]`
 
 ### Border Radius 토큰
 
@@ -116,7 +116,7 @@
     - 활성: `bg-ph-secondary` + `text-ph-primary` + 700
     - 비활성: `text-ph-text-secondary` + 500, hover 시 `bg-ph-gray-50`
     - 아이콘: Lucide 19×19
-    - 뱃지(count>0): minWidth 20, h20, `rounded-full`, 12px/700 — 활성 `bg-ph-primary text-white` / 비활성 `bg-ph-secondary text-ph-primary`
+    - 뱃지(count>0): minWidth 20, h20, `rounded-ph-full`, 12px/700 — 활성 `bg-ph-primary text-ph-on-accent` / 비활성 `bg-ph-secondary text-ph-primary`
 - **하단 유저**(`padding: 14px`, 상단 border): Avatar 36 + "운영 관리자"(14/700) + email(12 muted) + 로그아웃 아이콘버튼(34×34, `rounded-ph-sm`, border, hover시 `bg #fdeceb`/`border·text ph-error`, Lucide `log-out` 17px)
 
 ### 사이드바 메뉴 (NAV) — 5항목

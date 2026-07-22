@@ -4,38 +4,17 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { Banknote, ChevronDown, RefreshCw } from 'lucide-react'
 import { StatusBadge } from '@/components/admin/Badge'
 import { Table, Td, Th, Tr } from '@/components/admin/DataTable'
+import { SETTLEMENT_STATUS_FILTERS, type SettlementFilter } from '@/lib/constants'
 import {
   getSellerSettlementDetail,
   getSellerSettlements,
   requestSettlementPayout,
   type SellerMonthlySettlement,
   type SellerSettlementDetail,
-  type SettlementDisplayStatus,
 } from '@/lib/settlements'
-import { won } from '@/lib/utils'
-
-type SettlementFilter = 'all' | SettlementDisplayStatus
+import { apiErrorMessage, settlementMonthLabel, settlementPeriodLabel, won } from '@/lib/utils'
 
 const PAGE_SIZE = 10
-const FILTERS: { value: SettlementFilter; label: string }[] = [
-  { value: 'all', label: '전체' },
-  { value: 'WAITING', label: '대기' },
-  { value: 'APPROVAL_ON_HOLD', label: '승인 보류' },
-  { value: 'APPROVED', label: '승인' },
-  { value: 'PAYOUT_REQUESTED', label: '지급 신청' },
-  { value: 'PAYOUT_ON_HOLD', label: '지급 보류' },
-  { value: 'PAID', label: '지급 완료' },
-  { value: 'CANCELLED', label: '취소' },
-]
-
-function monthLabel(month: string) {
-  const [year, value] = month.split('-')
-  return `${year}년 ${Number(value)}월`
-}
-
-function periodLabel(start: string, end: string) {
-  return `${start.replaceAll('-', '.')} ~ ${end.slice(5).replaceAll('-', '.')}`
-}
 
 export default function SellerSettlementsPanel({
   onSettlementChange,
@@ -56,6 +35,7 @@ export default function SellerSettlementsPanel({
   const [actionError, setActionError] = useState<string | null>(null)
   const [detailError, setDetailError] = useState<Record<string, string>>({})
   const listRequestRef = useRef(0)
+  const detailRequestRef = useRef<Record<string, number>>({})
 
   const loadList = async (
     nextFilter: SettlementFilter,
@@ -104,15 +84,21 @@ export default function SellerSettlementsPanel({
 
   const loadDetail = async (month: string, force = false) => {
     if (!force && details[month]) return
+    const requestId = (detailRequestRef.current[month] ?? 0) + 1
+    detailRequestRef.current[month] = requestId
     setLoadingDetail(month)
     setDetailError((current) => ({ ...current, [month]: '' }))
     try {
       const detail = await getSellerSettlementDetail(month)
+      if (detailRequestRef.current[month] !== requestId) return
       setDetails((current) => ({ ...current, [month]: detail }))
     } catch {
+      if (detailRequestRef.current[month] !== requestId) return
       setDetailError((current) => ({ ...current, [month]: '주간 정산을 불러오지 못했어요.' }))
     } finally {
-      setLoadingDetail((current) => (current === month ? null : current))
+      if (detailRequestRef.current[month] === requestId) {
+        setLoadingDetail((current) => (current === month ? null : current))
+      }
     }
   }
 
@@ -133,9 +119,7 @@ export default function SellerSettlementsPanel({
       await Promise.all([loadDetail(month, true), loadList(filter, settlementMonth, 0, false)])
       onSettlementChange()
     } catch (error) {
-      const message = (error as { response?: { data?: { message?: string } } })?.response?.data
-        ?.message
-      setActionError(message ?? '지급 신청을 처리하지 못했어요.')
+      setActionError(apiErrorMessage(error, '지급 신청을 처리하지 못했어요.'))
       await loadDetail(month, true)
     } finally {
       setRequestingId(null)
@@ -143,33 +127,34 @@ export default function SellerSettlementsPanel({
   }
 
   return (
-    <section style={{ marginTop: 28, paddingBottom: 80 }}>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+    <section className="mt-7 pb-20">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-ph-16">
         <div>
           <h2 className="m-0 text-[22px] font-bold">정산 내역</h2>
-          <p className="mt-1.5 text-[13px] text-ph-text-muted">
+          <p className="mt-1.5 text-ph-caption text-ph-text-muted">
             월별 합계를 펼쳐 주간 정산을 확인하고 지급을 신청할 수 있어요.
           </p>
         </div>
-        <label className="flex flex-col gap-1.5 text-[12px] font-semibold text-ph-text-secondary">
+        <label className="flex flex-col gap-ph-2xs text-xs font-semibold text-ph-text-secondary">
           정산 월
           <input
             type="month"
             value={settlementMonth}
             onChange={(event) => changeFilters(filter, event.target.value)}
-            className="h-9 rounded-ph-sm border border-ph-border bg-ph-white px-3 text-[13px] outline-none focus:border-ph-primary"
+            className="h-9 rounded-ph-sm border border-ph-border bg-ph-surface px-3 text-ph-caption outline-none focus:border-ph-primary"
           />
         </label>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {FILTERS.map(({ value, label }) => (
+      <div className="mb-ph-16 flex flex-wrap gap-ph-8">
+        {SETTLEMENT_STATUS_FILTERS.map(({ value, label }) => (
           <button
+            type="button"
             key={value}
             onClick={() => changeFilters(value, settlementMonth)}
-            className={`rounded-ph-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
+            className={`rounded-ph-full border px-3.5 py-1.5 text-ph-caption font-semibold transition-colors ${
               filter === value
-                ? 'border-ph-primary bg-ph-primary text-white'
+                ? 'border-ph-primary bg-ph-primary text-ph-on-accent'
                 : 'border-ph-border text-ph-text-secondary hover:bg-ph-gray-50'
             }`}
           >
@@ -178,8 +163,9 @@ export default function SellerSettlementsPanel({
         ))}
         {settlementMonth && (
           <button
+            type="button"
             onClick={() => changeFilters(filter, '')}
-            className="px-2 text-[12px] font-semibold text-ph-primary"
+            className="px-2 text-xs font-semibold text-ph-primary"
           >
             월 선택 해제
           </button>
@@ -187,9 +173,9 @@ export default function SellerSettlementsPanel({
       </div>
 
       {actionError && (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-ph-sm border border-ph-error/30 bg-red-50 px-4 py-3 text-[13px] text-ph-error">
+        <div className="mb-4 flex items-center justify-between gap-ph-12 rounded-ph-sm border border-ph-error/30 bg-[#fdeceb] px-ph-16 py-3 text-ph-caption text-ph-error">
           <span>{actionError}</span>
-          <button onClick={() => setActionError(null)} className="font-semibold">
+          <button type="button" onClick={() => setActionError(null)} className="font-semibold">
             닫기
           </button>
         </div>
@@ -197,22 +183,23 @@ export default function SellerSettlementsPanel({
 
       {listError ? (
         <div className="rounded-ph-lg border border-ph-border py-14 text-center text-ph-text-muted">
-          <p className="mb-3 text-[14px]">{listError}</p>
+          <p className="mb-3 text-ph-body-sm">{listError}</p>
           <button
+            type="button"
             onClick={() => loadList(filter, settlementMonth, 0, false)}
-            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ph-primary"
+            className="inline-flex items-center gap-ph-2xs text-ph-caption font-semibold text-ph-primary"
           >
             <RefreshCw size={14} /> 다시 시도
           </button>
         </div>
       ) : loading ? (
-        <div className="py-16 text-center text-[14px] text-ph-text-muted">
+        <div className="py-16 text-center text-ph-body-sm text-ph-text-muted">
           정산 내역을 불러오는 중…
         </div>
       ) : items.length === 0 ? (
         <div className="py-[72px] text-center text-ph-text-muted">
           <Banknote className="mx-auto size-10" />
-          <p className="mt-3.5 text-[15px]">조건에 맞는 정산 내역이 없어요.</p>
+          <p className="mt-3.5 text-ph-body-md">조건에 맞는 정산 내역이 없어요.</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-ph-lg border border-ph-border">
@@ -238,15 +225,17 @@ export default function SellerSettlementsPanel({
                     <Tr>
                       <Td>
                         <button
+                          type="button"
                           onClick={() => toggleMonth(item.settlementMonth)}
                           aria-expanded={expanded}
-                          className="inline-flex items-center gap-2 whitespace-nowrap font-semibold text-ph-text"
+                          aria-controls={`seller-settlement-${item.settlementMonth}`}
+                          className="inline-flex items-center gap-ph-8 whitespace-nowrap font-semibold text-ph-text"
                         >
                           <ChevronDown
                             size={16}
                             className={`transition-transform ${expanded ? 'rotate-180' : ''}`}
                           />
-                          {monthLabel(item.settlementMonth)}
+                          {settlementMonthLabel(item.settlementMonth)}
                         </button>
                       </Td>
                       <Td align="right">
@@ -264,7 +253,7 @@ export default function SellerSettlementsPanel({
                         <strong>{won(item.payoutAmount)}</strong>
                       </Td>
                       <Td>
-                        <div className="flex min-w-[180px] flex-wrap gap-1.5">
+                        <div className="flex min-w-[180px] flex-wrap gap-ph-2xs">
                           {item.statusCounts.map((count) => (
                             <StatusBadge
                               key={count.status}
@@ -278,25 +267,27 @@ export default function SellerSettlementsPanel({
                     {expanded && (
                       <tr>
                         <td
+                          id={`seller-settlement-${item.settlementMonth}`}
                           colSpan={8}
                           className="border-t border-ph-border bg-ph-gray-50 px-5 py-4"
                         >
                           {loadingDetail === item.settlementMonth && !detail ? (
-                            <div className="py-6 text-center text-[13px] text-ph-text-muted">
+                            <div className="py-6 text-center text-ph-caption text-ph-text-muted">
                               주간 정산을 불러오는 중…
                             </div>
                           ) : detailError[item.settlementMonth] ? (
-                            <div className="flex items-center justify-between gap-3 rounded-ph-sm border border-ph-border bg-white px-4 py-3 text-[13px] text-ph-error">
+                            <div className="flex items-center justify-between gap-ph-12 rounded-ph-sm border border-ph-border bg-ph-surface px-ph-16 py-3 text-ph-caption text-ph-error">
                               <span>{detailError[item.settlementMonth]}</span>
                               <button
+                                type="button"
                                 onClick={() => loadDetail(item.settlementMonth, true)}
                                 className="font-semibold"
                               >
                                 다시 시도
                               </button>
                             </div>
-                          ) : detail ? (
-                            <div className="flex flex-col gap-2">
+                          ) : detail?.weeklySettlements.length ? (
+                            <div className="flex flex-col gap-ph-8">
                               {detail.weeklySettlements.map((weekly) => {
                                 const payoutAction = weekly.availableActions.find(
                                   (action) => action.type === 'REQUEST_PAYOUT',
@@ -304,15 +295,15 @@ export default function SellerSettlementsPanel({
                                 return (
                                   <div
                                     key={weekly.settlementId}
-                                    className="grid gap-3 rounded-ph-sm border border-ph-border bg-white px-4 py-3 md:grid-cols-[1.3fr_.7fr_.8fr_1fr_auto] md:items-center"
+                                    className="grid gap-ph-12 rounded-ph-sm border border-ph-border bg-ph-surface px-ph-16 py-3 md:grid-cols-[1.3fr_.7fr_.8fr_1fr_auto] md:items-center"
                                   >
-                                    <span className="text-[13px] text-ph-text-secondary">
-                                      {periodLabel(weekly.periodStart, weekly.periodEnd)}
+                                    <span className="text-ph-caption text-ph-text-secondary">
+                                      {settlementPeriodLabel(weekly.periodStart, weekly.periodEnd)}
                                     </span>
-                                    <span className="text-[13px] text-ph-text-secondary">
+                                    <span className="text-ph-caption text-ph-text-secondary">
                                       판매 {weekly.salesCount.toLocaleString('ko-KR')}건
                                     </span>
-                                    <strong className="text-[13px]">
+                                    <strong className="text-ph-caption">
                                       {won(weekly.payoutAmount)}
                                     </strong>
                                     <StatusBadge
@@ -321,11 +312,12 @@ export default function SellerSettlementsPanel({
                                     />
                                     {payoutAction ? (
                                       <button
+                                        type="button"
                                         onClick={() =>
                                           requestPayout(weekly.settlementId, item.settlementMonth)
                                         }
                                         disabled={requestingId === weekly.settlementId}
-                                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-ph-sm bg-ph-primary px-3 text-[12.5px] font-semibold text-white disabled:opacity-40"
+                                        className="inline-flex h-8 items-center justify-center gap-ph-2xs rounded-ph-sm bg-ph-primary px-3 text-[12.5px] font-semibold text-ph-on-accent disabled:opacity-40"
                                       >
                                         <Banknote size={14} />
                                         {requestingId === weekly.settlementId
@@ -339,6 +331,10 @@ export default function SellerSettlementsPanel({
                                 )
                               })}
                             </div>
+                          ) : detail ? (
+                            <div className="py-6 text-center text-ph-caption text-ph-text-muted">
+                              이 달의 주간 정산이 없어요.
+                            </div>
                           ) : null}
                         </td>
                       </tr>
@@ -351,11 +347,12 @@ export default function SellerSettlementsPanel({
           {hasNext && (
             <div className="border-t border-ph-border p-4 text-center">
               <button
+                type="button"
                 onClick={() =>
                   loadList(filter, settlementMonth, Math.ceil(items.length / PAGE_SIZE), true)
                 }
                 disabled={loadingMore}
-                className="h-[38px] rounded-ph-sm border border-ph-border bg-white px-5 text-[13.5px] font-semibold text-ph-text-secondary disabled:opacity-40"
+                className="h-[38px] rounded-ph-sm border border-ph-border bg-ph-surface px-5 text-[13.5px] font-semibold text-ph-text-secondary disabled:opacity-40"
               >
                 {loadingMore ? '불러오는 중…' : '더 보기'}
               </button>

@@ -15,7 +15,7 @@
 | `StatsCards.tsx` | 통계 카드 3개 (등록·판매·수익) |
 | `TabBar.tsx` | "내 프롬프트" / "정산 내역" 탭 버튼 |
 | `ListingsTab.tsx` | 내 프롬프트 그리드 + 카드 하단 액션 버튼 |
-| `PaymentsTab.tsx` | 정산 내역 필터 + PaymentTable |
+| `SellerSettlementsPanel.tsx` | 월·상태 필터 + 월별 목록 + 주간 정산 아코디언 + 지급 신청 |
 
 ### 인라인 상수
 
