@@ -36,6 +36,23 @@ export async function getProductsByIds(productIds: string[]): Promise<ProductByI
   return responses.flatMap((res) => res.data.data ?? [])
 }
 
+// POST /api/v2/products/orders — 마이페이지 구매한 프롬프트 카드용 상품 배치 조회
+export async function getProductsForOrders(productIds: string[]): Promise<ProductByIdsItem[]> {
+  const chunks = splitUniqueIds(productIds)
+  if (chunks.length === 0) return []
+
+  const responses = await Promise.all(
+    chunks.map((productIdsChunk) =>
+      api.post<{ success: boolean; data: ProductByIdsItem[]; message: string }>(
+        `${API_BASE}/products/orders`,
+        { productIds: productIdsChunk },
+      ),
+    ),
+  )
+
+  return responses.flatMap((res) => res.data.data ?? [])
+}
+
 // GET /api/v2/products/sellers/me/summary — 판매자의 등록 상품 수·누적 판매 수
 export async function getSellerProductSummary(): Promise<SellerProductSummary> {
   const res = await api.get<{

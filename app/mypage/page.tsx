@@ -9,7 +9,7 @@ import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { deleteUserMe, updateUserMe } from '@/lib/users';
 import { getWishlists } from '@/lib/wishlists';
-import { getProductsByIds } from '@/lib/products';
+import { getProductsByIds, getProductsForOrders } from '@/lib/products';
 import { getWishlistSellerNames } from '@/lib/sellers';
 import { composeWishlistCards } from '@/lib/wishlistComposition';
 import { requestRefund as apiRequestRefund } from '@/lib/payments';
@@ -45,6 +45,7 @@ type Prompt = {
   rating: number | string;
   salesCount: number;
   seller: string;
+  sellerId?: string;
   badge?: string;
   desc: string;
   thumbnail_url?: string | null;
@@ -300,8 +301,20 @@ function MyPageContent() {
     if (!isLoggedIn) { openLoginModal(); return; }
     fetchUser();
     getOrders()
-      .then((orders) => {
-        setPurchased(orders.map(mapOrderToPrompt).filter((item): item is Prompt => item !== null));
+      .then(async (orders) => {
+        const prompts = orders.map(mapOrderToPrompt).filter((item): item is Prompt => item !== null);
+
+        try {
+          const products = await getProductsForOrders(prompts.map((p) => p.id));
+          const sellerIdByProductId = new Map(products.map((p) => [p.productId, p.sellerId]));
+          prompts.forEach((p) => {
+            p.sellerId = sellerIdByProductId.get(p.id);
+          });
+        } catch {
+          // 상품 배치 조회 실패는 구매 목록 전체 실패로 전파하지 않는다. sellerId는 비워둔 채 진행.
+        }
+
+        setPurchased(prompts);
       })
       .catch(() => {})
       .finally(() => {
