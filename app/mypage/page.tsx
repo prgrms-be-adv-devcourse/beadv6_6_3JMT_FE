@@ -61,6 +61,7 @@ type UserInfo = {
   roles?: string[];
   provider: 'local' | 'kakao';
   sellerStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
+  profileImageUrl?: string | null;
 };
 
 type NotifState = { email: boolean; marketing: boolean; newPrompt: boolean };
@@ -503,7 +504,7 @@ function MyPageContent() {
                     background: 'var(--ph-secondary)',
                   }}>
                     <Image
-                      src="/images/promy-character.png"
+                      src={user.profileImageUrl || '/images/promy-character.png'}
                       alt="프로필 사진"
                       width={96}
                       height={96}

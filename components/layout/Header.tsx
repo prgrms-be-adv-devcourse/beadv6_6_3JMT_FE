@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
@@ -214,8 +215,18 @@ function Pop({ children, onClose, width = 280 }: { children: React.ReactNode; on
 
 /* ── Avatar ─────────────────────────────────────────────── */
 
-function Avatar({ name, size = 34 }: { name: string; size?: number }) {
+function Avatar({ name, size = 34, imageUrl }: { name: string; size?: number; imageUrl?: string | null }) {
   const initials = name ? name.slice(0, 2).toUpperCase() : '?';
+  if (imageUrl) {
+    return (
+      <span style={{
+        display: 'inline-flex', width: size, height: size, borderRadius: '50%',
+        overflow: 'hidden', flexShrink: 0,
+      }}>
+        <Image src={imageUrl} alt={name} width={size} height={size} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+      </span>
+    );
+  }
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -395,12 +406,12 @@ export default function Header() {
         onClick={() => toggle('user')}
         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', borderRadius: 'var(--ph-radius-full)' }}
       >
-        <Avatar name={user ? user.name : ''} size={34} />
+        <Avatar name={user ? user.name : ''} size={34} imageUrl={user?.profileImageUrl} />
       </button>
       {menu === 'user' && user && (
         <Pop onClose={close} width={240}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px' }}>
-            <Avatar name={user.name} size={40} />
+            <Avatar name={user.name} size={40} imageUrl={user.profileImageUrl} />
             <div>
               <div style={{ fontWeight: 700, fontSize: 14 }}>{user.name}</div>
               <div style={{ fontSize: 12, color: 'var(--ph-text-muted)' }}>{hasRole('admin') ? '관리자 계정' : hasRole('seller') ? '판매자 계정' : '구매자 계정'}</div>

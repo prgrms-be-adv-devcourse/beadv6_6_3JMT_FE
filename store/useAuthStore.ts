@@ -7,6 +7,7 @@ interface User {
   email: string
   roles: string[]
   provider?: 'local' | 'kakao'
+  profileImageUrl?: string | null
 }
 
 interface AuthState {
