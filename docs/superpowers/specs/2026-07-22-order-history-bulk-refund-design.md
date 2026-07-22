@@ -24,6 +24,8 @@
 
 ## 선행 API 계약
 
+백엔드 구현 요구사항과 인수 기준은 [주문 내역 상품 선택 환불 백엔드 변경 요구사항](../../payment/order-history-bulk-refund-backend-requirements.md)에 정리한다.
+
 `GET /api/v2/orders`의 주문상품 항목에 결제 당시 상품 금액을 필수 필드로 추가한다.
 
 ```ts
