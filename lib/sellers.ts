@@ -35,9 +35,9 @@ interface SellerBatchItem {
   sellerName: string | null
 }
 
-async function getSellerNamesByPurpose(
+async function getSellerNamesByPath(
   sellerIds: string[],
-  purpose: 'products' | 'wishlists',
+  path: 'sellers/products' | 'sellers/wishlists' | 'users/order-products',
 ): Promise<Record<string, string | null>> {
   const chunks = splitUniqueIds(sellerIds)
   if (chunks.length === 0) return {}
@@ -45,7 +45,7 @@ async function getSellerNamesByPurpose(
   const responses = await Promise.all(
     chunks.map((sellerIdsChunk) =>
       api.post<{ success: boolean; data: { sellers: SellerBatchItem[] }; message: string }>(
-        `${API_BASE}/sellers/${purpose}`,
+        `${API_BASE}/${path}`,
         { sellerIds: sellerIdsChunk },
       ),
     ),
@@ -61,13 +61,19 @@ async function getSellerNamesByPurpose(
 }
 
 export function getSellerNames(sellerIds: string[]): Promise<Record<string, string | null>> {
-  return getSellerNamesByPurpose(sellerIds, 'products')
+  return getSellerNamesByPath(sellerIds, 'sellers/products')
 }
 
 export function getWishlistSellerNames(
   sellerIds: string[],
 ): Promise<Record<string, string | null>> {
-  return getSellerNamesByPurpose(sellerIds, 'wishlists')
+  return getSellerNamesByPath(sellerIds, 'sellers/wishlists')
+}
+
+export function getOrderProductSellerNames(
+  sellerIds: string[],
+): Promise<Record<string, string | null>> {
+  return getSellerNamesByPath(sellerIds, 'users/order-products')
 }
 
 export interface SellerProfile {

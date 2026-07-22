@@ -1,7 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { hasPurchasedProduct, mapOrderToPrompt } from './orderAdapters.ts'
+import {
+  composePurchasedOrderCards,
+  hasPurchasedProduct,
+  mapOrderToPrompt,
+} from './orderAdapters.ts'
 
 test('mapOrderToPrompt keeps legacy mocked nested product orders', () => {
   const prompt = mapOrderToPrompt({
@@ -180,4 +184,131 @@ test('mapOrderToPrompt keeps paid products while an order refund is requested', 
   })
 
   assert.equal(prompt?.id, 'product-1')
+})
+
+test('composePurchasedOrderCards combines order, product, and seller responses', () => {
+  const cards = composePurchasedOrderCards(
+    [
+      {
+        orderId: 'order-1',
+        orderProductId: 'order-product-1',
+        productId: 'product-2',
+        orderStatus: 'COMPLETED',
+        orderProductStatus: 'PAID',
+        downloaded: true,
+        isRefundable: false,
+        paidAt: '2026-07-22T10:00:00',
+      },
+      {
+        orderId: 'order-2',
+        orderProductId: 'order-product-2',
+        productId: 'product-1',
+        orderStatus: 'COMPLETED',
+        orderProductStatus: 'PAID',
+        downloaded: false,
+        isRefundable: true,
+        paidAt: '2026-07-21T10:00:00',
+      },
+    ],
+    [
+      {
+        productId: 'product-1',
+        sellerId: 'seller-1',
+        title: 'First product',
+        amount: 1000,
+        thumbnailUrl: null,
+        productType: 'PROMPT',
+        model: 'GPT-4.1',
+        salesCount: 3,
+        averageRating: 4.5,
+        status: 'ACTIVE',
+      },
+      {
+        productId: 'product-2',
+        sellerId: 'seller-2',
+        title: 'Second product',
+        amount: 2000,
+        thumbnailUrl: '/second.png',
+        productType: 'NOTION',
+        model: '',
+        salesCount: 5,
+        averageRating: 4.8,
+        status: 'ACTIVE',
+      },
+    ],
+    { 'seller-1': '판매자 1', 'seller-2': '판매자 2' },
+  )
+
+  assert.deepEqual(cards.map((card) => card.id), ['product-2', 'product-1'])
+  assert.equal(cards[0]?.seller, '판매자 2')
+  assert.equal(cards[0]?.title, 'Second product')
+  assert.equal(cards[0]?.model, 'Prompt')
+  assert.equal(cards[0]?.downloaded, true)
+  assert.equal(cards[1]?.amount, 1000)
+})
+
+test('composePurchasedOrderCards excludes missing products and refunded orders', () => {
+  const cards = composePurchasedOrderCards(
+    [
+      {
+        orderId: 'order-missing',
+        productId: 'missing-product',
+        orderStatus: 'COMPLETED',
+        orderProductStatus: 'PAID',
+        downloaded: false,
+        isRefundable: false,
+      },
+      {
+        orderId: 'order-refunded',
+        productId: 'product-1',
+        orderStatus: 'ALL_REFUNDED',
+        orderProductStatus: 'REFUNDED',
+        downloaded: false,
+        isRefundable: false,
+      },
+    ],
+    [{
+      productId: 'product-1',
+      sellerId: 'seller-1',
+      title: 'Refunded product',
+      amount: 1000,
+      thumbnailUrl: null,
+      productType: 'PROMPT',
+      model: 'GPT-4.1',
+      salesCount: 0,
+      averageRating: 0,
+      status: 'ACTIVE',
+    }],
+    { 'seller-1': '판매자 1' },
+  )
+
+  assert.deepEqual(cards, [])
+})
+
+test('composePurchasedOrderCards uses a fallback when seller data is missing', () => {
+  const cards = composePurchasedOrderCards(
+    [{
+      orderId: 'order-1',
+      productId: 'product-1',
+      orderStatus: 'COMPLETED',
+      orderProductStatus: 'PAID',
+      downloaded: false,
+      isRefundable: false,
+    }],
+    [{
+      productId: 'product-1',
+      sellerId: 'seller-1',
+      title: 'Product',
+      amount: 1000,
+      thumbnailUrl: null,
+      productType: 'PROMPT',
+      model: 'GPT-4.1',
+      salesCount: 0,
+      averageRating: 0,
+      status: 'ACTIVE',
+    }],
+    { 'seller-1': null },
+  )
+
+  assert.equal(cards[0]?.seller, '탈퇴한 판매자')
 })

@@ -20,20 +20,31 @@ export interface SellerProductSummary {
   salesCount: number
 }
 
-export async function getProductsByIds(productIds: string[]): Promise<ProductByIdsItem[]> {
+async function getProductsByPurpose(
+  productIds: string[],
+  purpose: 'wishlists' | 'order-products',
+): Promise<ProductByIdsItem[]> {
   const chunks = splitUniqueIds(productIds)
   if (chunks.length === 0) return []
 
   const responses = await Promise.all(
     chunks.map((productIdsChunk) =>
       api.post<{ success: boolean; data: ProductByIdsItem[]; message: string }>(
-        `${API_BASE}/products/wishlists`,
+        `${API_BASE}/products/${purpose}`,
         { productIds: productIdsChunk },
       ),
     ),
   )
 
   return responses.flatMap((res) => res.data.data ?? [])
+}
+
+export function getProductsByIds(productIds: string[]): Promise<ProductByIdsItem[]> {
+  return getProductsByPurpose(productIds, 'wishlists')
+}
+
+export function getOrderProductsByIds(productIds: string[]): Promise<ProductByIdsItem[]> {
+  return getProductsByPurpose(productIds, 'order-products')
 }
 
 // GET /api/v2/products/sellers/me/summary — 판매자의 등록 상품 수·누적 판매 수

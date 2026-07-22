@@ -9,12 +9,12 @@ import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { deleteUserMe, updateUserMe } from '@/lib/users';
 import { getWishlists } from '@/lib/wishlists';
-import { getProductsByIds } from '@/lib/products';
-import { getWishlistSellerNames } from '@/lib/sellers';
+import { getOrderProductsByIds, getProductsByIds } from '@/lib/products';
+import { getOrderProductSellerNames, getWishlistSellerNames } from '@/lib/sellers';
 import { composeWishlistCards } from '@/lib/wishlistComposition';
 import { getPaymentHistory, requestRefund as apiRequestRefund } from '@/lib/payments';
 import { getOrders } from '@/lib/orders';
-import { mapOrderToPrompt } from '@/lib/orderAdapters';
+import { composePurchasedOrderCards, isActivePurchasedOrder } from '@/lib/orderAdapters';
 import { mapPaymentHistory } from '@/lib/paymentAdapters';
 import { OrderListItem, PaymentItem as ApiPaymentItem } from '@/types/api/orders';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
@@ -452,12 +452,27 @@ function MyPageContent() {
     if (!isLoggedIn) { openLoginModal(); return; }
     fetchUser();
     Promise.all([getOrders(), getPaymentHistory(1)])
-      .then(([orders, paymentHistory]) => {
+      .then(async ([orders, paymentHistory]) => {
         setOrderItems(orders);
-        setPurchased(orders.map(mapOrderToPrompt).filter((item): item is Prompt => item !== null));
         setPayments(mapPaymentHistory(paymentHistory.data, orders));
         setPaymentsPage(1);
         setPaymentsHasNext(paymentHistory.meta.hasNext);
+
+        const activeOrders = orders.filter(isActivePurchasedOrder);
+        const products = await getOrderProductsByIds(
+          activeOrders.flatMap((order) => order.productId ? [order.productId] : []),
+        );
+
+        let sellerNames: Record<string, string | null> = {};
+        try {
+          sellerNames = await getOrderProductSellerNames(
+            products.map((product) => product.sellerId),
+          );
+        } catch {
+          // 판매자 조회 실패는 카드 전체 실패로 전파하지 않고 fallback 문구를 사용한다.
+        }
+
+        setPurchased(composePurchasedOrderCards(activeOrders, products, sellerNames));
       })
       .catch(() => {})
       .finally(() => {
