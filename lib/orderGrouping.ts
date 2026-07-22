@@ -87,13 +87,16 @@ export function groupOrders(orderItems: OrderListItem[]): GroupedOrder[] {
       orderNumber,
       titleSummary,
       paidAt,
-      amount: items.reduce((sum, item) => sum + item.amount, 0),
+      amount: items.reduce((sum, item) => {
+        const amt = Number.isFinite(item.amount) ? item.amount : 0;
+        return sum + amt;
+      }, 0),
       status: ORDER_STATUS_LABEL[first.orderStatus] ?? '결제 대기',
       items: items.map((item) => ({
         orderProductId: item.orderProductId,
         productId: item.productId,
         title: item.title,
-        amount: item.amount,
+        amount: Number.isFinite(item.amount) ? item.amount : 0,
         orderProductStatus: item.orderProductStatus,
         downloaded: item.downloaded,
         isRefundable: item.isRefundable,

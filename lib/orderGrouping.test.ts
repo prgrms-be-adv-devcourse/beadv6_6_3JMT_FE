@@ -83,6 +83,13 @@ test('groupOrders uses createdAt when a pending or failed order has no paidAt', 
   assert.equal(result.paidAt, '2026-06-28T09:58:00')
 })
 
+test('groupOrders handles missing or undefined amount gracefully without producing NaN', () => {
+  const [result] = groupOrders([orderProduct({ amount: undefined as unknown as number })])
+
+  assert.equal(result.amount, 0)
+  assert.equal(result.items[0].amount, 0)
+})
+
 test('only paid and refundable order products are selectable', () => {
   const [result] = groupOrders([
     orderProduct({ orderProductId: 'selectable' }),
