@@ -15,7 +15,10 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Tag from '@/components/ui/Tag';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
-import { PRODUCT_TYPES, type ProductType } from '@/lib/productTypes';
+import {
+  PRODUCT_TYPES, PRODUCT_TYPE_LABEL, PRODUCT_TYPE_TITLE_PLACEHOLDER, PRODUCT_TYPE_DESC_PLACEHOLDER,
+  type ProductType,
+} from '@/lib/productTypes';
 
 /* ── Input ───────────────────────────────────────────────────────────── */
 
@@ -94,6 +97,7 @@ export default function SellPage() {
   const [galleryUrls, setGalleryUrls] = useState<(string | null)[]>(Array(5).fill(null));
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const showToast = useToast();
+  const typeLabel = PRODUCT_TYPE_LABEL[productType];
 
   const addTag = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,14 +108,15 @@ export default function SellPage() {
   const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
 
   const saveProduct = async (navigate: boolean) => {
-    if (!title.trim()) { showToast('프롬프트 제목을 입력해 주세요'); return; }
+    if (!title.trim()) { showToast(`${typeLabel} 제목을 입력해 주세요`); return; }
+    if (!desc.trim()) { showToast('상품 소개를 입력해 주세요'); return; }
     if (loading) return;
     setLoading(true);
     try {
       await api.post(`${API_BASE}/sellers/me/products`, {
         title,
         productType,
-        model,
+        model: productType === 'PROMPT' ? (model.trim() || null) : null,
         amount: Number(price),
         desc,
         content: productType === 'PROMPT' ? body : null,
@@ -158,7 +163,7 @@ export default function SellPage() {
 
   const previewItem: PromptItem = {
     id: 'preview',
-    title: title.trim() || '프롬프트 제목이 여기에 표시돼요',
+    title: title.trim() || `${typeLabel} 제목이 여기에 표시돼요`,
     icon: 'sparkles',
     productType,
     model: model.trim() || '모델 미정',
@@ -169,6 +174,14 @@ export default function SellPage() {
     desc: desc || '',
     thumbnail_url: thumbUrl ?? undefined,
   };
+
+  const outputLabel = productType === 'PROMPT' ? `${typeLabel} 내용` : productType === 'NOTION' ? `${typeLabel} 링크` : `${typeLabel} 파일`;
+  const outputText = productType === 'PROMPT' ? body : productType === 'NOTION' ? externalUrl : (fileUrl ? '파일이 업로드됐어요' : '');
+  const outputPlaceholder = productType === 'PROMPT'
+    ? '내용을 입력하면 이곳에서 실제 표시 형태를 확인할 수 있어요.'
+    : productType === 'NOTION'
+    ? '노션 템플릿 링크를 입력하면 이곳에서 확인할 수 있어요.'
+    : '파일을 업로드하면 이곳에서 확인할 수 있어요.';
 
   return (
     <div style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 32px 0' }}>
@@ -184,9 +197,9 @@ export default function SellPage() {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}>
         <div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-full)', fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
-            <Store style={{ width: 14, height: 14 }} /> 판매자 · 프롬프트 등록
+            <Store style={{ width: 14, height: 14 }} /> 판매자 · {typeLabel} 등록
           </div>
-          <h1 style={{ fontSize: 33, fontWeight: 700, letterSpacing: '-0.015em', margin: 0 }}>새 프롬프트 등록</h1>
+          <h1 style={{ fontSize: 33, fontWeight: 700, letterSpacing: '-0.015em', margin: 0 }}>새 {typeLabel} 등록</h1>
           <p style={{ fontSize: 16, color: 'var(--ph-text-secondary)', margin: '8px 0 0' }}>판매 수수료는 단 15%. 나머지는 모두 판매자의 몫이에요.</p>
         </div>
       </div>
@@ -199,7 +212,7 @@ export default function SellPage() {
           {/* 기본 정보 카드 */}
           <Card padding="28px">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-              <FormField label="프롬프트 제목" hint={`${title.length}/60`} value={title} maxLength={60} onChange={(v) => setTitle(v)} placeholder="예: 전환율 높이는 랜딩 카피 작성" />
+              <FormField label={`${typeLabel} 제목`} hint={`${title.length}/60`} value={title} maxLength={60} onChange={(v) => setTitle(v)} placeholder={PRODUCT_TYPE_TITLE_PLACEHOLDER[productType]} />
               <div>
                 <Label>상품 유형</Label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -208,8 +221,10 @@ export default function SellPage() {
                   ))}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <FormField label="대상 모델" value={model} onChange={(v) => setModel(v)} placeholder="예: GPT-4o" />
+              <div style={{ display: 'grid', gridTemplateColumns: productType === 'PROMPT' ? '1fr 1fr' : '1fr', gap: 16 }}>
+                {productType === 'PROMPT' && (
+                  <FormField label="대상 모델" value={model} onChange={(v) => setModel(v)} placeholder="예: GPT-4o" />
+                )}
                 <FormField label="가격" value={price} onChange={(v) => setPrice(v.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="4900" leading={<span style={{ fontWeight: 700 }}>₩</span>} />
               </div>
             </div>
@@ -224,7 +239,7 @@ export default function SellPage() {
               value={desc}
               onChange={(v) => setDesc(v.slice(0, 200))}
               rows={3}
-              placeholder="상품 목록에 표시되는 짧은 소개 문구를 입력하세요. 예: 전환율 높이는 랜딩 카피를 단계별로 만들어 드립니다."
+              placeholder={PRODUCT_TYPE_DESC_PLACEHOLDER[productType]}
             />
           </Card>
 
@@ -376,9 +391,14 @@ export default function SellPage() {
 
           {/* 내용 미리보기 */}
           <Card padding="16px">
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>프롬프트 내용</div>
-            <div style={{ fontSize: 13.5, lineHeight: 1.65, color: body ? 'var(--ph-text-secondary)' : 'var(--ph-text-muted)', whiteSpace: 'pre-wrap', maxHeight: 220, overflowY: 'auto', fontFamily: 'var(--ph-font-family)' }}>
-              {body || '내용을 입력하면 이곳에서 실제 표시 형태를 확인할 수 있어요.'}
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{typeLabel} 소개</div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.65, color: desc ? 'var(--ph-text-secondary)' : 'var(--ph-text-muted)', whiteSpace: 'pre-wrap', fontFamily: 'var(--ph-font-family)' }}>
+              {desc || '상품 소개를 입력하면 이곳에서 확인할 수 있어요.'}
+            </div>
+
+            <div style={{ fontSize: 13, fontWeight: 700, margin: '18px 0 8px' }}>{outputLabel}</div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.65, color: outputText ? 'var(--ph-text-secondary)' : 'var(--ph-text-muted)', whiteSpace: 'pre-wrap', maxHeight: 220, overflowY: 'auto', fontFamily: 'var(--ph-font-family)' }}>
+              {outputText || outputPlaceholder}
             </div>
             {tags.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>

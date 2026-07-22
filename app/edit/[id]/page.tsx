@@ -18,7 +18,10 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Tag from '@/components/ui/Tag';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
-import { PRODUCT_TYPES, type ProductType } from '@/lib/productTypes';
+import {
+  PRODUCT_TYPES, PRODUCT_TYPE_LABEL, PRODUCT_TYPE_TITLE_PLACEHOLDER, PRODUCT_TYPE_DESC_PLACEHOLDER,
+  PRODUCT_TYPE_CHANGE_PLACEHOLDER, type ProductType,
+} from '@/lib/productTypes';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -130,6 +133,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   const [saving, setSaving] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const showToast = useToast();
+  const typeLabel = PRODUCT_TYPE_LABEL[productType];
 
   const curVer = (versions[0]?.ver ?? '1.0').replace(/^v/, '');
   const nxtVer = nextVer(curVer, versionType);
@@ -152,7 +156,8 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     setSaving(true);
     try {
       await api.put(`${API_BASE}/sellers/me/products/${id}`, {
-        title, productType, model,
+        title, productType,
+        model: productType === 'PROMPT' ? (model.trim() || null) : null,
         amount: Number(price),
         desc,
         content: productType === 'PROMPT' ? body : null,
@@ -199,7 +204,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
 
   const previewItem: PromptItem = {
     id: 'preview',
-    title: title.trim() || '프롬프트 제목이 여기에 표시돼요',
+    title: title.trim() || `${typeLabel} 제목이 여기에 표시돼요`,
     icon: 'sparkles',
     productType,
     model: model.trim() || '모델 미정',
@@ -210,6 +215,14 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     desc: desc || '',
     thumbnail_url: thumbUrl ?? undefined,
   };
+
+  const outputLabel = productType === 'PROMPT' ? `${typeLabel} 내용` : productType === 'NOTION' ? `${typeLabel} 링크` : `${typeLabel} 파일`;
+  const outputText = productType === 'PROMPT' ? body : productType === 'NOTION' ? externalUrl : (fileUrl ? '파일이 업로드됐어요' : '');
+  const outputPlaceholder = productType === 'PROMPT'
+    ? '내용을 입력하면 이곳에서 실제 표시 형태를 확인할 수 있어요.'
+    : productType === 'NOTION'
+    ? '노션 템플릿 링크를 입력하면 이곳에서 확인할 수 있어요.'
+    : '파일을 업로드하면 이곳에서 확인할 수 있어요.';
 
   return (
     <div style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 32px 0' }}>
@@ -225,9 +238,9 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}>
         <div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-full)', fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
-            <Pencil style={{ width: 14, height: 14 }} /> 상품 수정
+            <Pencil style={{ width: 14, height: 14 }} /> {typeLabel} 수정
           </div>
-          <h1 style={{ fontSize: 33, fontWeight: 700, letterSpacing: '-0.015em', margin: 0 }}>프롬프트 수정</h1>
+          <h1 style={{ fontSize: 33, fontWeight: 700, letterSpacing: '-0.015em', margin: 0 }}>{typeLabel} 수정</h1>
           {!isDraft && (
             <p style={{ fontSize: 16, color: 'var(--ph-text-secondary)', margin: '8px 0 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               저장하면{' '}
@@ -251,7 +264,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
           {/* 기본 정보 카드 */}
           <Card padding="28px">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-              <FormField label="프롬프트 제목" hint={`${title.length}/60`} value={title} maxLength={60} onChange={(v) => setTitle(v)} placeholder="예: 전환율 높이는 랜딩 카피 작성" />
+              <FormField label={`${typeLabel} 제목`} hint={`${title.length}/60`} value={title} maxLength={60} onChange={(v) => setTitle(v)} placeholder={PRODUCT_TYPE_TITLE_PLACEHOLDER[productType]} />
               <div>
                 <Label>상품 유형</Label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -260,8 +273,10 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
                   ))}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <FormField label="대상 모델" value={model} onChange={(v) => setModel(v)} placeholder="예: GPT-4o" />
+              <div style={{ display: 'grid', gridTemplateColumns: productType === 'PROMPT' ? '1fr 1fr' : '1fr', gap: 16 }}>
+                {productType === 'PROMPT' && (
+                  <FormField label="대상 모델" value={model} onChange={(v) => setModel(v)} placeholder="예: GPT-4o" />
+                )}
                 <FormField label="가격" value={price} onChange={(v) => setPrice(v.replace(/[^0-9]/g, ''))} inputMode="numeric" placeholder="4900" leading={<span style={{ fontWeight: 700 }}>₩</span>} />
               </div>
             </div>
@@ -276,7 +291,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
               value={desc}
               onChange={(v) => setDesc(v.slice(0, 200))}
               rows={3}
-              placeholder="상품 목록에 표시되는 짧은 소개 문구를 입력하세요."
+              placeholder={PRODUCT_TYPE_DESC_PLACEHOLDER[productType]}
             />
           </Card>
 
@@ -436,7 +451,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
                 onChange={(e) => { setChangeReason(e.target.value); setNoteErr(false); }}
                 maxLength={500}
                 rows={3}
-                placeholder="예: 프롬프트 지시문 개선, 예시 3개 추가"
+                placeholder={PRODUCT_TYPE_CHANGE_PLACEHOLDER[productType]}
                 style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${noteErr ? 'var(--ph-error)' : 'var(--ph-border)'}`, borderRadius: 'var(--ph-radius-md)', padding: '12px 14px', fontFamily: 'var(--ph-font-family)', fontSize: 15, lineHeight: 1.6, resize: 'vertical', outline: 'none', color: 'var(--ph-text)' }}
               />
               {noteErr && (
@@ -451,7 +466,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 8 }}>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
               <Button variant="secondary" size="lg" onClick={handleCancel}>취소</Button>
-              <Button variant="solid" size="lg" disabled={saving || !title.trim()} onClick={save}>
+              <Button variant="solid" size="lg" disabled={saving || !title.trim() || !desc.trim()} onClick={save}>
                 {saving ? '저장 중...' : isDraft ? '저장' : '새 버전으로 저장'}
               </Button>
             </div>
@@ -465,9 +480,14 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
           </div>
           <PromptCard p={previewItem} />
           <Card padding="16px">
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>프롬프트 내용</div>
-            <div style={{ fontSize: 13.5, lineHeight: 1.65, color: body ? 'var(--ph-text-secondary)' : 'var(--ph-text-muted)', whiteSpace: 'pre-wrap', maxHeight: 220, overflowY: 'auto', fontFamily: 'var(--ph-font-family)' }}>
-              {body || '내용을 입력하면 이곳에서 실제 표시 형태를 확인할 수 있어요.'}
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{typeLabel} 소개</div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.65, color: desc ? 'var(--ph-text-secondary)' : 'var(--ph-text-muted)', whiteSpace: 'pre-wrap', fontFamily: 'var(--ph-font-family)' }}>
+              {desc || '상품 소개를 입력하면 이곳에서 확인할 수 있어요.'}
+            </div>
+
+            <div style={{ fontSize: 13, fontWeight: 700, margin: '18px 0 8px' }}>{outputLabel}</div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.65, color: outputText ? 'var(--ph-text-secondary)' : 'var(--ph-text-muted)', whiteSpace: 'pre-wrap', maxHeight: 220, overflowY: 'auto', fontFamily: 'var(--ph-font-family)' }}>
+              {outputText || outputPlaceholder}
             </div>
             {tags.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
