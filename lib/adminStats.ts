@@ -1,18 +1,6 @@
 import api from '@/lib/auth'
 import { API_BASE } from '@/lib/apiBase'
 
-export interface AdminRawStats {
-  totalUsers?: number
-  totalUsersDelta?: number
-  newToday?: number
-  newTodayDelta?: number
-  monthRevenue?: number
-  monthRevenueDelta?: number
-  pendingPayout?: number
-  pendingPayoutCount?: number
-  sales7d?: any[]
-}
-
 export interface AdminMonthlyOrdersData {
   monthlyTransactionAmount: number
 }
@@ -25,13 +13,6 @@ export interface DailyTransaction {
 
 export interface AdminWeeklyOrdersData {
   dailyTransactions: DailyTransaction[]
-}
-
-export async function getAdminDashboardStats(): Promise<AdminRawStats> {
-  const res = await api.get<{ success: boolean; data: AdminRawStats; message: string }>(
-    `${API_BASE}/admin/stats`,
-  )
-  return res.data.data
 }
 
 export async function getAdminMonthlyOrders(): Promise<AdminMonthlyOrdersData> {

@@ -1,25 +1,16 @@
 import api from '@/lib/auth'
 import { API_BASE } from '@/lib/apiBase'
+import {
+  mapAdminProducts,
+  type AdminProduct,
+  type AdminProductResponse,
+} from '@/lib/adminProductAdapters'
 
-export interface AdminProduct {
-  id: string
-  title: string
-  seller: string
-  model: string
-  icon: string
-  status?: string
-}
+export type { AdminProduct } from '@/lib/adminProductAdapters'
 
-export interface GetAdminProductsParams {
-  page?: number
-  size?: number
-  status?: string
-}
-
-export async function getAdminProducts(params?: GetAdminProductsParams): Promise<AdminProduct[]> {
-  const res = await api.get<{ success: boolean; data: AdminProduct[]; message: string }>(
+export async function getAdminProducts(): Promise<AdminProduct[]> {
+  const res = await api.get<{ success: boolean; data: AdminProductResponse[]; message: string }>(
     `${API_BASE}/admin/products`,
-    { params },
   )
-  return res.data.data
+  return mapAdminProducts(res.data.data)
 }
