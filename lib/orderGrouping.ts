@@ -1,34 +1,109 @@
-import type { PaymentItem } from '@/types/api/orders';
+import type {
+  OrderListItem,
+  OrderProductStatus,
+  PaymentItem,
+  PaymentStatus,
+} from '@/types/api/orders';
 
-export type OrderStatus = '결제완료' | '부분 환불' | '전체 환불';
+export type OrderHistoryStatus = '결제완료' | '환불 신청 중' | '부분 환불' | '전체 환불';
+export type OrderHistoryProductStatus =
+  | '결제완료'
+  | '환불 신청 중'
+  | '환불 완료'
+  | '결제 대기'
+  | '결제 실패';
+
+export interface GroupedOrderItem {
+  orderProductId: string;
+  productId: string;
+  title: string;
+  amount: number;
+  orderProductStatus: OrderProductStatus;
+  downloaded: boolean;
+  isRefundable: boolean;
+  selectable: boolean;
+}
 
 export interface GroupedOrder {
   orderId: string;
+  paymentId: string;
   paidAt: string;
   amount: number;
-  status: OrderStatus;
-  items: PaymentItem[];
+  status: OrderHistoryStatus;
+  items: GroupedOrderItem[];
 }
 
-export function groupOrders(payments: PaymentItem[]): GroupedOrder[] {
-  const grouped = new Map<string, PaymentItem[]>();
-  for (const payment of payments) {
-    const items = grouped.get(payment.orderId) ?? [];
-    items.push(payment);
-    grouped.set(payment.orderId, items);
-  }
+export interface RefundSelectionSummary {
+  count: number;
+  amount: number;
+  orderProductIds: string[];
+}
 
-  return Array.from(grouped.entries()).map(([orderId, items]) => {
-    const allPaid = items.every((it) => it.paymentStatus === 'PAID');
-    const allRefunded = items.every((it) => it.paymentStatus === 'ALL_REFUNDED');
-    const status: OrderStatus = allPaid ? '결제완료' : allRefunded ? '전체 환불' : '부분 환불';
+const ORDER_STATUS_LABEL: Record<PaymentStatus, OrderHistoryStatus> = {
+  PAID: '결제완료',
+  REFUNDING: '환불 신청 중',
+  PARTIAL_REFUNDED: '부분 환불',
+  ALL_REFUNDED: '전체 환불',
+};
 
-    return {
-      orderId,
-      paidAt: items[0].paidAt,
-      amount: items.reduce((sum, it) => sum + it.amount, 0),
-      status,
-      items,
-    };
-  });
+const ORDER_PRODUCT_STATUS_LABEL: Record<OrderProductStatus, OrderHistoryProductStatus> = {
+  PENDING: '결제 대기',
+  PAID: '결제완료',
+  FAILED: '결제 실패',
+  REFUND_REQUESTED: '환불 신청 중',
+  REFUNDED: '환불 완료',
+};
+
+export function orderProductStatusLabel(status: OrderProductStatus): OrderHistoryProductStatus {
+  return ORDER_PRODUCT_STATUS_LABEL[status];
+}
+
+export function groupOrders(payments: PaymentItem[], orderItems: OrderListItem[]): GroupedOrder[] {
+  return payments.map((payment) => ({
+    orderId: payment.orderId,
+    paymentId: payment.paymentId,
+    paidAt: payment.paidAt,
+    amount: payment.amount,
+    status: ORDER_STATUS_LABEL[payment.paymentStatus],
+    items: orderItems
+      .filter((item) => item.orderId === payment.orderId)
+      .map((item) => ({
+        orderProductId: item.orderProductId,
+        productId: item.productId,
+        title: item.title,
+        amount: item.amount,
+        orderProductStatus: item.orderProductStatus,
+        downloaded: item.downloaded,
+        isRefundable: item.isRefundable,
+        selectable: item.orderProductStatus === 'PAID' && item.isRefundable,
+      })),
+  }));
+}
+
+export function getSelectedRefundSummary(
+  items: GroupedOrderItem[],
+  selectedIds: readonly string[],
+): RefundSelectionSummary {
+  const selected = new Set(selectedIds);
+  const selectedItems = items.filter(
+    (item) => item.selectable && selected.has(item.orderProductId),
+  );
+
+  return {
+    count: selectedItems.length,
+    amount: selectedItems.reduce((sum, item) => sum + item.amount, 0),
+    orderProductIds: selectedItems.map((item) => item.orderProductId),
+  };
+}
+
+export function markRefundRequested(
+  orderItems: OrderListItem[],
+  selectedIds: readonly string[],
+): OrderListItem[] {
+  const selected = new Set(selectedIds);
+  return orderItems.map((item) =>
+    selected.has(item.orderProductId)
+      ? { ...item, orderProductStatus: 'REFUND_REQUESTED', isRefundable: false }
+      : item,
+  );
 }
