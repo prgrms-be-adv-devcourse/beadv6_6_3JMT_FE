@@ -10,6 +10,7 @@ import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
 import ImageUpload from '@/components/ui/ImageUpload';
 import FileUpload from '@/components/ui/FileUpload';
 import { useToast } from '@/store/useToastStore';
+import { isValidProductPrice } from '@/lib/utils';
 import Label from '@/components/ui/Label';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -110,6 +111,7 @@ export default function SellPage() {
   const saveProduct = async (navigate: boolean) => {
     if (!title.trim()) { showToast(`${typeLabel} 제목을 입력해 주세요`); return; }
     if (!desc.trim()) { showToast('상품 소개를 입력해 주세요'); return; }
+    if (!isValidProductPrice(Number(price))) { showToast('가격은 무료(0원) 또는 100원 이상으로 입력해 주세요'); return; }
     if (loading) return;
     setLoading(true);
     try {
