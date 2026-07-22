@@ -94,3 +94,16 @@ export async function getSellerProfile(sellerId: string): Promise<SellerProfile 
     return null
   }
 }
+
+// GET /api/v2/users/order-product — 구매한 프롬프트 리더(/reader)용 판매자 정보 단건 조회
+export async function getOrderProductSellerProfile(sellerId: string): Promise<SellerProfile | null> {
+  try {
+    const res = await api.get<{ success: boolean; data: SellerProfile; message: string }>(
+      `${API_BASE}/users/order-product`,
+      { params: { sellerId } },
+    )
+    return res.data.data
+  } catch {
+    return null
+  }
+}
