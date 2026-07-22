@@ -154,7 +154,7 @@ export default function SellerSettlementsPanel({
             onClick={() => changeFilters(value, settlementMonth)}
             className={`rounded-ph-full border px-3.5 py-1.5 text-ph-caption font-semibold transition-colors ${
               filter === value
-                ? 'border-ph-primary bg-ph-primary text-ph-on-accent'
+                ? 'border-ph-primary bg-ph-secondary text-ph-primary'
                 : 'border-ph-border text-ph-text-secondary hover:bg-ph-gray-50'
             }`}
           >

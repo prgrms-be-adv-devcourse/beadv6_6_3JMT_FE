@@ -141,7 +141,7 @@
   --color-ph-warning-bg: var(--ph-warning-bg);
 
   /* Font family */
-  --font-family-ph: var(--ph-font-family);
+  --font-ph: var(--ph-font-family);
 
   /* Font weight */
   --font-weight-ph-regular: var(--ph-weight-regular);
@@ -149,28 +149,26 @@
   --font-weight-ph-bold: var(--ph-weight-bold);
 
   /* Font size */
-  --font-size-ph-headline-display: var(--ph-headline-display-size);
-  --font-size-ph-headline-lg: var(--ph-headline-lg-size);
-  --font-size-ph-headline-md: var(--ph-headline-md-size);
-  --font-size-ph-body-lg: var(--ph-body-lg-size);
-  --font-size-ph-body-md: var(--ph-body-md-size);
-  --font-size-ph-body-sm: var(--ph-body-sm-size);
-  --font-size-ph-label-lg: var(--ph-label-lg-size);
-  --font-size-ph-label-md: var(--ph-label-md-size);
-  --font-size-ph-label-sm: var(--ph-label-sm-size);
-  --font-size-ph-caption: var(--ph-caption-size);
-
-  /* Line height */
-  --line-height-ph-headline-display: var(--ph-headline-display-lh);
-  --line-height-ph-headline-lg: var(--ph-headline-lg-lh);
-  --line-height-ph-headline-md: var(--ph-headline-md-lh);
-  --line-height-ph-body-lg: var(--ph-body-lg-lh);
-  --line-height-ph-body-md: var(--ph-body-md-lh);
-  --line-height-ph-body-sm: var(--ph-body-sm-lh);
-  --line-height-ph-label-lg: var(--ph-label-lg-lh);
-  --line-height-ph-label-md: var(--ph-label-md-lh);
-  --line-height-ph-label-sm: var(--ph-label-sm-lh);
-  --line-height-ph-caption: var(--ph-caption-lh);
+  --text-ph-headline-display: var(--ph-headline-display-size);
+  --text-ph-headline-display--line-height: var(--ph-headline-display-lh);
+  --text-ph-headline-lg: var(--ph-headline-lg-size);
+  --text-ph-headline-lg--line-height: var(--ph-headline-lg-lh);
+  --text-ph-headline-md: var(--ph-headline-md-size);
+  --text-ph-headline-md--line-height: var(--ph-headline-md-lh);
+  --text-ph-body-lg: var(--ph-body-lg-size);
+  --text-ph-body-lg--line-height: var(--ph-body-lg-lh);
+  --text-ph-body-md: var(--ph-body-md-size);
+  --text-ph-body-md--line-height: var(--ph-body-md-lh);
+  --text-ph-body-sm: var(--ph-body-sm-size);
+  --text-ph-body-sm--line-height: var(--ph-body-sm-lh);
+  --text-ph-label-lg: var(--ph-label-lg-size);
+  --text-ph-label-lg--line-height: var(--ph-label-lg-lh);
+  --text-ph-label-md: var(--ph-label-md-size);
+  --text-ph-label-md--line-height: var(--ph-label-md-lh);
+  --text-ph-label-sm: var(--ph-label-sm-size);
+  --text-ph-label-sm--line-height: var(--ph-label-sm-lh);
+  --text-ph-caption: var(--ph-caption-size);
+  --text-ph-caption--line-height: var(--ph-caption-lh);
 
   /* Spacing */
   --spacing-ph-2xs: var(--ph-space-2xs);

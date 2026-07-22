@@ -10,6 +10,7 @@
 
 - 이 프로젝트는 **Tailwind v4** → `tailwind.config.ts` 없음. 토큰은 `app/globals.css`의 `:root`(원시값) + `@theme`(Tailwind 매핑) 2단 구조.
 - **원본이 토큰(`var(--ph-*)`)으로 쓴 건 토큰으로, 인라인 리터럴(`#fdeceb` 등)로 쓴 건 그대로 인라인으로** 이식한다. (임의 토큰화 금지 — 원본과 달라짐)
+- Tailwind v4 `@theme` 네임스페이스는 폰트 패밀리 `--font-ph`, 폰트 크기 `--text-ph-*`, 대응 행간 `--text-ph-*--line-height`를 사용한다. `--font-family-*`, `--font-size-*`, `--line-height-*`로 선언하면 유틸리티가 생성되지 않는다.
 
 ### Tailwind v4 단위 규칙
 - Tailwind v4 기본 spacing 단위: `--spacing: 0.25rem` → `gap-4` = 1rem ≈ 16px
