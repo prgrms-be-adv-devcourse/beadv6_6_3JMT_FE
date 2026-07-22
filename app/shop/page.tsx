@@ -116,11 +116,12 @@ export default function ShopPage() {
           if (s === 'STOPPED') return 'stopped'
           return 'draft'
         }
-        const products = raw.map((p: { productId: string; status: string; rejectionReason?: string; [key: string]: unknown }) => ({
+        const products = raw.map((p: { productId: string; status: string; rejectionReason?: string; averageRating?: number; [key: string]: unknown }) => ({
           ...p,
           id: p.productId,
           status: toStatus(p.status),
           rejectionReason: p.rejectionReason ?? null,
+          rating: p.averageRating,
         }));
         setMyListings(products);
       });
