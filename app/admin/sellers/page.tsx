@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, X, Store } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import { type SellerRegister, getSellerRegisters, approveSellerRegister, rejectSellerRegister } from '@/lib/adminSellers'
+import { notifyAdminSellerRegistersChanged } from '@/lib/adminSellerEvents'
 import { SectionCard } from '@/components/admin/SectionCard'
 import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { Badge, StatusBadge } from '@/components/admin/Badge'
@@ -58,6 +59,7 @@ export default function AdminSellersPage() {
     try {
       await approveSellerRegister(registerId)
       setApplies((prev) => prev.map((a) => (a.registerId === registerId ? { ...a, status: 'approved' } : a)))
+      notifyAdminSellerRegistersChanged()
     } finally {
       setActing(null)
     }
@@ -75,6 +77,7 @@ export default function AdminSellersPage() {
     try {
       await rejectSellerRegister(registerId, rejectReason.trim())
       setApplies((prev) => prev.map((a) => (a.registerId === registerId ? { ...a, status: 'rejected' } : a)))
+      notifyAdminSellerRegistersChanged()
     } finally {
       setActing(null)
     }

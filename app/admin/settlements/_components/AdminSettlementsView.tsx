@@ -9,7 +9,6 @@ import {
   Clock,
   Pause,
   PauseCircle,
-  Play,
   RefreshCw,
   RotateCcw,
   X,
@@ -23,9 +22,7 @@ import {
   getAdminSettlementDetail,
   getAdminSettlements,
   getAdminSettlementSummary,
-  getSettlementJobStatus,
   runAdminSettlementAction,
-  runSettlementBatch,
   type AdminMonthlySettlement,
   type AdminSettlementAction,
   type AdminSettlementDetail,
@@ -113,10 +110,6 @@ export default function AdminSettlementsView() {
   const [actingId, setActingId] = useState<string | null>(null)
   const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [batchOpen, setBatchOpen] = useState(false)
-  const [batchPeriod, setBatchPeriod] = useState(() => new Date().toISOString().slice(0, 7))
-  const [batchRunning, setBatchRunning] = useState(false)
-  const [batchMessage, setBatchMessage] = useState<string | null>(null)
   const listRequestRef = useRef(0)
   const detailRequestRef = useRef<Record<string, number>>({})
 
@@ -260,44 +253,6 @@ export default function AdminSettlementsView() {
     setCancelTarget(null)
   }
 
-  const pollJob = async (jobExecutionId: number) => {
-    for (let attempt = 0; attempt < 40; attempt += 1) {
-      const status = await getSettlementJobStatus(jobExecutionId)
-      if (status.status === 'COMPLETED') return { ok: true, message: null }
-      if (status.status === 'FAILED' || status.status === 'STOPPED')
-        return { ok: false, message: status.failureMessage }
-      await new Promise((resolve) => window.setTimeout(resolve, 1500))
-    }
-    return { ok: false, message: '상태 확인 시간이 초과됐어요.' }
-  }
-
-  const startBatch = async () => {
-    if (!/^\d{4}-\d{2}$/.test(batchPeriod)) {
-      setBatchMessage('기준 월을 선택해 주세요.')
-      return
-    }
-    setBatchRunning(true)
-    setBatchMessage('정산 배치를 실행하고 있어요…')
-    try {
-      const job = await runSettlementBatch(batchPeriod)
-      const result = await pollJob(job.jobExecutionId)
-      setBatchMessage(
-        result.ok
-          ? `${batchPeriod} 정산 배치가 완료됐어요.`
-          : `정산 배치 실패: ${result.message ?? '알 수 없는 오류'}`,
-      )
-      if (result.ok)
-        await Promise.all([
-          loadSummary(settlementMonth),
-          loadList(filter, settlementMonth, 0, false),
-        ])
-    } catch {
-      setBatchMessage('정산 배치 요청에 실패했어요. 권한과 연결 상태를 확인해 주세요.')
-    } finally {
-      setBatchRunning(false)
-    }
-  }
-
   const sumBy = (statuses: SettlementDisplayStatus[]) =>
     summary
       .filter((card) => statuses.includes(card.status))
@@ -365,7 +320,7 @@ export default function AdminSettlementsView() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-ph-12">
+      <div>
         <label className="flex flex-col gap-ph-2xs text-ph-caption font-semibold text-ph-text-secondary">
           정산 월
           <input
@@ -375,45 +330,7 @@ export default function AdminSettlementsView() {
             className="h-[38px] rounded-ph-sm border border-ph-border bg-ph-white px-3 text-ph-body-sm outline-none focus:border-ph-primary"
           />
         </label>
-        <button
-          type="button"
-          onClick={() => {
-            setBatchOpen((open) => !open)
-            setBatchMessage(null)
-          }}
-          className="inline-flex h-[38px] items-center gap-ph-8 rounded-ph-sm border border-ph-border bg-ph-white px-ph-16 text-[13.5px] font-semibold text-ph-text-secondary hover:bg-ph-gray-50"
-        >
-          <Play size={15} className="text-ph-primary" /> 수동 정산 실행
-        </button>
       </div>
-
-      {batchOpen && (
-        <div className="rounded-ph-lg border border-ph-border bg-ph-white px-5 py-[18px]">
-          <div className="flex flex-wrap items-end gap-ph-12">
-            <label className="flex flex-col gap-ph-2xs text-ph-caption font-semibold text-ph-text-secondary">
-              배치 기준 월
-              <input
-                type="month"
-                value={batchPeriod}
-                onChange={(event) => setBatchPeriod(event.target.value)}
-                disabled={batchRunning}
-                className="h-[38px] rounded-ph-sm border border-ph-border bg-ph-white px-3 text-ph-body-sm outline-none focus:border-ph-primary"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={startBatch}
-              disabled={batchRunning}
-              className="inline-flex h-[38px] items-center gap-ph-2xs rounded-ph-sm bg-ph-primary px-[18px] text-[13.5px] font-semibold text-ph-on-accent disabled:opacity-40"
-            >
-              <Play size={15} /> {batchRunning ? '실행 중…' : '정산 실행'}
-            </button>
-            {batchMessage && (
-              <span className="text-ph-caption text-ph-text-muted">{batchMessage}</span>
-            )}
-          </div>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 gap-ph-16 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => {

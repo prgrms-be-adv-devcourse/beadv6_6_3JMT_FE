@@ -2,43 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  Users,
-  UserPlus,
-  TrendingUp,
-  TrendingDown,
-  Wallet,
-  ClipboardCheck,
-  Sparkles,
-} from 'lucide-react'
+import { Users, UserPlus, TrendingUp, Wallet, ClipboardCheck, Sparkles } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useAuthStore } from '@/store/useAuthStore'
-import { getAdminUserStats } from '@/lib/adminUsers'
-import { getAdminDashboardStats, getAdminMonthlyOrders, getAdminWeeklyOrders } from '@/lib/adminStats'
-import { getAdminProducts } from '@/lib/adminProducts'
-import type { AdminProduct } from '@/lib/adminProducts'
+import { getAdminHome } from '@/lib/adminHome'
+import type { AdminHomeViewModel } from '@/lib/adminHomeAdapters'
 import { SectionCard, LinkAction } from '@/components/admin/SectionCard'
 import { ICON_MAP } from '@/lib/iconMap'
 
-interface SalesPoint {
-  day: string
-  date: string
-  count: number
-  revenue: number
-}
-
-interface Stats {
-  totalUsers: number
-  totalUsersDelta?: number
-  newToday: number
-  newTodayDelta?: number
-  monthRevenue: number
-  monthRevenueDelta?: number
-  pendingPayout?: number
-  pendingPayoutCount?: number
-  sales7d: SalesPoint[]
-}
-
+type SalesPoint = AdminHomeViewModel['stats']['sales7d'][number]
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`
 function wonShort(n: number) {
@@ -53,17 +25,14 @@ function StatCard({
   label,
   value,
   sub,
-  delta,
   loading,
 }: {
   Icon: typeof Users
   label: string
   value: string
   sub?: string
-  delta?: number
   loading?: boolean
 }) {
-  const up = delta != null && delta >= 0
   return (
     <div className="rounded-ph-lg border border-ph-border bg-ph-white px-[22px] py-[20px]">
       <div className="flex items-center gap-[10px]">
@@ -80,16 +49,6 @@ function StatCard({
             <span className="text-[30px] font-bold leading-none tracking-[-0.02em] text-ph-text">
               {value}
             </span>
-            {delta != null && (
-              <span
-                className={`inline-flex items-center gap-[2px] pb-[2px] text-[13px] font-bold ${
-                  up ? 'text-ph-primary' : 'text-ph-error'
-                }`}
-              >
-                {up ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
-                {Math.abs(delta)}%
-              </span>
-            )}
           </>
         )}
       </div>
@@ -197,52 +156,64 @@ function CategoryIcon({ slug, style }: { slug: string; style?: CSSProperties }) 
 export default function AdminDashboardPage() {
   const { token } = useAuthStore()
   const router = useRouter()
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [products, setProducts] = useState<AdminProduct[]>([])
+  const [home, setHome] = useState<AdminHomeViewModel | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   const load = async () => {
+    setLoading(true)
+    setError(false)
     try {
-      const [statsData, productsData, monthData, weekendData] = await Promise.all([
-        getAdminDashboardStats().catch(() => null),
-        getAdminProducts({ status: 'review' }).catch(() => null),
-        getAdminMonthlyOrders().catch(() => null),
-        getAdminWeeklyOrders().catch(() => null),
-      ])
-      const userStats = await getAdminUserStats().catch(() => null)
-
-      setStats({
-        ...(statsData ?? {}),
-        totalUsers: userStats?.totalUsers ?? statsData?.totalUsers ?? 0,
-        newToday: userStats?.todayNewUsers ?? statsData?.newToday ?? 0,
-        monthRevenue: monthData?.monthlyTransactionAmount ?? statsData?.monthRevenue ?? 0,
-        sales7d: weekendData?.dailyTransactions?.map((d) => {
-          const dt = new Date(d.date)
-          const dayStr = Number.isNaN(dt.getTime()) ? '' : ['일', '월', '화', '수', '목', '금', '토'][dt.getDay()]
-          return {
-            day: dayStr,
-            date: d.date && !Number.isNaN(dt.getTime()) ? `${dt.getMonth() + 1}/${dt.getDate()}` : d.date,
-            count: d.transactionCount || 0,
-            revenue: d.transactionAmount || 0,
-          }
-        }) || statsData?.sales7d || []
-      })
-      setProducts(productsData ?? [])
+      setHome(await getAdminHome())
+    } catch {
+      setError(true)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    if (token) load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!token) return
+
+    let active = true
+    void getAdminHome()
+      .then((data) => {
+        if (active) setHome(data)
+      })
+      .catch(() => {
+        if (active) setError(true)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
   }, [token])
 
+  const stats = home?.stats
   const sales = stats?.sales7d ?? []
-  const weekTotal = sales.reduce((s, d) => s + d.count, 0)
-  const weekRevenue = sales.reduce((s, d) => s + d.revenue, 0)
-  const reviewProducts = products.filter((p) => p.status === 'review').slice(0, 4)
-  const reviewCount = products.filter((p) => p.status === 'review').length
+  const weekTotal = stats?.weekTotal ?? 0
+  const weekRevenue = stats?.weekRevenue ?? 0
+  const reviewProducts = home?.products ?? []
+  const reviewCount = home?.reviewCount ?? 0
+
+  if (error) {
+    return (
+      <div className="rounded-ph-lg border border-ph-border bg-ph-white px-[24px] py-[56px] text-center">
+        <div className="text-[15px] font-bold text-ph-text">대시보드 정보를 불러오지 못했어요</div>
+        <div className="mt-[6px] text-[13.5px] text-ph-text-muted">잠시 후 다시 시도해 주세요.</div>
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="mt-[18px] inline-flex h-[36px] items-center justify-center rounded-ph-sm bg-ph-primary px-[16px] text-[13.5px] font-semibold text-white hover:bg-ph-blue-hover"
+        >
+          다시 시도
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-[20px]">
@@ -252,7 +223,6 @@ export default function AdminDashboardPage() {
           Icon={Users}
           label="총 가입자"
           value={(stats?.totalUsers ?? 0).toLocaleString('ko-KR')}
-          delta={stats?.totalUsersDelta}
           sub="누적 회원 수"
           loading={loading}
         />
@@ -260,23 +230,21 @@ export default function AdminDashboardPage() {
           Icon={UserPlus}
           label="오늘 신규 가입"
           value={(stats?.newToday ?? 0).toLocaleString('ko-KR')}
-          delta={stats?.newTodayDelta}
-          sub="어제 대비"
+          sub="오늘 가입한 회원"
           loading={loading}
         />
         <StatCard
           Icon={TrendingUp}
           label="이번 달 거래액"
           value={wonShort(stats?.monthRevenue ?? 0)}
-          delta={stats?.monthRevenueDelta}
           sub={`GMV · ${won(stats?.monthRevenue ?? 0)}`}
           loading={loading}
         />
         <StatCard
           Icon={Wallet}
           label="정산 대기 금액"
-          value={wonShort(stats?.pendingPayout ?? 0)}
-          sub={`${stats?.pendingPayoutCount ?? 0}건 처리 대기`}
+          value={wonShort(stats?.pendingApprovalAmount ?? 0)}
+          sub={`${stats?.pendingApprovalCount ?? 0}건 처리 대기`}
           loading={loading}
         />
       </div>
@@ -310,7 +278,11 @@ export default function AdminDashboardPage() {
         bodyStyle={{ padding: reviewProducts.length ? '6px 0' : 0 }}
       >
         {loading ? null : reviewProducts.length === 0 ? (
-          <AdminEmpty Icon={ClipboardCheck} title="검수할 상품이 없어요" sub="모든 등록 상품을 검토했습니다." />
+          <AdminEmpty
+            Icon={ClipboardCheck}
+            title="검수할 상품이 없어요"
+            sub="모든 등록 상품을 검토했습니다."
+          />
         ) : (
           reviewProducts.map((p, i) => (
             <div

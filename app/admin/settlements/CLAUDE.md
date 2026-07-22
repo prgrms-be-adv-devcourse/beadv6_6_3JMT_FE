@@ -10,7 +10,7 @@
 ## 구조
 
 - `page.tsx`는 정산 화면 컴포넌트만 조합한다.
-- `_components/AdminSettlementsView.tsx`가 필터, 목록, 상세 캐시, 액션, 수동 배치 상태를 관리한다.
+- `_components/AdminSettlementsView.tsx`가 필터, 목록, 상세 캐시와 관리자 액션 상태를 관리한다.
 - 기존 `/admin/payments`는 호환을 위한 `/admin/settlements` 리다이렉트만 제공한다.
 
 ## 주의 사항
@@ -18,3 +18,4 @@
 - 월별 합계는 백엔드 응답값을 사용하고 주간 행을 프론트에서 다시 합산하지 않는다.
 - 상태 전이 후 현재 월 상세, 월별 목록, 요약 카드를 다시 조회한다.
 - 취소는 확인 다이얼로그를 거친다.
+- `settlement-service`의 배치 API는 기능 플래그로 켜는 로컬 검증 전용이므로 관리자 UI에 노출하지 않는다.

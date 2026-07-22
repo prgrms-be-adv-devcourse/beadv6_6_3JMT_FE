@@ -1,6 +1,6 @@
-/** 금액을 한국 원화 형식으로 포맷 (₩1,234,567) */
-export function won(n: number): string {
-  return '₩' + n.toLocaleString('ko-KR')
+export function won(n: number | null | undefined): string {
+  const val = typeof n === 'number' && Number.isFinite(n) ? n : 0
+  return '₩' + val.toLocaleString('ko-KR')
 }
 
 /** YYYY-MM 정산 월을 한국어 레이블로 포맷 */

@@ -63,6 +63,7 @@ export interface OrderListItem {
   orderId: string;
   orderProductId: string;
   productId: string;
+  amount: number;
   orderStatus: OrderStatus;
   orderProductStatus: OrderProductStatus;
   downloaded: boolean;
@@ -101,7 +102,7 @@ export type PaymentStatus = 'PAID' | 'REFUNDING' | 'PARTIAL_REFUNDED' | 'ALL_REF
 export interface PaymentHistoryItem {
   orderId: string;
   paymentId: string;
-  paymentStatus: Exclude<PaymentStatus, 'REFUNDING'>;
+  paymentStatus: PaymentStatus;
   amount: number;
   paidAt: string;
 }
