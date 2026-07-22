@@ -20,3 +20,11 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
     (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback
   )
 }
+
+/** 토스페이먼츠 최소 결제금액 제약 — 상품 가격 하한 */
+export const MIN_PRODUCT_PRICE = 100
+
+/** 상품 가격이 유효한지 검사 (무료 0원 또는 100원 이상만 허용) */
+export function isValidProductPrice(amount: number): boolean {
+  return amount === 0 || amount >= MIN_PRODUCT_PRICE
+}
