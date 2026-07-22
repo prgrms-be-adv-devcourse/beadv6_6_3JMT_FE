@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
@@ -9,7 +9,13 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useDirectBuyStore } from '@/store/useDirectBuyStore';
 import { createOrder } from '@/lib/orders';
 import { getCartItems, removeCartItem } from '@/lib/cart';
-import { preparePaidOrder } from '@/lib/checkoutContracts';
+import {
+  CheckoutStageError,
+  normalizeCheckoutFailure,
+  preparePaidOrder,
+  shouldRequestPayment,
+  type CheckoutStage,
+} from '@/lib/checkoutContracts';
 import { ShoppingCart, Trash2, ArrowLeft, CreditCard } from 'lucide-react';
 import { won } from '@/lib/utils';
 
@@ -31,6 +37,7 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tossPayments, setTossPayments] = useState<any>(null);
+  const submissionLockedRef = useRef(false);
 
   useEffect(() => {
     const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
@@ -83,9 +90,12 @@ function CheckoutContent() {
   };
 
   const handleOrder = async () => {
-    if (loading || items.length === 0 || !user) return;
+    if (submissionLockedRef.current || loading || items.length === 0 || !user) return;
+    submissionLockedRef.current = true;
     setError(null);
     setLoading(true);
+    let activeStage: CheckoutStage = total > 0 ? 'payment_setup' : 'order_creation';
+
     try {
       const orderProducts = items.map((item) => ({
         productId: item.productId,
@@ -121,13 +131,16 @@ function CheckoutContent() {
 
       // 무료(0원) 상품인 경우 토스페이먼츠를 거치지 않고 바로 마이페이지로 이동합니다.
       // 백엔드 createOrder에서 이미 COMPLETED 처리됨
-      if (totalAmount === 0) {
-        window.location.href = `${window.location.origin}/mypage?tab=purchased`;
+      if (!shouldRequestPayment(totalAmount)) {
+        router.replace('/mypage?tab=purchased');
         return;
       }
 
       if (!paymentInstance) {
-        throw new Error("결제 모듈이 초기화되지 않았습니다. 잠시 후 다시 시도해 주세요.");
+        throw new CheckoutStageError(
+          'payment_setup',
+          '결제 모듈이 초기화되지 않았습니다. 잠시 후 다시 시도해 주세요.',
+        );
       }
 
       const payment = paymentInstance.payment({ customerKey: user.id });
@@ -136,6 +149,7 @@ function CheckoutContent() {
         ? items[0].title
         : `${items[0].title} 외 ${items.length - 1}건`;
 
+      activeStage = 'payment_request';
       await payment.requestPayment({
         method: 'CARD',
         amount: { currency: 'KRW', value: totalAmount },
@@ -144,13 +158,11 @@ function CheckoutContent() {
         successUrl: `${window.location.origin}/checkout/success`,
         failUrl: `${window.location.origin}/checkout/fail`,
       });
-    } catch (e: any) {
-      console.error('Checkout error:', e);
-      const response = e?.response;
-      const msg = response?.status === 503
-        ? '주문 서비스를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.'
-        : response?.data?.message ?? e?.message ?? '주문 요청을 처리하지 못했습니다.';
-      setError(msg);
+    } catch (error: unknown) {
+      const failure = normalizeCheckoutFailure(error, activeStage);
+      console.error('Checkout failure', failure, error);
+      setError(failure.message);
+      submissionLockedRef.current = false;
       setLoading(false);
     }
   };
