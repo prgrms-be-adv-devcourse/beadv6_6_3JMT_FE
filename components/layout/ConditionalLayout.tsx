@@ -9,7 +9,8 @@ import LoginModal from '@/components/modals/LoginModal'
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { loginModalOpen, closeLoginModal } = useAuthStore()
-  const isFullscreen = pathname.startsWith('/admin') || pathname.startsWith('/reader')
+  const isFullscreen = pathname.startsWith('/admin')
+  const hideFooter = isFullscreen || pathname.startsWith('/reader')
 
   return (
     <>
@@ -22,7 +23,7 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
           <main style={{ flex: 1 }}>
             {children}
           </main>
-          <Footer />
+          {!hideFooter && <Footer />}
         </>
       )}
     </>

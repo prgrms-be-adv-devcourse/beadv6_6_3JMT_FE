@@ -259,22 +259,6 @@ export default function ReaderPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ph-background)', fontFamily: 'var(--ph-font-family)' }}>
-      {/* ── Nav ─────────────────────────────────────────────────────── */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'var(--ph-surface)',
-        borderBottom: '1px solid var(--ph-border)',
-      }}>
-        <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 32px', height: 60, display: 'flex', alignItems: 'center' }}>
-          <button
-            onClick={() => router.push('/')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 18, fontWeight: 700, fontFamily: 'var(--ph-font-family)', color: 'var(--ph-text)' }}
-          >
-            PromptHub
-          </button>
-        </div>
-      </nav>
-
       {/* ── Content ─────────────────────────────────────────────────── */}
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '40px 32px 80px' }}>
         {/* Back link */}

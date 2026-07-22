@@ -13,7 +13,7 @@ export default function AuthSync() {
   const { isLoggedIn, _hasHydrated } = useAuthStore();
   const { setItems } = useWishStore();
 
-  const isFullscreen = pathname.startsWith('/admin') || pathname.startsWith('/reader');
+  const isFullscreen = pathname.startsWith('/admin');
 
   // 토큰 유효성 검증 겸 프로필 이미지 동기화 — persist 복원(hydrate) 후에 실행해야 user가 채워져 있음
   useEffect(() => {
