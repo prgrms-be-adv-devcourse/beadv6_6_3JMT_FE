@@ -13,6 +13,7 @@ import {
   CheckoutStageError,
   normalizeCheckoutFailure,
   preparePaidOrder,
+  shouldRestoreCartAfterCheckoutFailure,
   shouldRequestPayment,
   type CheckoutStage,
 } from '@/lib/checkoutContracts';
@@ -95,6 +96,8 @@ function CheckoutContent() {
     setError(null);
     setLoading(true);
     let activeStage: CheckoutStage = total > 0 ? 'payment_setup' : 'order_creation';
+    const capturedCartItems = isSingle ? [] : [...items];
+    let localCartCleared = false;
 
     try {
       const orderProducts = items.map((item) => ({
@@ -127,7 +130,10 @@ function CheckoutContent() {
         JSON.stringify({ orderId, productIds: items.map((i) => i.productId), amount: totalAmount })
       );
 
-      if (!isSingle) clearCart();
+      if (!isSingle) {
+        clearCart();
+        localCartCleared = true;
+      }
 
       // 무료(0원) 상품인 경우 토스페이먼츠를 거치지 않고 바로 마이페이지로 이동합니다.
       // 백엔드 createOrder에서 이미 COMPLETED 처리됨
@@ -162,6 +168,14 @@ function CheckoutContent() {
       const failure = normalizeCheckoutFailure(error, activeStage);
       console.error('Checkout failure', failure, error);
       setError(failure.message);
+      if (
+        shouldRestoreCartAfterCheckoutFailure({
+          isSingle,
+          localCartCleared,
+        })
+      ) {
+        setCartItems(capturedCartItems);
+      }
       submissionLockedRef.current = false;
       setLoading(false);
     }

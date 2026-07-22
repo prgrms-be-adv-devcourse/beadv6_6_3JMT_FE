@@ -5,12 +5,37 @@ import {
   CheckoutStageError,
   normalizeCheckoutFailure,
   preparePaidOrder,
+  shouldRestoreCartAfterCheckoutFailure,
   shouldRequestPayment,
 } from './checkoutContracts.ts'
 
 test('shouldRequestPayment skips zero and requests Toss for a positive amount', () => {
   assert.equal(shouldRequestPayment(0), false)
   assert.equal(shouldRequestPayment(15000), true)
+})
+
+test('shouldRestoreCartAfterCheckoutFailure only restores cleared cart-mode checkouts', () => {
+  assert.equal(
+    shouldRestoreCartAfterCheckoutFailure({
+      isSingle: true,
+      localCartCleared: true,
+    }),
+    false,
+  )
+  assert.equal(
+    shouldRestoreCartAfterCheckoutFailure({
+      isSingle: false,
+      localCartCleared: false,
+    }),
+    false,
+  )
+  assert.equal(
+    shouldRestoreCartAfterCheckoutFailure({
+      isSingle: false,
+      localCartCleared: true,
+    }),
+    true,
+  )
 })
 
 test('preparePaidOrder rejects a missing client key before creating an order', async () => {
@@ -173,6 +198,24 @@ test('normalizeCheckoutFailure maps a message-less 503 to a service message', ()
       status: 503,
       code: null,
       message: '주문 서비스를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+    },
+  )
+})
+
+test('normalizeCheckoutFailure preserves top-level Toss diagnostics for payment requests', () => {
+  assert.deepEqual(
+    normalizeCheckoutFailure(
+      new CheckoutStageError('payment_request', '결제창 호출에 실패했습니다.', {
+        code: 'USER_CANCEL',
+        message: '취소되었습니다.',
+      }),
+      'order_creation',
+    ),
+    {
+      stage: 'payment_request',
+      status: null,
+      code: 'USER_CANCEL',
+      message: '취소되었습니다.',
     },
   )
 })
