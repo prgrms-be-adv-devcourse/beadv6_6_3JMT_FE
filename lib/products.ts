@@ -36,13 +36,13 @@ export async function getProductsByIds(productIds: string[]): Promise<ProductByI
   return responses.flatMap((res) => res.data.data ?? [])
 }
 
-// GET /api/v2/products/sellers/me/summary — 판매자의 등록 상품 수·누적 판매 수
+// GET /api/v2/sellers/me/products/summary — 판매자의 등록 상품 수·누적 판매 수
 export async function getSellerProductSummary(): Promise<SellerProductSummary> {
   const res = await api.get<{
     success: boolean
     data?: Partial<SellerProductSummary>
     message: string
-  }>(`${API_BASE}/products/sellers/me/summary`)
+  }>(`${API_BASE}/sellers/me/products/summary`)
   const data = res.data.data ?? {}
   return {
     productCount: Number(data.productCount ?? 0),
