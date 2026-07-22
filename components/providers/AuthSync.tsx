@@ -10,14 +10,16 @@ import { toSyncedWishItems } from '@/lib/wishlistComposition';
 
 export default function AuthSync() {
   const pathname = usePathname();
-  const { isLoggedIn, user, token, login } = useAuthStore();
+  const { isLoggedIn, _hasHydrated } = useAuthStore();
   const { setItems } = useWishStore();
 
   const isFullscreen = pathname.startsWith('/admin') || pathname.startsWith('/reader');
 
-  // 앱 마운트 시 토큰 유효성 검증 겸 프로필 이미지 동기화 — 무효 토큰이면 401 인터셉터가 logout() 처리
+  // 토큰 유효성 검증 겸 프로필 이미지 동기화 — persist 복원(hydrate) 후에 실행해야 user가 채워져 있음
   useEffect(() => {
-    if (!isLoggedIn || !user || !token) return;
+    if (!_hasHydrated || !isLoggedIn) return;
+    const { user, token, login } = useAuthStore.getState();
+    if (!user || !token) return;
     getUserMe()
       .then((profile) => {
         if (profile.profileImageUrl !== user.profileImageUrl) {
@@ -25,8 +27,7 @@ export default function AuthSync() {
         }
       })
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isLoggedIn, _hasHydrated]);
 
   // 위시리스트 동기화
   useEffect(() => {
