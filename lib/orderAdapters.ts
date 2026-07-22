@@ -14,7 +14,9 @@ function normalizeModel(model?: string | null): string {
 export function isActivePurchasedOrder(order: MyOrderItem): boolean {
   if (order.orderProductStatus) {
     return (
-      (order.orderStatus === 'COMPLETED' || order.orderStatus === 'PARTIAL_REFUNDED') &&
+      (order.orderStatus === 'COMPLETED' ||
+        order.orderStatus === 'REFUND_REQUESTED' ||
+        order.orderStatus === 'PARTIAL_REFUNDED') &&
       order.orderProductStatus === 'PAID'
     )
   }

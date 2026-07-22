@@ -1,6 +1,7 @@
 import api from '@/lib/auth'
 import { PaginationMeta, PaymentHistoryItem } from '@/types/api/orders'
 import { API_BASE } from '@/lib/apiBase'
+import { buildRefundRequest } from '@/lib/refundContracts'
 
 export async function confirmPayment(params: {
   paymentKey: string
@@ -20,11 +21,9 @@ export async function getPaymentHistory(
 }
 
 export async function requestRefund(params: {
-  paymentId: string
+  orderId: string
   orderProductIds: string[]
 }): Promise<void> {
-  await api.post(`${API_BASE}/orders/refunds`, {
-    paymentId: params.paymentId,
-    orderProductIds: params.orderProductIds,
-  })
+  const request = buildRefundRequest(params.orderId, params.orderProductIds)
+  await api.post(request.path, request.body)
 }

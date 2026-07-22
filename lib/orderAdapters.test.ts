@@ -160,3 +160,24 @@ test('hasPurchasedProduct excludes refunded orders', () => {
     false,
   )
 })
+
+test('mapOrderToPrompt keeps paid products while an order refund is requested', () => {
+  const prompt = mapOrderToPrompt({
+    orderId: 'order-1',
+    orderProductId: 'order-product-1',
+    productId: 'product-1',
+    orderStatus: 'REFUND_REQUESTED',
+    orderProductStatus: 'PAID',
+    downloaded: false,
+    isRefundable: true,
+    productType: 'PROMPT',
+    title: 'Accessible prompt',
+    model: null,
+    rating: null,
+    paidAt: '2026-07-18T10:00:00',
+    createdAt: '2026-07-18T09:50:00',
+    product: null,
+  })
+
+  assert.equal(prompt?.id, 'product-1')
+})

@@ -2,10 +2,16 @@ import api from '@/lib/auth'
 import { CartItem, mapCartResponseToItems } from '@/lib/cartAdapters'
 import axios from 'axios'
 import { API_BASE } from '@/lib/apiBase'
+import { hasHttpStatus } from '@/lib/httpContracts'
 
 export async function getCartItems(): Promise<CartItem[]> {
-  const res = await api.get(`${API_BASE}/cart`)
-  return mapCartResponseToItems(res.data.data)
+  try {
+    const res = await api.get(`${API_BASE}/cart`)
+    return mapCartResponseToItems(res.data.data)
+  } catch (error) {
+    if (hasHttpStatus(error, 404)) return []
+    throw error
+  }
 }
 
 export async function addCartItem(productId: string): Promise<CartItem | null> {

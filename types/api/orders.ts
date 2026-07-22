@@ -35,10 +35,11 @@ export type OrderStatus =
   | 'CREATED'
   | 'COMPLETED'
   | 'FAILED'
+  | 'REFUND_REQUESTED'
   | 'PARTIAL_REFUNDED'
   | 'ALL_REFUNDED'
 
-export type OrderProductStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED'
+export type OrderProductStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUND_REQUESTED' | 'REFUNDED'
 
 export interface MyOrderItem {
   orderId: string;

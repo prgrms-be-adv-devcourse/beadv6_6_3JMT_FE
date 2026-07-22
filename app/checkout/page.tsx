@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useDirectBuyStore } from '@/store/useDirectBuyStore';
 import { createOrder } from '@/lib/orders';
 import { getCartItems, removeCartItem } from '@/lib/cart';
+import { preparePaidOrder } from '@/lib/checkoutContracts';
 import { ShoppingCart, Trash2, ArrowLeft, CreditCard } from 'lucide-react';
 import { won } from '@/lib/utils';
 
@@ -90,7 +91,25 @@ function CheckoutContent() {
         productId: item.productId,
         productTitle: item.title,
       }));
-      const { orderId, totalAmount } = await createOrder(orderProducts);
+
+      let paymentInstance = tossPayments;
+      let orderResult;
+
+      if (total > 0) {
+        const prepared = await preparePaidOrder({
+          paymentInstance,
+          clientKey: process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY,
+          loadPayments: loadTossPayments,
+          createOrder: () => createOrder(orderProducts),
+        });
+        paymentInstance = prepared.paymentInstance;
+        orderResult = prepared.order;
+        if (!tossPayments) setTossPayments(paymentInstance);
+      } else {
+        orderResult = await createOrder(orderProducts);
+      }
+
+      const { orderId, totalAmount } = orderResult;
 
       // MSW용: 결제창이 팝업으로 열려 sessionStorage가 격리될 수 있으므로 localStorage 사용
       localStorage.setItem(
@@ -105,20 +124,6 @@ function CheckoutContent() {
       if (totalAmount === 0) {
         window.location.href = `${window.location.origin}/mypage?tab=purchased`;
         return;
-      }
-
-      let paymentInstance = tossPayments;
-      if (!paymentInstance) {
-        try {
-          const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
-          if (!clientKey) {
-            throw new Error("결제 클라이언트 키가 설정되지 않았습니다.");
-          }
-          paymentInstance = await loadTossPayments(clientKey);
-          setTossPayments(paymentInstance);
-        } catch (err) {
-          throw new Error("결제 모듈을 불러오지 못했습니다. 광고 차단 프로그램(AdBlock 등)을 사용 중이시라면 잠시 꺼주세요.");
-        }
       }
 
       if (!paymentInstance) {
