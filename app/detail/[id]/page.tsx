@@ -103,7 +103,7 @@ function Avatar({ name, size = 40, imageUrl }: { name: string; size?: number; im
       alt={name}
       width={size}
       height={size}
-      style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+      style={{ width: size, height: size, aspectRatio: '1 / 1', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
     />
   ) : (
     <div
