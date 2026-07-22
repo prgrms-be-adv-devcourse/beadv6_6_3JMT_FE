@@ -42,7 +42,7 @@ const NAV: NavEntry[] = [
   { type: 'item', href: '/admin/sellers', label: '판매자 신청 관리', Icon: Store, badgeKey: 'sellers' },
   { type: 'item', href: '/admin/products', label: '상품 검수', Icon: ClipboardCheck, badgeKey: 'products' },
   { type: 'item', href: '/admin/orders', label: '주문 관리', Icon: ShoppingCart },
-  { type: 'item', href: '/admin/payments', label: '정산 관리', Icon: Wallet, badgeKey: 'settlements' },
+  { type: 'item', href: '/admin/settlements', label: '정산 관리', Icon: Wallet, badgeKey: 'settlements' },
 ]
 
 // 원본 admin-app.js PAGES 메타 (title + subtitle)
@@ -52,7 +52,7 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   '/admin/sellers': { title: '판매자 신청 관리', sub: '판매자 전환 신청을 검토하고 승인·반려합니다.' },
   '/admin/products': { title: '상품 검수', sub: '등록된 프롬프트를 검수하고 게시 여부를 결정합니다.' },
   '/admin/orders': { title: '주문 관리', sub: '주문 내역을 조회하고 환불을 처리합니다.' },
-  '/admin/payments': { title: '정산 관리', sub: '판매 수익 정산을 승인하고 지급을 처리합니다.' },
+  '/admin/settlements': { title: '정산 관리', sub: '판매 수익 정산을 승인하고 지급을 처리합니다.' },
 }
 
 function isActive(href: string, pathname: string) {
@@ -65,11 +65,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, token, logout } = useAuthStore()
   const [badges, setBadges] = useState<Record<BadgeKey, number>>({ sellers: 0, products: 0, settlements: 0 })
   const [sidebarOpen, setSidebarOpen] = useState(false)
-
-  // 라우트 이동 시 모바일 사이드바 닫기
-  useEffect(() => {
-    setSidebarOpen(false)
-  }, [pathname])
 
   // 사이드바 pending 건수 뱃지 집계
   useEffect(() => {
@@ -165,6 +160,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link
                 key={entry.href}
                 href={entry.href}
+                onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-[11px] rounded-ph-md px-[12px] py-[10px] text-[14.5px] transition-colors ${
                   active
                     ? 'bg-ph-secondary font-bold text-ph-primary'
