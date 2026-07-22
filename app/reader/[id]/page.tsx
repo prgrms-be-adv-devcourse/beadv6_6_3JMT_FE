@@ -430,10 +430,6 @@ export default function ReaderPage() {
           </Card>
         )}
 
-        {/* Bottom back link */}
-        <div style={{ display: 'flex', justifyContent: 'center', margin: '36px 0 8px' }}>
-          {backLink}
-        </div>
       </div>
 
       {/* ── Download confirm dialog ──────────────────────────────────── */}
