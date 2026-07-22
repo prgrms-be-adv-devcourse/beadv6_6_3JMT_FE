@@ -39,6 +39,7 @@ function CheckoutContent() {
   const [error, setError] = useState<string | null>(null);
   const [tossPayments, setTossPayments] = useState<any>(null);
   const submissionLockedRef = useRef(false);
+  const [paymentBlocked, setPaymentBlocked] = useState(false);
 
   useEffect(() => {
     const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
@@ -168,6 +169,8 @@ function CheckoutContent() {
       const failure = normalizeCheckoutFailure(error, activeStage);
       console.error('Checkout failure', failure, error);
       setError(failure.message);
+      // 결제 설정 미완료는 재시도해도 실패가 뻔하므로 버튼을 다시 활성화하지 않는다.
+      if (failure.message === '결제 설정이 완료되지 않았습니다.') setPaymentBlocked(true);
       if (
         shouldRestoreCartAfterCheckoutFailure({
           isSingle,
@@ -316,16 +319,16 @@ function CheckoutContent() {
         {/* 결제 버튼 */}
         <button
           onClick={handleOrder}
-          disabled={loading || items.length === 0}
+          disabled={loading || items.length === 0 || paymentBlocked}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             width: '100%', height: 52, border: 'none',
             borderRadius: 'var(--ph-radius-lg)',
-            background: (loading || items.length === 0) ? 'var(--ph-text-muted)' : 'var(--ph-primary)',
+            background: (loading || items.length === 0 || paymentBlocked) ? 'var(--ph-text-muted)' : 'var(--ph-primary)',
             color: '#fff',
             fontFamily: 'var(--ph-font-family)',
             fontSize: 16, fontWeight: 700,
-            cursor: (loading || items.length === 0) ? 'not-allowed' : 'pointer',
+            cursor: (loading || items.length === 0 || paymentBlocked) ? 'not-allowed' : 'pointer',
             transition: 'background 0.2s',
           }}
         >
