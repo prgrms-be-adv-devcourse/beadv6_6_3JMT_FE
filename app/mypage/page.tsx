@@ -8,8 +8,10 @@ import { useToast } from '@/store/useToastStore';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { deleteUserMe, updateUserMe } from '@/lib/users';
-import { getWishlists, type WishlistItem } from '@/lib/wishlists';
+import { getWishlists } from '@/lib/wishlists';
 import { getProductsByIds } from '@/lib/products';
+import { getWishlistSellerNames } from '@/lib/sellers';
+import { composeWishlistCards } from '@/lib/wishlistComposition';
 import { getPaymentHistory, requestRefund as apiRequestRefund } from '@/lib/payments';
 import { getOrders } from '@/lib/orders';
 import { mapOrderToPrompt } from '@/lib/orderAdapters';
@@ -402,6 +404,7 @@ function MyPageContent() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [loadingPurchased, setLoadingPurchased] = useState(true);
   const [loadingWishlist, setLoadingWishlist] = useState(true);
+  const [wishlistLoadError, setWishlistLoadError] = useState(false);
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [userLoadError, setUserLoadError] = useState(false);
 
@@ -461,32 +464,23 @@ function MyPageContent() {
         setLoadingPurchased(false);
         setLoadingPayments(false);
       });
+    setWishlistLoadError(false);
     getWishlists()
-      .then(async (items: WishlistItem[]) => {
-        const productIds = items.map((item) => item.productId);
-        const products = await getProductsByIds(productIds);
-        const productMap = new Map(products.map((p) => [p.productId, p]));
-        const resolved: Prompt[] = [];
-        for (const item of items) {
-          const product = productMap.get(item.productId);
-          if (!product) continue;
-          resolved.push({
-            id:            item.productId,
-            title:         product.title,
-            thumbnail_url: product.thumbnailUrl,
-            amount:        product.amount,
-            seller:        '',
-            rating:        product.averageRating,
-            salesCount:    product.salesCount,
-            productType:   product.productType,
-            icon:          '',
-            model:         product.model,
-            desc:          '',
-          });
+      .then(async (items) => {
+        const products = await getProductsByIds(items.map((item) => item.productId));
+
+        let sellerNames: Record<string, string | null> = {};
+        try {
+          sellerNames = await getWishlistSellerNames(products.map((product) => product.sellerId));
+        } catch {
+          // 판매자 조회 실패는 카드 전체 실패로 전파하지 않고 fallback 문구를 사용한다.
         }
-        setWishlist(resolved);
+
+        setWishlist(composeWishlistCards(items, products, sellerNames));
       })
-      .catch(() => {})
+      .catch(() => {
+        setWishlistLoadError(true);
+      })
       .finally(() => setLoadingWishlist(false));
   }, [isLoggedIn, _hasHydrated, openLoginModal, fetchUser]);
 
@@ -799,6 +793,13 @@ function MyPageContent() {
               <SectionTitle sub="관심 있는 프롬프트를 모아뒀어요.">찜한 프롬프트</SectionTitle>
               {loadingWishlist ? (
                 <GridSkeleton />
+              ) : wishlistLoadError ? (
+                <EmptyState
+                  icon={Heart}
+                  text="찜한 프롬프트를 불러오지 못했어요."
+                  cta="다시 시도"
+                  onCta={() => window.location.reload()}
+                />
               ) : wishlist.length === 0 ? (
                 <EmptyState
                   icon={Heart}

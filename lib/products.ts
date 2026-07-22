@@ -1,5 +1,6 @@
 import api from '@/lib/auth'
 import { API_BASE } from '@/lib/apiBase'
+import { splitUniqueIds } from '@/lib/batchIds'
 
 export interface ProductByIdsItem {
   productId: string
@@ -19,22 +20,15 @@ export interface SellerProductSummary {
   salesCount: number
 }
 
-const PRODUCT_BATCH_MAX = 30
-
 export async function getProductsByIds(productIds: string[]): Promise<ProductByIdsItem[]> {
-  const unique = Array.from(new Set(productIds))
-  if (unique.length === 0) return []
-
-  const chunks: string[][] = []
-  for (let i = 0; i < unique.length; i += PRODUCT_BATCH_MAX) {
-    chunks.push(unique.slice(i, i + PRODUCT_BATCH_MAX))
-  }
+  const chunks = splitUniqueIds(productIds)
+  if (chunks.length === 0) return []
 
   const responses = await Promise.all(
-    chunks.map((chunk) =>
-      api.get<{ success: boolean; data: ProductByIdsItem[]; message: string }>(
-        `${API_BASE}/products/by-ids`,
-        { params: { ids: chunk.join(',') } },
+    chunks.map((productIdsChunk) =>
+      api.post<{ success: boolean; data: ProductByIdsItem[]; message: string }>(
+        `${API_BASE}/products/wishlists`,
+        { productIds: productIdsChunk },
       ),
     ),
   )

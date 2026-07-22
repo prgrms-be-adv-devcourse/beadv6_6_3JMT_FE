@@ -6,6 +6,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
+import { getWishlists } from '@/lib/wishlists';
+import { toSyncedWishItems } from '@/lib/wishlistComposition';
 
 export default function AuthSync() {
   const pathname = usePathname();
@@ -27,20 +29,8 @@ export default function AuthSync() {
       if (!isLoggedIn) Promise.resolve().then(() => setItems([]));
       return;
     }
-    api.get(`${API_BASE}/wishlists`)
-      .then((res) => {
-        const items: { wishlistId: string; productId: string; title: string; price: number; thumbnailUrl: string | null }[] =
-          res.data.data ?? [];
-        setItems(
-          items.map((w) => ({
-            id: String(w.productId),
-            title: w.title,
-            amount: w.price,
-            thumbnailUrl: w.thumbnailUrl ?? null,
-            wishlistId: w.wishlistId,
-          }))
-        );
-      })
+    getWishlists()
+      .then((items) => setItems(toSyncedWishItems(items)))
       .catch(() => {});
   }, [isLoggedIn, isFullscreen, setItems]);
 

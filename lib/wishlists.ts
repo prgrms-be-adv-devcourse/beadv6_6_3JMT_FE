@@ -4,13 +4,6 @@ import { API_BASE } from '@/lib/apiBase'
 export interface WishlistItem {
   wishlistId: string
   productId: string
-  title: string
-  thumbnailUrl: string | null
-  price: number
-  sellerNickname: string
-  averageRating: number
-  salesCount: number
-  model: string
   addedAt: string
 }
 
@@ -28,8 +21,12 @@ export async function checkWishlistExists(productId: string): Promise<boolean> {
   return res.data.data?.wished ?? false
 }
 
-export async function getWishlists<T = WishlistItem>(): Promise<T[]> {
-  const res = await api.get<{ success: boolean; data: T[]; message: string }>(`${API_BASE}/wishlists`)
+export async function getWishlists(): Promise<WishlistItem[]> {
+  const res = await api.get<{
+    success: boolean
+    data: WishlistItem[]
+    message: string
+  }>(`${API_BASE}/wishlists`)
   return res.data.data ?? []
 }
 

@@ -1,5 +1,6 @@
 import api from '@/lib/auth'
 import { API_BASE } from '@/lib/apiBase'
+import { splitUniqueIds } from '@/lib/batchIds'
 
 export interface SellerRegisterRequest {
   categories: string[]
@@ -34,29 +35,39 @@ interface SellerBatchItem {
   sellerName: string | null
 }
 
-const SELLER_BATCH_MAX = 30
-
-export async function getSellerNames(sellerIds: string[]): Promise<Record<string, string | null>> {
-  const unique = Array.from(new Set(sellerIds))
-  const chunks: string[][] = []
-  for (let i = 0; i < unique.length; i += SELLER_BATCH_MAX) {
-    chunks.push(unique.slice(i, i + SELLER_BATCH_MAX))
-  }
+async function getSellerNamesByPurpose(
+  sellerIds: string[],
+  purpose: 'products' | 'wishlists',
+): Promise<Record<string, string | null>> {
+  const chunks = splitUniqueIds(sellerIds)
+  if (chunks.length === 0) return {}
 
   const responses = await Promise.all(
-    chunks.map((chunk) =>
+    chunks.map((sellerIdsChunk) =>
       api.post<{ success: boolean; data: { sellers: SellerBatchItem[] }; message: string }>(
-        `${API_BASE}/sellers/products`,
-        { sellerIds: chunk },
+        `${API_BASE}/sellers/${purpose}`,
+        { sellerIds: sellerIdsChunk },
       ),
     ),
   )
 
-  const map: Record<string, string | null> = {}
+  const names: Record<string, string | null> = {}
   responses.forEach((res) => {
-    res.data.data.sellers.forEach((s) => { map[s.sellerId] = s.sellerName })
+    res.data.data.sellers.forEach((seller) => {
+      names[seller.sellerId] = seller.sellerName
+    })
   })
-  return map
+  return names
+}
+
+export function getSellerNames(sellerIds: string[]): Promise<Record<string, string | null>> {
+  return getSellerNamesByPurpose(sellerIds, 'products')
+}
+
+export function getWishlistSellerNames(
+  sellerIds: string[],
+): Promise<Record<string, string | null>> {
+  return getSellerNamesByPurpose(sellerIds, 'wishlists')
 }
 
 export interface SellerProfile {
