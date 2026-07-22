@@ -72,11 +72,11 @@
 | `--ph-label-sm-size` | 14px | `text-ph-label-sm` | 작은 레이블 |
 | `--ph-caption-size` | **0.8125rem** (13px) | `text-ph-caption` | 캡션·보조 텍스트·뱃지 |
 
-> **임의값 변환 가이드** (토큰 없는 비표준 크기 — rem으로 표기)
-> - 13.5px → `text-[0.84375rem]`
-> - 12.5px → `text-[0.78125rem]`
+> **임의값 변환 가이드** (토큰 없는 비표준 크기 — px로 표기)
+> - 13.5px → `text-[13.5px]`
+> - 12.5px → `text-[12.5px]`
 > - 12px → Tailwind 기본 `text-xs` (0.75rem)
-> - 11.5px → `text-[0.71875rem]`
+> - 11.5px → `text-[11.5px]`
 
 ### Border Radius 토큰
 
@@ -116,7 +116,7 @@
     - 활성: `bg-ph-secondary` + `text-ph-primary` + 700
     - 비활성: `text-ph-text-secondary` + 500, hover 시 `bg-ph-gray-50`
     - 아이콘: Lucide 19×19
-    - 뱃지(count>0): minWidth 20, h20, `rounded-full`, 12px/700 — 활성 `bg-ph-primary text-white` / 비활성 `bg-ph-secondary text-ph-primary`
+    - 뱃지(count>0): minWidth 20, h20, `rounded-ph-full`, 12px/700 — 활성 `bg-ph-primary text-ph-on-accent` / 비활성 `bg-ph-secondary text-ph-primary`
 - **하단 유저**(`padding: 14px`, 상단 border): Avatar 36 + "운영 관리자"(14/700) + email(12 muted) + 로그아웃 아이콘버튼(34×34, `rounded-ph-sm`, border, hover시 `bg #fdeceb`/`border·text ph-error`, Lucide `log-out` 17px)
 
 ### 사이드바 메뉴 (NAV) — 5항목
@@ -170,9 +170,9 @@
 | PENDING_APPROVAL | 대기 | neutral | ✓ | `#8b95a1` | (레거시) |
 | SETTLEMENT_ON_HOLD | 승인 보류 | error | ✓ | `#d92d20` | (레거시) |
 
-> 정산 표시 상태(`SettlementDisplayStatus`) 뱃지. seller(`/shop` 정산 내역)·admin(`/admin/payments`)가 동일 매핑을 공유한다.
+> 정산 표시 상태(`SettlementDisplayStatus`) 뱃지. seller(`/shop` 정산 내역)·admin(`/admin/settlements`)가 동일 매핑을 공유한다.
 > 실제 정산 서비스 스펙(`WAITING`/`APPROVAL_ON_HOLD` 등)에 맞춘 코드이며, `PENDING_APPROVAL`/`SETTLEMENT_ON_HOLD`는 레거시 호환용으로 남겨둔다.
-> admin 목록 응답은 `displayStatus`가 코드, seller 목록 응답은 `status`가 코드·`displayStatus`가 한글 라벨이다.
+> 월별 목록은 `statusCounts[].status`, 주간 상세는 `weeklySettlements[].status`를 상태 코드로 사용한다.
 
 뱃지: `gap 6, padding 5px 10px, 6px dot(원형) + label`
 

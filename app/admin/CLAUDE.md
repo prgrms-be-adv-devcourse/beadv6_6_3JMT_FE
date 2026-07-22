@@ -11,7 +11,7 @@
 | `/admin` | 대시보드 (통계 + 최근 판매 + 신청 목록) |
 | `/admin/login` | 어드민 로그인 |
 | `/admin/orders` | 주문 관리 |
-| `/admin/payments` | 정산 관리 |
+| `/admin/settlements` | 정산 관리 (`/admin/payments`는 호환 리다이렉트) |
 | `/admin/products` | 상품 관리 |
 | `/admin/sellers` | 판매자 신청 관리 |
 | `/admin/users` | 회원 관리 |
@@ -26,7 +26,7 @@
 |----------|--------|------|-----------|
 | `StatCard` | page.tsx line 86 | 분리 | `app/admin/_components/StatCard.tsx` |
 | `SalesBarChart` | page.tsx line 137 | 분리 | `app/admin/_components/SalesBarChart.tsx` |
-| `RowBtn` | page.tsx line 186 | **공통 추출** | `components/admin/RowBtn.tsx` (payments에도 동일 컴포넌트 중복) |
+| `RowBtn` | page.tsx line 186 | **공통 추출** | `components/admin/RowBtn.tsx` (settlements 액션 버튼과 통합 검토) |
 | `AdminEmpty` | page.tsx line 215 | **공통 추출** | `components/admin/AdminEmpty.tsx` (여러 어드민 페이지에서 활용 가능) |
 | `CategoryIcon` | page.tsx line 227 | **공통 추출** | `components/admin/CategoryIcon.tsx` (products에도 동일 컴포넌트 중복) |
 
@@ -65,7 +65,7 @@ const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.id, c.label]))
 | `ReviewProductList.tsx` | 검수 대기 상품 목록 |
 
 ### 주의 사항
-- `RowBtn`을 `components/admin/RowBtn.tsx`로 공통 추출하면 `payments/page.tsx`의 동일 컴포넌트도 함께 교체
+- `RowBtn`을 `components/admin/RowBtn.tsx`로 공통 추출하면 `settlements`의 액션 버튼도 함께 교체
 - `CategoryIcon`을 공통 추출하면 `products/page.tsx`도 함께 교체
 - 어드민 공통 컴포넌트 변경 시 `docs/design-tokens.md` 동기화 필수 (CLAUDE.md 규칙)
 

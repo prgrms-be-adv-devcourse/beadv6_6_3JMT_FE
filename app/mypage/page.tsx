@@ -8,18 +8,19 @@ import { useToast } from '@/store/useToastStore';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { deleteUserMe, updateUserMe } from '@/lib/users';
-import { getWishlists, type WishlistItem } from '@/lib/wishlists';
+import { getWishlists } from '@/lib/wishlists';
 import { getProductsByIds } from '@/lib/products';
-import { getPaymentHistory, requestRefund as apiRequestRefund } from '@/lib/payments';
+import { getWishlistSellerNames } from '@/lib/sellers';
+import { composeWishlistCards } from '@/lib/wishlistComposition';
+import { requestRefund as apiRequestRefund } from '@/lib/payments';
 import { getOrders } from '@/lib/orders';
 import { mapOrderToPrompt } from '@/lib/orderAdapters';
-import { mapPaymentHistory } from '@/lib/paymentAdapters';
-import { OrderListItem, PaymentItem as ApiPaymentItem } from '@/types/api/orders';
+import { PaymentItem as ApiPaymentItem } from '@/types/api/orders';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';
 import {
   User, ShoppingBag, Heart, Receipt, Settings, LogOut, Store,
-  AlertCircle, ArrowLeft, Lock, AlertTriangle, Star, Check, Mail,
+  ArrowLeft, Lock, AlertTriangle, Star, Check, Mail,
   ShieldCheck, Info, Clock, XCircle,
 } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
@@ -181,152 +182,6 @@ function SectionTitle({ children, sub }: { children: React.ReactNode; sub?: stri
 }
 
 
-/* ── PasswordChangeModal ────────────────────────────────────────────── */
-
-function PasswordChangeModal({ onClose }: { onClose: () => void }) {
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [err, setErr] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-
-  const validate = () => {
-    if (!current) return '현재 비밀번호를 입력해주세요.';
-    if (next.length < 8) return '새 비밀번호는 8자 이상이어야 해요.';
-    if (next === current) return '현재 비밀번호와 동일한 비밀번호로 변경할 수 없어요.';
-    if (next !== confirm) return '새 비밀번호가 서로 일치하지 않아요.';
-    return '';
-  };
-
-  const submit = async () => {
-    const e = validate();
-    if (e) { setErr(e); return; }
-    setLoading(true);
-    setErr('');
-    try {
-      await api.put(`${API_BASE}/auth/password`, { currentPassword: current, newPassword: next });
-      setDone(true);
-    } catch (ex: unknown) {
-      const msg = (ex as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setErr(msg ?? '비밀번호 변경에 실패했어요.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const errStyle: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 6, marginTop: 10,
-    fontSize: 13, fontWeight: 600, color: 'var(--ph-error)',
-  };
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        style={{
-          background: '#fff', borderRadius: 'var(--ph-radius-xl)',
-          maxWidth: 440, width: '100%', padding: 28,
-        }}
-      >
-        {/* 헤더 */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 'var(--ph-radius-full)',
-            background: 'var(--ph-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Lock style={{ width: 22, height: 22, color: 'var(--ph-primary)' } as React.CSSProperties} />
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="닫기"
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--ph-text-muted)', padding: 4, lineHeight: 0,
-            }}
-          >
-            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {done ? (
-          <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
-            <div style={{
-              width: 56, height: 56, borderRadius: '50%', background: 'var(--ph-secondary)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
-            }}>
-              <Check style={{ width: 28, height: 28, color: 'var(--ph-primary)' } as React.CSSProperties} />
-            </div>
-            <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 8 }}>비밀번호가 변경됐어요</div>
-            <p style={{ fontSize: 14, color: 'var(--ph-text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
-              다음 로그인부터 새 비밀번호를 사용하세요.
-            </p>
-            <Button variant="solid" size="lg" fullWidth onClick={onClose}>확인</Button>
-          </div>
-        ) : (
-          <div>
-            <div style={{ fontSize: 19, fontWeight: 700, margin: '14px 0 6px' }}>비밀번호 변경</div>
-            <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ph-text-secondary)', margin: '0 0 20px' }}>
-              현재 비밀번호를 확인한 후 새 비밀번호로 변경해요.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <PHInput
-                label="현재 비밀번호"
-                type="password"
-                value={current}
-                placeholder="현재 비밀번호 입력"
-                autoFocus
-                onChange={(e) => { setCurrent(e.target.value); setErr(''); }}
-                onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
-              />
-              <PHInput
-                label="새 비밀번호"
-                type="password"
-                value={next}
-                placeholder="8자 이상"
-                onChange={(e) => { setNext(e.target.value); setErr(''); }}
-                onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
-              />
-              <PHInput
-                label="새 비밀번호 확인"
-                type="password"
-                value={confirm}
-                placeholder="새 비밀번호 다시 입력"
-                onChange={(e) => { setConfirm(e.target.value); setErr(''); }}
-                onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
-              />
-            </div>
-            {err && (
-              <div style={errStyle}>
-                <AlertCircle style={{ width: 15, height: 15 }} />{err}
-              </div>
-            )}
-            <div style={{ marginTop: 24 }}>
-              <Button
-                variant="solid" size="lg" fullWidth
-                onClick={submit}
-                disabled={!current || !next || !confirm || loading}
-              >
-                {loading ? '변경 중...' : '비밀번호 변경'}
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ── Skeleton helpers ───────────────────────────────────────────────── */
 
 function ContentSkeleton() {
@@ -387,21 +242,17 @@ function MyPageContent() {
   const [nick, setNick] = useState('');
   const [savedNick, setSavedNick] = useState(false);
   const [emailModal, setEmailModal] = useState(false);
-  const [pwModal, setPwModal] = useState(false);
   const [notif, setNotif] = useState<NotifState>({ email: true, marketing: false, newPrompt: true });
   const [refunds, setRefunds] = useState<Record<string, 'requested' | 'refunded'>>({});
   const [refundTargetId, setRefundTargetId] = useState<string | null>(null);
   const [purchased, setPurchased] = useState<Prompt[]>([]);
-  const [orderItems, setOrderItems] = useState<OrderListItem[]>([]);
   const [wishlist, setWishlist] = useState<Prompt[]>([]);
   const [payments, setPayments] = useState<ApiPaymentItem[]>([]);
-  const [paymentsPage, setPaymentsPage] = useState(1);
-  const [paymentsHasNext, setPaymentsHasNext] = useState(false);
-  const [loadingMorePayments, setLoadingMorePayments] = useState(false);
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const [loadingPurchased, setLoadingPurchased] = useState(true);
   const [loadingWishlist, setLoadingWishlist] = useState(true);
+  const [wishlistLoadError, setWishlistLoadError] = useState(false);
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [userLoadError, setUserLoadError] = useState(false);
 
@@ -448,45 +299,32 @@ function MyPageContent() {
     if (!_hasHydrated) return;
     if (!isLoggedIn) { openLoginModal(); return; }
     fetchUser();
-    Promise.all([getOrders(), getPaymentHistory(1)])
-      .then(([orders, paymentHistory]) => {
-        setOrderItems(orders);
+    getOrders()
+      .then((orders) => {
         setPurchased(orders.map(mapOrderToPrompt).filter((item): item is Prompt => item !== null));
-        setPayments(mapPaymentHistory(paymentHistory.data, orders));
-        setPaymentsPage(1);
-        setPaymentsHasNext(paymentHistory.meta.hasNext);
       })
       .catch(() => {})
       .finally(() => {
         setLoadingPurchased(false);
         setLoadingPayments(false);
       });
+    setWishlistLoadError(false);
     getWishlists()
-      .then(async (items: WishlistItem[]) => {
-        const productIds = items.map((item) => item.productId);
-        const products = await getProductsByIds(productIds);
-        const productMap = new Map(products.map((p) => [p.productId, p]));
-        const resolved: Prompt[] = [];
-        for (const item of items) {
-          const product = productMap.get(item.productId);
-          if (!product) continue;
-          resolved.push({
-            id:            item.productId,
-            title:         product.title,
-            thumbnail_url: product.thumbnailUrl,
-            amount:        product.amount,
-            seller:        '',
-            rating:        product.averageRating,
-            salesCount:    product.salesCount,
-            productType:   product.productType,
-            icon:          '',
-            model:         product.model,
-            desc:          '',
-          });
+      .then(async (items) => {
+        const products = await getProductsByIds(items.map((item) => item.productId));
+
+        let sellerNames: Record<string, string | null> = {};
+        try {
+          sellerNames = await getWishlistSellerNames(products.map((product) => product.sellerId));
+        } catch {
+          // 판매자 조회 실패는 카드 전체 실패로 전파하지 않고 fallback 문구를 사용한다.
         }
-        setWishlist(resolved);
+
+        setWishlist(composeWishlistCards(items, products, sellerNames));
       })
-      .catch(() => {})
+      .catch(() => {
+        setWishlistLoadError(true);
+      })
       .finally(() => setLoadingWishlist(false));
   }, [isLoggedIn, _hasHydrated, openLoginModal, fetchUser]);
 
@@ -546,22 +384,6 @@ function MyPageContent() {
         409: '이미 다운로드했거나 환불할 수 없는 상품이에요.',
       };
       showToast(messages[response?.status ?? 0] ?? '환불 신청에 실패했어요. 다시 시도해주세요');
-    }
-  };
-
-  const handleLoadMorePayments = async () => {
-    if (loadingMorePayments || !paymentsHasNext) return;
-    setLoadingMorePayments(true);
-    try {
-      const nextPage = paymentsPage + 1;
-      const { data, meta } = await getPaymentHistory(nextPage);
-      setPayments((prev) => [...prev, ...mapPaymentHistory(data, orderItems)]);
-      setPaymentsPage(nextPage);
-      setPaymentsHasNext(meta.hasNext);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingMorePayments(false);
     }
   };
 
@@ -799,6 +621,13 @@ function MyPageContent() {
               <SectionTitle sub="관심 있는 프롬프트를 모아뒀어요.">찜한 프롬프트</SectionTitle>
               {loadingWishlist ? (
                 <GridSkeleton />
+              ) : wishlistLoadError ? (
+                <EmptyState
+                  icon={Heart}
+                  text="찜한 프롬프트를 불러오지 못했어요."
+                  cta="다시 시도"
+                  onCta={() => window.location.reload()}
+                />
               ) : wishlist.length === 0 ? (
                 <EmptyState
                   icon={Heart}
@@ -830,23 +659,10 @@ function MyPageContent() {
                   onCta={() => router.push('/browse')}
                 />
               ) : (
-                <>
-                  <OrderList
-                    payments={payments}
-                    onRefund={(paymentId) => setRefundTargetId(paymentId)}
-                  />
-                  {paymentsHasNext && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
-                      <Button
-                        variant="secondary"
-                        onClick={handleLoadMorePayments}
-                        disabled={loadingMorePayments}
-                      >
-                        {loadingMorePayments ? '불러오는 중...' : '더 보기'}
-                      </Button>
-                    </div>
-                  )}
-                </>
+                <OrderList
+                  payments={payments}
+                  onRefund={(paymentId) => setRefundTargetId(paymentId)}
+                />
               )}
             </div>
           )}
@@ -881,7 +697,7 @@ function MyPageContent() {
                   </Button>
                 </Row>
                 {/* 이메일 */}
-                <Row>
+                <Row last>
                   <div style={{ minWidth: 120 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>이메일</div>
                     <div style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 2 }}>로그인·알림에 사용돼요</div>
@@ -907,31 +723,6 @@ function MyPageContent() {
                   ) : (
                     <Button variant="secondary" onClick={() => setEmailModal(true)} style={{ whiteSpace: 'nowrap' }}>
                       이메일 변경
-                    </Button>
-                  )}
-                </Row>
-                {/* 비밀번호 */}
-                <Row last>
-                  <div style={{ minWidth: 120 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>비밀번호</div>
-                    <div style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 2 }}>
-                      {user.provider !== 'local'
-                        ? '소셜 로그인 계정은 해당 서비스에서 비밀번호를 관리해요'
-                        : '로그인 시 사용하는 비밀번호'}
-                    </div>
-                  </div>
-                  <div style={{ flex: 1 }} />
-                  {user.provider !== 'local' ? (
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
-                      padding: '3px 10px', borderRadius: 'var(--ph-radius-full)',
-                      background: 'var(--ph-secondary)', color: 'var(--ph-primary)', fontSize: 12, fontWeight: 600,
-                    }}>
-                      소셜 계정
-                    </span>
-                  ) : (
-                    <Button variant="secondary" onClick={() => setPwModal(true)} style={{ whiteSpace: 'nowrap' }}>
-                      비밀번호 변경
                     </Button>
                   )}
                 </Row>
@@ -968,9 +759,6 @@ function MyPageContent() {
           )}
         </div>
       </div>
-
-      {/* ── 비밀번호 변경 모달 ── */}
-      {pwModal && <PasswordChangeModal onClose={() => setPwModal(false)} />}
 
       {/* ── 회원 탈퇴 확인 모달 ── */}
       <ConfirmDialog

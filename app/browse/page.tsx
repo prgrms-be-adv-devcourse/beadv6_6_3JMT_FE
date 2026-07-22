@@ -7,7 +7,7 @@ import { API_BASE } from '@/lib/apiBase';
 import { X, Check, SearchX } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
 import Tag from '@/components/ui/Tag';
-import { PRODUCT_TYPES } from '@/lib/productTypes';
+import { PRODUCT_TYPES, PRODUCT_TYPE_LABEL, PRODUCT_TYPE_BROWSE_DESC } from '@/lib/productTypes';
 import { getSellerNames } from '@/lib/sellers';
 
 /* ── Types ────────────────────────────────────────────────────────── */
@@ -83,11 +83,15 @@ function BrowseScreen() {
     router.push('/browse' + (params.toString() ? `?${params.toString()}` : ''));
   };
 
+  const currentTypeLabel = productType === 'all' ? '전체 상품' : (PRODUCT_TYPE_LABEL[productType] ?? '전체 상품');
+  const currentTypeDesc = PRODUCT_TYPE_BROWSE_DESC[productType] ?? PRODUCT_TYPE_BROWSE_DESC.all;
+  const countLabel = productType === 'all' ? '상품' : (PRODUCT_TYPE_LABEL[productType] ?? '상품');
+
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '44px 32px 0' }}>
-      <h1 style={{ fontSize: 33, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.01em' }}>프롬프트 탐색</h1>
+      <h1 style={{ fontSize: 33, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.01em' }}>{currentTypeLabel}</h1>
       <p style={{ color: 'var(--ph-text-secondary)', fontSize: 16, margin: '0 0 28px' }}>
-        {query ? <span>'{query}' 검색 결과 · </span> : null}{list.length}개의 프롬프트
+        {query ? <span>'{query}' 검색 결과 · </span> : <span>{currentTypeDesc} · </span>}{list.length}개의 {countLabel}
       </p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>

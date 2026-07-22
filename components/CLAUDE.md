@@ -66,7 +66,7 @@ components/
 | 모달 | import |
 |------|--------|
 | `LoginModal` | `@/components/modals/LoginModal` |
-| `ConfirmDialog` | `@/components/modals/ConfirmDialog` |
+| `ConfirmDialog` | `@/components/modals/ConfirmDialog` (`showCancel={false}`로 단일 확인 다이얼로그 지원) |
 | `EmailChangeModal` | `@/components/modals/EmailChangeModal` |
 
 **리팩토링 후 추가 예정**:

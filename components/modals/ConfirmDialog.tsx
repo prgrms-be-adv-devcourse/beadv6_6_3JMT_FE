@@ -1,23 +1,25 @@
-'use client';
+'use client'
 
-import { AlertTriangle } from 'lucide-react';
-import Button from '@/components/ui/Button';
+import { useEffect, useId } from 'react'
+import { AlertTriangle } from 'lucide-react'
+import Button from '@/components/ui/Button'
 
 interface ConfirmDialogProps {
-  open: boolean;
-  title: string;
-  description: React.ReactNode;
-  icon?: React.ComponentType<{ style?: React.CSSProperties }>;
-  iconBg?: string;
-  iconColor?: string;
-  confirmLabel: string;
-  cancelLabel?: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  loading?: boolean;
-  confirmVariant?: 'danger' | 'primary';
-  titleAlign?: 'left' | 'center';
-  maxWidth?: number;
+  open: boolean
+  title: string
+  description: React.ReactNode
+  icon?: React.ComponentType<{ style?: React.CSSProperties }>
+  iconBg?: string
+  iconColor?: string
+  confirmLabel: string
+  cancelLabel?: string
+  showCancel?: boolean
+  onConfirm: () => void
+  onCancel: () => void
+  loading?: boolean
+  confirmVariant?: 'danger' | 'primary'
+  titleAlign?: 'left' | 'center'
+  maxWidth?: number
 }
 
 export default function ConfirmDialog({
@@ -25,10 +27,11 @@ export default function ConfirmDialog({
   title,
   description,
   icon: Icon = AlertTriangle,
-  iconBg = 'rgba(217,45,32,0.10)',
+  iconBg = '#fdeceb',
   iconColor = 'var(--ph-error)',
   confirmLabel,
   cancelLabel = '취소',
+  showCancel = true,
   onConfirm,
   onCancel,
   loading = false,
@@ -36,74 +39,70 @@ export default function ConfirmDialog({
   titleAlign = 'left',
   maxWidth = 420,
 }: ConfirmDialogProps) {
-  if (!open) return null;
+  const titleId = useId()
+  const descriptionId = useId()
+  const isCentered = titleAlign === 'center'
 
-  const isCentered = titleAlign === 'center';
+  useEffect(() => {
+    if (!open) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !loading) onCancel()
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [loading, onCancel, open])
+
+  if (!open) return null
+
   const dangerStyle: React.CSSProperties | undefined =
-    confirmVariant === 'danger' ? { background: 'var(--ph-error)' } : undefined;
+    confirmVariant === 'danger' ? { background: 'var(--ph-error)' } : undefined
 
   return (
     <div
-      onClick={() => { if (!loading) onCancel(); }}
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.45)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000, padding: 20,
+      onClick={() => {
+        if (!loading) onCancel()
       }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 p-5"
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        style={{
-          background: '#fff', borderRadius: 'var(--ph-radius-xl)',
-          maxWidth, width: '100%', padding: 28,
-        }}
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        className="w-full rounded-ph-xl bg-ph-surface p-7"
+        style={{ maxWidth }}
       >
-        {/* 아이콘 */}
-        <div style={{
-          width: 44, height: 44, borderRadius: 'var(--ph-radius-full)',
-          background: iconBg,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: isCentered ? '0 auto 16px' : '0 0 16px',
-        }}>
+        <div
+          className={`flex size-11 items-center justify-center rounded-ph-full ${isCentered ? 'mx-auto mb-ph-16' : 'mb-ph-16'}`}
+          style={{ background: iconBg }}
+        >
           <Icon style={{ width: 22, height: 22, color: iconColor }} />
         </div>
 
-        {/* 제목 */}
-        <div style={{
-          fontSize: 18, fontWeight: 700,
-          textAlign: titleAlign, marginBottom: isCentered ? 10 : 8,
-        }}>
+        <div
+          id={titleId}
+          className={`text-ph-body-lg font-bold ${isCentered ? 'mb-2.5 text-center' : 'mb-ph-8'}`}
+        >
           {title}
         </div>
 
-        {/* 설명 */}
-        <p style={{
-          fontSize: isCentered ? 14 : 15,
-          color: 'var(--ph-text-secondary)',
-          textAlign: isCentered ? 'center' : undefined,
-          lineHeight: 1.6,
-          margin: '0 0 24px',
-        }}>
+        <p
+          id={descriptionId}
+          className={`mb-ph-24 text-ph-text-secondary ${isCentered ? 'text-center text-ph-body-sm' : 'text-ph-body-md'} leading-relaxed`}
+        >
           {description}
         </p>
 
-        {/* 버튼 */}
-        <div style={{ display: 'flex', gap: 10 }}>
-          <div style={{ flex: 1 }}>
-            <Button
-              variant="secondary"
-              size="lg"
-              fullWidth
-              disabled={loading}
-              onClick={onCancel}
-            >
-              {cancelLabel}
-            </Button>
-          </div>
-          <div style={{ flex: 1 }}>
+        <div className="flex gap-ph-xs">
+          {showCancel && (
+            <div className="flex-1">
+              <Button variant="secondary" size="lg" fullWidth disabled={loading} onClick={onCancel}>
+                {cancelLabel}
+              </Button>
+            </div>
+          )}
+          <div className="flex-1">
             <Button
               variant="solid"
               size="lg"
@@ -118,5 +117,5 @@ export default function ConfirmDialog({
         </div>
       </div>
     </div>
-  );
+  )
 }
