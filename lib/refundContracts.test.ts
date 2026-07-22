@@ -3,11 +3,10 @@ import test from 'node:test'
 
 import { buildRefundRequest } from './refundContracts.ts'
 
-test('buildRefundRequest sends payment id and only selected order product ids', () => {
-  assert.deepEqual(buildRefundRequest('payment-1', ['line-2', 'line-3']), {
-    path: '/api/v2/orders/refunds',
+test('buildRefundRequest sends the order id in the selected-product refund path', () => {
+  assert.deepEqual(buildRefundRequest('order-1', ['line-2', 'line-3']), {
+    path: '/api/v2/orders/order-1/refund',
     body: {
-      paymentId: 'payment-1',
       orderProductIds: ['line-2', 'line-3'],
     },
   })

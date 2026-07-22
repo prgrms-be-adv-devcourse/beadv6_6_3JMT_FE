@@ -12,7 +12,6 @@ import Button from './Button';
 import { won } from '@/lib/utils';
 
 export interface RefundTarget {
-  paymentId: string;
   orderId: string;
   orderProductIds: string[];
   count: number;
@@ -25,10 +24,12 @@ export interface OrderListProps {
   onRefund: (target: RefundTarget) => void;
 }
 
-const GRID_COLS = 'grid-cols-[1.4fr_1fr_1fr_1fr_96px]';
+const GRID_COLS = 'grid-cols-[2fr_1fr_1fr_1fr_40px]';
 
 const ORDER_STATUS_CLASS: Record<GroupedOrder['status'], string> = {
+  '결제 대기': 'bg-ph-gray-100 text-ph-text-secondary',
   결제완료: 'bg-ph-secondary text-ph-primary',
+  '결제 실패': 'bg-[#fdeceb] text-ph-error',
   '환불 신청 중': 'bg-ph-warning-bg text-ph-warning',
   '부분 환불': 'bg-[#fdeceb] text-ph-error',
   '전체 환불': 'bg-ph-gray-100 text-ph-text-secondary',
@@ -78,7 +79,7 @@ export default function OrderList({ orders, refundingOrderId, onRefund }: OrderL
         <div
           className={`grid ${GRID_COLS} border-b border-ph-border px-ph-16 py-ph-12 text-ph-caption font-medium text-ph-text-secondary`}
         >
-          <span>주문 번호</span>
+          <span>주문 상품 / 번호</span>
           <span>주문일</span>
           <span>주문 금액</span>
           <span>상태</span>
@@ -94,9 +95,10 @@ export default function OrderList({ orders, refundingOrderId, onRefund }: OrderL
           const selection = getSelectedRefundSummary(order.items, effectiveSelectedIds);
           const hasSelectableItems = order.items.some((item) => item.selectable);
           const panelId = `order-detail-${order.orderId}`;
+          const displayOrderNumber = order.orderNumber ?? order.orderId;
 
           return (
-            <div key={order.paymentId}>
+            <div key={order.orderId}>
               <button
                 type="button"
                 aria-expanded={isOpen}
@@ -104,7 +106,14 @@ export default function OrderList({ orders, refundingOrderId, onRefund }: OrderL
                 className={`grid w-full ${GRID_COLS} cursor-pointer items-center border-0 border-b border-ph-border bg-transparent px-ph-16 py-4.5 text-left text-ph-body-sm font-[inherit] hover:bg-ph-gray-50`}
                 onClick={() => setOpenOrderId(isOpen ? null : order.orderId)}
               >
-                <span className="font-bold text-ph-text">{order.orderId}</span>
+                <div className="flex flex-col min-w-0 pr-2">
+                  <span className="font-bold text-ph-text truncate" title={order.titleSummary}>
+                    {order.titleSummary}
+                  </span>
+                  <span className="text-xs text-ph-text-muted truncate mt-0.5" title={displayOrderNumber}>
+                    {displayOrderNumber}
+                  </span>
+                </div>
                 <span className="text-ph-text-secondary">{formatDate(order.paidAt)}</span>
                 <span className="font-bold text-ph-text">{won(order.amount)}</span>
                 <span>
@@ -200,7 +209,6 @@ export default function OrderList({ orders, refundingOrderId, onRefund }: OrderL
                         }}
                         onClick={() =>
                           onRefund({
-                            paymentId: order.paymentId,
                             orderId: order.orderId,
                             orderProductIds: selection.orderProductIds,
                             count: selection.count,

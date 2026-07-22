@@ -1,11 +1,16 @@
 import type {
   OrderListItem,
+  OrderStatus,
   OrderProductStatus,
-  PaymentItem,
-  PaymentStatus,
 } from '@/types/api/orders';
 
-export type OrderHistoryStatus = '결제완료' | '환불 신청 중' | '부분 환불' | '전체 환불';
+export type OrderHistoryStatus =
+  | '결제 대기'
+  | '결제완료'
+  | '결제 실패'
+  | '환불 신청 중'
+  | '부분 환불'
+  | '전체 환불';
 export type OrderHistoryProductStatus =
   | '결제완료'
   | '환불 신청 중'
@@ -26,7 +31,8 @@ export interface GroupedOrderItem {
 
 export interface GroupedOrder {
   orderId: string;
-  paymentId: string;
+  orderNumber?: string;
+  titleSummary: string;
   paidAt: string;
   amount: number;
   status: OrderHistoryStatus;
@@ -39,9 +45,11 @@ export interface RefundSelectionSummary {
   orderProductIds: string[];
 }
 
-const ORDER_STATUS_LABEL: Record<PaymentStatus, OrderHistoryStatus> = {
-  PAID: '결제완료',
-  REFUNDING: '환불 신청 중',
+const ORDER_STATUS_LABEL: Record<OrderStatus, OrderHistoryStatus> = {
+  CREATED: '결제 대기',
+  COMPLETED: '결제완료',
+  FAILED: '결제 실패',
+  REFUND_REQUESTED: '환불 신청 중',
   PARTIAL_REFUNDED: '부분 환불',
   ALL_REFUNDED: '전체 환불',
 };
@@ -58,16 +66,30 @@ export function orderProductStatusLabel(status: OrderProductStatus): OrderHistor
   return ORDER_PRODUCT_STATUS_LABEL[status];
 }
 
-export function groupOrders(payments: PaymentItem[], orderItems: OrderListItem[]): GroupedOrder[] {
-  return payments.map((payment) => ({
-    orderId: payment.orderId,
-    paymentId: payment.paymentId,
-    paidAt: payment.paidAt,
-    amount: payment.amount,
-    status: ORDER_STATUS_LABEL[payment.paymentStatus],
-    items: orderItems
-      .filter((item) => item.orderId === payment.orderId)
-      .map((item) => ({
+export function groupOrders(orderItems: OrderListItem[]): GroupedOrder[] {
+  const itemsByOrder = new Map<string, OrderListItem[]>();
+
+  orderItems.forEach((item) => {
+    const items = itemsByOrder.get(item.orderId) ?? [];
+    items.push(item);
+    itemsByOrder.set(item.orderId, items);
+  });
+
+  return Array.from(itemsByOrder.values()).map((items) => {
+    const first = items[0];
+    const paidAt = items.find((item) => item.paidAt)?.paidAt ?? first.createdAt;
+    const firstTitle = first.title || '주문 상품';
+    const titleSummary = items.length > 1 ? `${firstTitle} 외 ${items.length - 1}건` : firstTitle;
+    const orderNumber = (first as unknown as { orderNumber?: string }).orderNumber;
+
+    return {
+      orderId: first.orderId,
+      orderNumber,
+      titleSummary,
+      paidAt,
+      amount: items.reduce((sum, item) => sum + item.amount, 0),
+      status: ORDER_STATUS_LABEL[first.orderStatus] ?? '결제 대기',
+      items: items.map((item) => ({
         orderProductId: item.orderProductId,
         productId: item.productId,
         title: item.title,
@@ -77,7 +99,8 @@ export function groupOrders(payments: PaymentItem[], orderItems: OrderListItem[]
         isRefundable: item.isRefundable,
         selectable: item.orderProductStatus === 'PAID' && item.isRefundable,
       })),
-  }));
+    };
+  });
 }
 
 export function getSelectedRefundSummary(
@@ -101,9 +124,17 @@ export function markRefundRequested(
   selectedIds: readonly string[],
 ): OrderListItem[] {
   const selected = new Set(selectedIds);
-  return orderItems.map((item) =>
-    selected.has(item.orderProductId)
-      ? { ...item, orderProductStatus: 'REFUND_REQUESTED', isRefundable: false }
-      : item,
+  const requestedOrderIds = new Set(
+    orderItems
+      .filter((item) => selected.has(item.orderProductId))
+      .map((item) => item.orderId),
   );
+
+  return orderItems.map((item) => ({
+    ...item,
+    ...(requestedOrderIds.has(item.orderId) ? { orderStatus: 'REFUND_REQUESTED' as const } : {}),
+    ...(selected.has(item.orderProductId)
+      ? { orderProductStatus: 'REFUND_REQUESTED' as const, isRefundable: false }
+      : {}),
+  }));
 }

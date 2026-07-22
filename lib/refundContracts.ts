@@ -1,8 +1,8 @@
 import { API_BASE } from './apiBase.ts'
 
-export function buildRefundRequest(paymentId: string, orderProductIds: string[]) {
+export function buildRefundRequest(orderId: string, orderProductIds: string[]) {
   return {
-    path: `${API_BASE}/orders/refunds`,
-    body: { paymentId, orderProductIds },
+    path: `${API_BASE}/orders/${orderId}/refund`,
+    body: { orderProductIds },
   }
 }

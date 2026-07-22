@@ -12,12 +12,11 @@ import { getWishlists } from '@/lib/wishlists';
 import { getProductsByIds, getProductsForOrders } from '@/lib/products';
 import { getWishlistSellerNames } from '@/lib/sellers';
 import { composeWishlistCards } from '@/lib/wishlistComposition';
-import { getPaymentHistory, requestRefund as apiRequestRefund } from '@/lib/payments';
+import { requestRefund as apiRequestRefund } from '@/lib/payments';
 import { getOrders } from '@/lib/orders';
 import { mapOrderToPrompt } from '@/lib/orderAdapters';
-import { mapPaymentHistory } from '@/lib/paymentAdapters';
 import { groupOrders, markRefundRequested } from '@/lib/orderGrouping';
-import { OrderListItem, PaymentItem as ApiPaymentItem } from '@/types/api/orders';
+import { OrderListItem } from '@/types/api/orders';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';
 import {
@@ -252,17 +251,14 @@ function MyPageContent() {
   const [refundingOrderId, setRefundingOrderId] = useState<string | null>(null);
   const [purchased, setPurchased] = useState<Prompt[]>([]);
   const [wishlist, setWishlist] = useState<Prompt[]>([]);
-  const [payments, setPayments] = useState<ApiPaymentItem[]>([]);
   const [orderItems, setOrderItems] = useState<OrderListItem[]>([]);
-  const [paymentsPage, setPaymentsPage] = useState(1);
-  const [paymentsHasNext, setPaymentsHasNext] = useState(false);
-  const [loadingMorePayments, setLoadingMorePayments] = useState(false);
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const [loadingPurchased, setLoadingPurchased] = useState(true);
   const [loadingWishlist, setLoadingWishlist] = useState(true);
   const [wishlistLoadError, setWishlistLoadError] = useState(false);
   const [loadingPayments, setLoadingPayments] = useState(true);
+  const [orderLoadError, setOrderLoadError] = useState(false);
   const [userLoadError, setUserLoadError] = useState(false);
 
   const fetchUser = useCallback(async () => {
@@ -304,43 +300,42 @@ function MyPageContent() {
     }
   };
 
+  const fetchOrders = useCallback(async () => {
+    setLoadingPurchased(true);
+    setLoadingPayments(true);
+    setOrderLoadError(false);
+
+    try {
+      const orders = await getOrders();
+      setOrderItems(orders);
+      const prompts = orders.map(mapOrderToPrompt).filter((item): item is Prompt => item !== null);
+
+      try {
+        const products = await getProductsForOrders(prompts.map((p) => p.id));
+        const sellerIdByProductId = new Map(products.map((p) => [p.productId, p.sellerId]));
+        prompts.forEach((p) => {
+          p.sellerId = sellerIdByProductId.get(p.id);
+        });
+      } catch {
+        // 상품 배치 조회 실패는 주문 조회 실패와 구분하고 sellerId만 비워둔다.
+      }
+
+      setPurchased(prompts);
+    } catch {
+      setOrderItems([]);
+      setPurchased([]);
+      setOrderLoadError(true);
+    } finally {
+      setLoadingPurchased(false);
+      setLoadingPayments(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!_hasHydrated) return;
     if (!isLoggedIn) { openLoginModal(); return; }
     fetchUser();
-    getOrders()
-      .then(async (orders) => {
-        setOrderItems(orders);
-        const prompts = orders.map(mapOrderToPrompt).filter((item): item is Prompt => item !== null);
-
-        try {
-          const products = await getProductsForOrders(prompts.map((p) => p.id));
-          const sellerIdByProductId = new Map(products.map((p) => [p.productId, p.sellerId]));
-          prompts.forEach((p) => {
-            p.sellerId = sellerIdByProductId.get(p.id);
-          });
-        } catch {
-          // 상품 배치 조회 실패는 구매 목록 전체 실패로 전파하지 않는다. sellerId는 비워둔 채 진행.
-        }
-
-        setPurchased(prompts);
-
-        try {
-          const paymentHistory = await getPaymentHistory(1);
-          setPayments(mapPaymentHistory(paymentHistory.data, orders));
-          setPaymentsPage(1);
-          setPaymentsHasNext(paymentHistory.meta.hasNext);
-        } catch {
-          setPaymentsHasNext(false);
-        }
-      })
-      .catch(() => {
-        setPaymentsHasNext(false);
-      })
-      .finally(() => {
-        setLoadingPurchased(false);
-        setLoadingPayments(false);
-      });
+    fetchOrders();
     setWishlistLoadError(false);
     getWishlists()
       .then(async (items) => {
@@ -359,10 +354,10 @@ function MyPageContent() {
         setWishlistLoadError(true);
       })
       .finally(() => setLoadingWishlist(false));
-  }, [isLoggedIn, _hasHydrated, openLoginModal, fetchUser]);
+  }, [isLoggedIn, _hasHydrated, openLoginModal, fetchUser, fetchOrders]);
 
   const cart = cartItems;
-  const groupedOrders = useMemo(() => groupOrders(payments, orderItems), [payments, orderItems]);
+  const groupedOrders = useMemo(() => groupOrders(orderItems), [orderItems]);
 
   if (!_hasHydrated) return null;
 
@@ -400,17 +395,10 @@ function MyPageContent() {
     setRefundingOrderId(refundTarget.orderId);
     try {
       await apiRequestRefund({
-        paymentId: refundTarget.paymentId,
+        orderId: refundTarget.orderId,
         orderProductIds: refundTarget.orderProductIds,
       });
       setOrderItems((prev) => markRefundRequested(prev, refundTarget.orderProductIds));
-      setPayments((prev) =>
-        prev.map((payment) =>
-          payment.paymentId === refundTarget.paymentId
-            ? { ...payment, paymentStatus: 'REFUNDING' }
-            : payment
-        )
-      );
       const selectedOrderProductIds = new Set(refundTarget.orderProductIds);
       setRefunds((prev) => {
         const next = { ...prev };
@@ -433,22 +421,6 @@ function MyPageContent() {
     } finally {
       setRefundingOrderId(null);
       setRefundTarget(null);
-    }
-  };
-
-  const handleLoadMorePayments = async () => {
-    if (loadingMorePayments || !paymentsHasNext) return;
-    setLoadingMorePayments(true);
-    try {
-      const nextPage = paymentsPage + 1;
-      const paymentHistory = await getPaymentHistory(nextPage);
-      setPayments((prev) => [...prev, ...mapPaymentHistory(paymentHistory.data, orderItems)]);
-      setPaymentsPage(nextPage);
-      setPaymentsHasNext(paymentHistory.meta.hasNext);
-    } catch {
-      showToast('주문 내역을 더 불러오지 못했어요. 다시 시도해 주세요.');
-    } finally {
-      setLoadingMorePayments(false);
     }
   };
 
@@ -603,7 +575,11 @@ function MyPageContent() {
               {/* 통계 카드 3개 */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 16 }}>
                 {[
-                  { label: '구매한 프롬프트', value: purchased.length, toTab: 'purchased' as TabId },
+                  {
+                    label: '구매한 프롬프트',
+                    value: loadingPurchased || orderLoadError ? '—' : purchased.length,
+                    toTab: 'purchased' as TabId,
+                  },
                   { label: '찜한 프롬프트',   value: wishlist.length,  toTab: 'wishlist'  as TabId },
                   { label: '장바구니',         value: cart.length,       toTab: undefined },
                 ].map((s) => (
@@ -627,6 +603,13 @@ function MyPageContent() {
               <SectionTitle sub="결제한 프롬프트를 다시 받아볼 수 있어요.">구매한 프롬프트</SectionTitle>
               {loadingPurchased ? (
                 <GridSkeleton />
+              ) : orderLoadError ? (
+                <EmptyState
+                  icon={AlertTriangle}
+                  text="구매 내역을 불러오지 못했어요. 다시 시도해 주세요."
+                  cta="다시 시도"
+                  onCta={fetchOrders}
+                />
               ) : purchased.length === 0 ? (
                 <EmptyState
                   icon={ShoppingBag}
@@ -716,7 +699,14 @@ function MyPageContent() {
               <SectionTitle sub="주문한 내역과 환불 상태를 확인하세요.">주문 내역</SectionTitle>
               {loadingPayments ? (
                 <TableSkeleton />
-              ) : payments.length === 0 ? (
+              ) : orderLoadError ? (
+                <EmptyState
+                  icon={AlertTriangle}
+                  text="주문 내역을 불러오지 못했어요. 다시 시도해 주세요."
+                  cta="다시 시도"
+                  onCta={fetchOrders}
+                />
+              ) : groupedOrders.length === 0 ? (
                 <EmptyState
                   icon={Receipt}
                   text="아직 주문 내역이 없어요."
@@ -730,13 +720,6 @@ function MyPageContent() {
                     refundingOrderId={refundingOrderId}
                     onRefund={setRefundTarget}
                   />
-                  {paymentsHasNext && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>
-                      <Button variant="secondary" disabled={loadingMorePayments} onClick={handleLoadMorePayments}>
-                        {loadingMorePayments ? '불러오는 중...' : '주문 내역 더 보기'}
-                      </Button>
-                    </div>
-                  )}
                 </>
               )}
             </div>
