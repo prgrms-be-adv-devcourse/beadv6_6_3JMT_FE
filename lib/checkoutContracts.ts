@@ -35,6 +35,16 @@ export function shouldRequestPayment(totalAmount: number): boolean {
   return totalAmount > 0
 }
 
+export function shouldRestoreCartAfterCheckoutFailure({
+  isSingle,
+  localCartCleared,
+}: {
+  isSingle: boolean
+  localCartCleared: boolean
+}): boolean {
+  return !isSingle && localCartCleared
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null
     ? (value as Record<string, unknown>)
@@ -51,8 +61,10 @@ export function normalizeCheckoutFailure(
   const response = asRecord(sourceRecord?.response)
   const data = asRecord(response?.data)
   const status = typeof response?.status === 'number' ? response.status : null
-  const code = typeof data?.code === 'string' ? data.code : null
-  const serverMessage = typeof data?.message === 'string' ? data.message : null
+  const topLevelCode = typeof sourceRecord?.code === 'string' ? sourceRecord.code : null
+  const topLevelMessage = typeof sourceRecord?.message === 'string' ? sourceRecord.message : null
+  const code = typeof data?.code === 'string' ? data.code : topLevelCode
+  const serverMessage = typeof data?.message === 'string' ? data.message : topLevelMessage
   const localMessage = error instanceof Error ? error.message : null
 
   return {
