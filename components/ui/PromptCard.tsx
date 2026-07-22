@@ -13,6 +13,7 @@ import { useToast } from '@/store/useToastStore';
 import { won } from '@/lib/utils';
 import { addCartItem } from '@/lib/cart';
 import { addWishlist, removeWishlist, getWishlistIdForProduct } from '@/lib/wishlists';
+import { PRODUCT_TYPE_LABEL } from '@/lib/productTypes';
 
 /* ── 공유 Prompt 타입 ────────────────────────────────────────────── */
 
@@ -200,6 +201,10 @@ export default function PromptCard({
 
   /* detail 페이지 관련 카드는 gray-100, 나머지는 gray-50 */
   const modelBg = detailBadge ? 'var(--ph-gray-100)' : 'var(--ph-gray-50)';
+  /* PROMPT 타입에 모델 데이터가 있을 때만 모델명을, 그 외(NOTION/PPT/EXCEL 등)엔 상품 유형 라벨을 표시 */
+  const modelLabel = p.model && p.productType === 'PROMPT'
+    ? p.model
+    : (p.productType && PRODUCT_TYPE_LABEL[p.productType]) || p.model;
 
   return (
     <div
@@ -282,7 +287,7 @@ export default function PromptCard({
           color: 'var(--ph-text-secondary)', whiteSpace: 'nowrap',
           overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
         }}>
-          {p.model}
+          {modelLabel}
         </span>
       </div>
 
