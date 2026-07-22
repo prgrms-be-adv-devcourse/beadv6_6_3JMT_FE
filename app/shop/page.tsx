@@ -105,7 +105,7 @@ export default function ShopPage() {
 
   useEffect(() => {
     // 프롬프트 목록(그리드)은 상품 서비스에서 그대로 사용
-    api.get(`${API_BASE}/sellers/me/products`)
+    api.get(`${API_BASE}/products/sellers/me`)
       .catch(() => ({ data: { data: [] } }))
       .then((productsRes) => {
         const raw = productsRes.data.data ?? [];
@@ -149,7 +149,7 @@ export default function ShopPage() {
 
   const submitForReview = async (id: string) => {
     try {
-      await api.patch(`${API_BASE}/sellers/me/products/${id}/submit`)
+      await api.patch(`${API_BASE}/products/${id}/inspection`)
       setMyListings((prev) => prev.map((p) => p.id === id ? { ...p, status: 'review' as const } : p))
     } catch {
       // 실패 무시
@@ -159,7 +159,7 @@ export default function ShopPage() {
   const isStopped = (id: string | number) => !!stopped[id];
   const stopSelling = async (id: string | number) => {
     try {
-      await api.delete(`${API_BASE}/sellers/me/products/${id}`);
+      await api.delete(`${API_BASE}/products/${id}`);
     } catch {
       // 실패해도 UI는 동일하게 처리
     } finally {

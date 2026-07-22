@@ -155,7 +155,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     if (saving) return;
     setSaving(true);
     try {
-      await api.put(`${API_BASE}/sellers/me/products/${id}`, {
+      await api.patch(`${API_BASE}/products/${id}`, {
         title, productType,
         model: productType === 'PROMPT' ? (model.trim() || null) : null,
         amount: Number(price),
@@ -193,7 +193,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   const cleanupAndCancel = async () => {
     const tempUrls = [thumbUrl, fileUrl, ...galleryUrls].filter((u): u is string => !!u && u.includes('/temp/'));
     if (tempUrls.length > 0) {
-      await api.delete(`${API_BASE}/sellers/me/products/images`, { data: tempUrls }).catch(() => {});
+      await api.delete(`${API_BASE}/products/images`, { data: tempUrls }).catch(() => {});
     }
     router.push('/shop');
   };
@@ -529,7 +529,7 @@ export default function EditPage() {
 
   useEffect(() => {
     if (!id) return;
-    api.get(`${API_BASE}/sellers/me/products/${id}`)
+    api.get(`${API_BASE}/products/${id}/sellers/me`)
       .then((res) => {
         const d = res.data.data;
         setPrompt({

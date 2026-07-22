@@ -33,12 +33,12 @@ test('buildDirectRoutingRewrites returns nothing when only paths or only target 
 
 test('buildDirectRoutingRewrites builds a rewrite per configured path prefix', () => {
   resetEnv()
-  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products, /api/v2/sellers/me/products,/api/v2/admin/products'
+  mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products, /api/v2/orders,/api/v2/admin/products'
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
   const rules = buildDirectRoutingRewrites()
   assert.deepEqual(rules, [
     { source: '/api/v2/products/:path*', destination: 'http://localhost:8082/api/v2/products/:path*' },
-    { source: '/api/v2/sellers/me/products/:path*', destination: 'http://localhost:8082/api/v2/sellers/me/products/:path*' },
+    { source: '/api/v2/orders/:path*', destination: 'http://localhost:8082/api/v2/orders/:path*' },
     { source: '/api/v2/admin/products/:path*', destination: 'http://localhost:8082/api/v2/admin/products/:path*' },
   ])
   resetEnv()

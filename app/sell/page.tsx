@@ -113,7 +113,7 @@ export default function SellPage() {
     if (loading) return;
     setLoading(true);
     try {
-      await api.post(`${API_BASE}/sellers/me/products`, {
+      await api.post(`${API_BASE}/products`, {
         title,
         productType,
         model: productType === 'PROMPT' ? (model.trim() || null) : null,
@@ -146,7 +146,7 @@ export default function SellPage() {
   const cleanupAndLeave = async () => {
     const uploadedUrls = [thumbUrl, fileUrl, ...galleryUrls].filter((u): u is string => u !== null);
     if (uploadedUrls.length > 0) {
-      await api.delete(`${API_BASE}/sellers/me/products/images`, { data: uploadedUrls }).catch(() => {});
+      await api.delete(`${API_BASE}/products/images`, { data: uploadedUrls }).catch(() => {});
     }
     router.push('/shop');
   };

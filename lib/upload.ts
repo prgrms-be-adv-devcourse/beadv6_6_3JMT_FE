@@ -36,7 +36,7 @@ export async function uploadViaPresign(
   purpose: UploadPurpose,
   productType?: string,
 ): Promise<string> {
-  const { data } = await api.post(`${API_BASE}/sellers/me/products/uploads`, {
+  const { data } = await api.post(`${API_BASE}/products/uploads/presigned-urls`, {
     purpose,
     fileName: file.name,
     productType,
