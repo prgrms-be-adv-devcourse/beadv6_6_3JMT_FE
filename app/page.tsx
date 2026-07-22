@@ -11,6 +11,7 @@ import { ICON_MAP } from '@/lib/iconMap';
 import { useAuthStore } from '@/store/useAuthStore';
 import Card from '@/components/ui/Card';
 import { PRODUCT_TYPES } from '@/lib/productTypes';
+import { getSellerNames } from '@/lib/sellers';
 
 /* ── Mock Data ─────────────────────────────────────────────────────── */
 
@@ -33,7 +34,7 @@ const TAGS = [
 type Prompt = {
   id: string; title: string; icon: string; model: string;
   amount: number; originalAmount?: number; rating: number; salesCount: number;
-  seller: string; badge?: string; desc: string;
+  seller: string; sellerId?: string; badge?: string; desc: string;
 };
 
 
@@ -203,7 +204,20 @@ function PopularGrid() {
 
   useEffect(() => {
     api.get(`${API_BASE}/products`, { params: { sort: 'popular', size: '8', productType: 'PROMPT' } })
-      .then((res) => setFeatured(res.data.data ?? []))
+      .then(async (res) => {
+        const products: Prompt[] = res.data.data ?? [];
+        const sellerIds = products.map((p) => p.sellerId).filter((id): id is string => !!id);
+        if (sellerIds.length === 0) { setFeatured(products); return; }
+
+        try {
+          const sellerNames = await getSellerNames(sellerIds);
+          setFeatured(products.map((p) => (
+            p.sellerId ? { ...p, seller: sellerNames[p.sellerId] ?? p.seller ?? '탈퇴한 판매자' } : p
+          )));
+        } catch {
+          setFeatured(products);
+        }
+      })
       .catch(() => {});
   }, []);
 
