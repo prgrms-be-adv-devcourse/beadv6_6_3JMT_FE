@@ -18,7 +18,6 @@ import { StatusBadge } from '@/components/admin/Badge'
 import { Identity, Table, Td, Th, Tr } from '@/components/admin/DataTable'
 import { SectionCard } from '@/components/admin/SectionCard'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
-import { SettlementAmountBreakdown } from '@/components/ui/SettlementAmountBreakdown'
 import { SETTLEMENT_STATUS_FILTERS, type SettlementFilter } from '@/lib/constants'
 import {
   getAdminSettlementDetail,
@@ -534,7 +533,7 @@ export default function AdminSettlementsView() {
                           <td
                             id={`admin-settlement-${key}`}
                             colSpan={9}
-                            className="border-t border-ph-border bg-ph-gray-50 px-5 py-4"
+                            className="border-t border-ph-border bg-ph-gray-50 p-ph-16"
                           >
                             {loadingDetail === key && !detail ? (
                               <div className="py-6 text-center text-ph-caption text-ph-text-muted">
@@ -552,67 +551,92 @@ export default function AdminSettlementsView() {
                                 </button>
                               </div>
                             ) : detail?.weeklySettlements.length ? (
-                              <div className="flex flex-col gap-ph-8">
-                                {detail.weeklySettlements.map((weekly) => {
-                                  const adminActions =
-                                    weekly.availableActions.filter(isAdminSettlementAction)
-                                  return (
-                                    <div
-                                      key={weekly.settlementId}
-                                      className="rounded-ph-sm border border-ph-border bg-ph-white px-ph-16 py-3"
-                                    >
-                                      <div className="flex flex-wrap items-center justify-between gap-ph-12">
-                                        <div className="flex flex-wrap items-center gap-x-ph-16 gap-y-ph-8">
-                                          <span className="text-ph-caption font-semibold text-ph-text-secondary">
-                                            {settlementPeriodLabel(
-                                              weekly.periodStart,
-                                              weekly.periodEnd,
-                                            )}
-                                          </span>
-                                          <span className="text-ph-caption text-ph-text-muted">
-                                            판매 {weekly.salesCount.toLocaleString('ko-KR')}건
-                                          </span>
-                                          <StatusBadge
-                                            status={weekly.status}
-                                            label={weekly.statusLabel}
-                                          />
-                                        </div>
-                                        <div className="flex flex-wrap justify-end gap-ph-2xs">
-                                          {adminActions.length === 0 ? (
-                                            <span className="text-[12.5px] text-ph-text-muted">
-                                              처리할 액션 없음
-                                            </span>
-                                          ) : (
-                                            adminActions.map((action) => {
-                                              const actionType: AdminSettlementAction = action.type
-                                              const meta = ACTION_META[actionType]
-                                              const Icon = meta.Icon
-                                              return (
-                                                <RowButton
-                                                  key={actionType}
-                                                  tone={meta.tone}
-                                                  disabled={actingId === weekly.settlementId}
-                                                  onClick={() =>
-                                                    handleAction(item, weekly, actionType)
-                                                  }
-                                                >
-                                                  <Icon size={14} /> {action.label}
-                                                </RowButton>
-                                              )
-                                            })
-                                          )}
-                                        </div>
-                                      </div>
-                                      <SettlementAmountBreakdown
-                                        grossAmount={weekly.grossAmount}
-                                        feeAmount={weekly.feeAmount}
-                                        refundAmount={weekly.refundAmount}
-                                        payoutAmount={weekly.payoutAmount}
-                                        className="mt-ph-12 border-t border-ph-border pt-ph-12"
-                                      />
-                                    </div>
-                                  )
-                                })}
+                              <div className="overflow-x-auto rounded-ph-lg border border-ph-border bg-ph-white [&_tbody_tr:last-child_td]:border-b-0">
+                                <div className="min-w-[1120px]">
+                                  <Table>
+                                    <thead>
+                                      <tr>
+                                        <Th>정산 기간</Th>
+                                        <Th align="right">판매</Th>
+                                        <Th align="right">총 거래액</Th>
+                                        <Th align="right">수수료</Th>
+                                        <Th align="right">환불</Th>
+                                        <Th align="right">지급액</Th>
+                                        <Th>상태</Th>
+                                        <Th align="right">관리</Th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {detail.weeklySettlements.map((weekly) => {
+                                        const adminActions =
+                                          weekly.availableActions.filter(isAdminSettlementAction)
+                                        return (
+                                          <Tr key={weekly.settlementId}>
+                                            <Td>
+                                              <span className="whitespace-nowrap font-semibold text-ph-text-secondary">
+                                                {settlementPeriodLabel(
+                                                  weekly.periodStart,
+                                                  weekly.periodEnd,
+                                                )}
+                                              </span>
+                                            </Td>
+                                            <Td align="right">
+                                              {weekly.salesCount.toLocaleString('ko-KR')}건
+                                            </Td>
+                                            <Td align="right">{won(weekly.grossAmount)}</Td>
+                                            <Td align="right">
+                                              <span className="text-ph-text-muted">
+                                                −{won(weekly.feeAmount)}
+                                              </span>
+                                            </Td>
+                                            <Td align="right">
+                                              <span className="text-ph-text-muted">
+                                                −{won(weekly.refundAmount)}
+                                              </span>
+                                            </Td>
+                                            <Td align="right">
+                                              <strong>{won(weekly.payoutAmount)}</strong>
+                                            </Td>
+                                            <Td>
+                                              <StatusBadge
+                                                status={weekly.status}
+                                                label={weekly.statusLabel}
+                                              />
+                                            </Td>
+                                            <Td align="right">
+                                              <div className="flex flex-wrap justify-end gap-ph-2xs">
+                                                {adminActions.length === 0 ? (
+                                                  <span className="text-[12.5px] text-ph-text-muted">
+                                                    처리할 액션 없음
+                                                  </span>
+                                                ) : (
+                                                  adminActions.map((action) => {
+                                                    const actionType: AdminSettlementAction =
+                                                      action.type
+                                                    const meta = ACTION_META[actionType]
+                                                    const Icon = meta.Icon
+                                                    return (
+                                                      <RowButton
+                                                        key={actionType}
+                                                        tone={meta.tone}
+                                                        disabled={actingId === weekly.settlementId}
+                                                        onClick={() =>
+                                                          handleAction(item, weekly, actionType)
+                                                        }
+                                                      >
+                                                        <Icon size={14} /> {action.label}
+                                                      </RowButton>
+                                                    )
+                                                  })
+                                                )}
+                                              </div>
+                                            </Td>
+                                          </Tr>
+                                        )
+                                      })}
+                                    </tbody>
+                                  </Table>
+                                </div>
                               </div>
                             ) : detail ? (
                               <div className="py-6 text-center text-ph-caption text-ph-text-muted">

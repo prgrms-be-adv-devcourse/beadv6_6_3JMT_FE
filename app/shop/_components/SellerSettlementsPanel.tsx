@@ -4,7 +4,6 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { Banknote, ChevronDown, RefreshCw } from 'lucide-react'
 import { StatusBadge } from '@/components/admin/Badge'
 import { Table, Td, Th, Tr } from '@/components/admin/DataTable'
-import { SettlementAmountBreakdown } from '@/components/ui/SettlementAmountBreakdown'
 import { SETTLEMENT_STATUS_FILTERS, type SettlementFilter } from '@/lib/constants'
 import {
   getSellerSettlementDetail,
@@ -270,7 +269,7 @@ export default function SellerSettlementsPanel({
                         <td
                           id={`seller-settlement-${item.settlementMonth}`}
                           colSpan={8}
-                          className="border-t border-ph-border bg-ph-gray-50 px-5 py-4"
+                          className="border-t border-ph-border bg-ph-gray-50 p-ph-16"
                         >
                           {loadingDetail === item.settlementMonth && !detail ? (
                             <div className="py-6 text-center text-ph-caption text-ph-text-muted">
@@ -288,63 +287,89 @@ export default function SellerSettlementsPanel({
                               </button>
                             </div>
                           ) : detail?.weeklySettlements.length ? (
-                            <div className="flex flex-col gap-ph-8">
-                              {detail.weeklySettlements.map((weekly) => {
-                                const payoutAction = weekly.availableActions.find(
-                                  (action) => action.type === 'REQUEST_PAYOUT',
-                                )
-                                return (
-                                  <div
-                                    key={weekly.settlementId}
-                                    className="rounded-ph-sm border border-ph-border bg-ph-surface px-ph-16 py-3"
-                                  >
-                                    <div className="flex flex-wrap items-center justify-between gap-ph-12">
-                                      <div className="flex flex-wrap items-center gap-x-ph-16 gap-y-ph-8">
-                                        <span className="text-ph-caption font-semibold text-ph-text-secondary">
-                                          {settlementPeriodLabel(
-                                            weekly.periodStart,
-                                            weekly.periodEnd,
-                                          )}
-                                        </span>
-                                        <span className="text-ph-caption text-ph-text-muted">
-                                          판매 {weekly.salesCount.toLocaleString('ko-KR')}건
-                                        </span>
-                                      </div>
-                                      <div className="flex flex-wrap items-center gap-ph-8">
-                                        <StatusBadge
-                                          status={weekly.status}
-                                          label={weekly.statusLabel}
-                                        />
-                                        {payoutAction && (
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              requestPayout(
-                                                weekly.settlementId,
-                                                item.settlementMonth,
-                                              )
-                                            }
-                                            disabled={requestingId === weekly.settlementId}
-                                            className="inline-flex h-8 items-center justify-center gap-ph-2xs rounded-ph-sm bg-ph-primary px-3 text-[12.5px] font-semibold text-ph-on-accent disabled:opacity-40"
-                                          >
-                                            <Banknote size={14} />
-                                            {requestingId === weekly.settlementId
-                                              ? '처리 중…'
-                                              : payoutAction.label}
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <SettlementAmountBreakdown
-                                      grossAmount={weekly.grossAmount}
-                                      feeAmount={weekly.feeAmount}
-                                      refundAmount={weekly.refundAmount}
-                                      payoutAmount={weekly.payoutAmount}
-                                      className="mt-ph-12 border-t border-ph-border pt-ph-12"
-                                    />
-                                  </div>
-                                )
-                              })}
+                            <div className="overflow-x-auto rounded-ph-lg border border-ph-border bg-ph-surface [&_tbody_tr:last-child_td]:border-b-0">
+                              <div className="min-w-[960px]">
+                                <Table>
+                                  <thead>
+                                    <tr>
+                                      <Th>정산 기간</Th>
+                                      <Th align="right">판매</Th>
+                                      <Th align="right">총 거래액</Th>
+                                      <Th align="right">수수료</Th>
+                                      <Th align="right">환불</Th>
+                                      <Th align="right">지급액</Th>
+                                      <Th>상태</Th>
+                                      <Th align="right">지급 신청</Th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {detail.weeklySettlements.map((weekly) => {
+                                      const payoutAction = weekly.availableActions.find(
+                                        (action) => action.type === 'REQUEST_PAYOUT',
+                                      )
+                                      return (
+                                        <Tr key={weekly.settlementId}>
+                                          <Td>
+                                            <span className="whitespace-nowrap font-semibold text-ph-text-secondary">
+                                              {settlementPeriodLabel(
+                                                weekly.periodStart,
+                                                weekly.periodEnd,
+                                              )}
+                                            </span>
+                                          </Td>
+                                          <Td align="right">
+                                            {weekly.salesCount.toLocaleString('ko-KR')}건
+                                          </Td>
+                                          <Td align="right">{won(weekly.grossAmount)}</Td>
+                                          <Td align="right">
+                                            <span className="text-ph-text-muted">
+                                              −{won(weekly.feeAmount)}
+                                            </span>
+                                          </Td>
+                                          <Td align="right">
+                                            <span className="text-ph-text-muted">
+                                              −{won(weekly.refundAmount)}
+                                            </span>
+                                          </Td>
+                                          <Td align="right">
+                                            <strong>{won(weekly.payoutAmount)}</strong>
+                                          </Td>
+                                          <Td>
+                                            <StatusBadge
+                                              status={weekly.status}
+                                              label={weekly.statusLabel}
+                                            />
+                                          </Td>
+                                          <Td align="right">
+                                            {payoutAction ? (
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  requestPayout(
+                                                    weekly.settlementId,
+                                                    item.settlementMonth,
+                                                  )
+                                                }
+                                                disabled={requestingId === weekly.settlementId}
+                                                className="inline-flex h-8 items-center justify-center gap-ph-2xs whitespace-nowrap rounded-ph-sm bg-ph-primary px-3 text-[12.5px] font-semibold text-ph-on-accent hover:bg-ph-blue-hover disabled:opacity-40"
+                                              >
+                                                <Banknote size={14} />
+                                                {requestingId === weekly.settlementId
+                                                  ? '처리 중…'
+                                                  : payoutAction.label}
+                                              </button>
+                                            ) : (
+                                              <span className="text-ph-caption text-ph-text-muted">
+                                                —
+                                              </span>
+                                            )}
+                                          </Td>
+                                        </Tr>
+                                      )
+                                    })}
+                                  </tbody>
+                                </Table>
+                              </div>
                             </div>
                           ) : detail ? (
                             <div className="py-6 text-center text-ph-caption text-ph-text-muted">
