@@ -79,7 +79,7 @@ export default function OrderList({ orders, refundingOrderId, onRefund }: OrderL
         <div
           className={`grid ${GRID_COLS} border-b border-ph-border px-ph-16 py-ph-12 text-ph-caption font-medium text-ph-text-secondary`}
         >
-          <span>주문 상품 / 번호</span>
+          <span>주문 번호</span>
           <span>주문일</span>
           <span>주문 금액</span>
           <span>상태</span>
@@ -106,11 +106,8 @@ export default function OrderList({ orders, refundingOrderId, onRefund }: OrderL
                 className={`grid w-full ${GRID_COLS} cursor-pointer items-center border-0 border-b border-ph-border bg-transparent px-ph-16 py-4.5 text-left text-ph-body-sm font-[inherit] hover:bg-ph-gray-50`}
                 onClick={() => setOpenOrderId(isOpen ? null : order.orderId)}
               >
-                <div className="flex flex-col min-w-0 pr-2">
-                  <span className="font-bold text-ph-text truncate" title={order.titleSummary}>
-                    {order.titleSummary}
-                  </span>
-                  <span className="text-xs text-ph-text-muted truncate mt-0.5" title={displayOrderNumber}>
+                <div className="min-w-0 pr-2">
+                  <span className="font-bold text-ph-text truncate block" title={displayOrderNumber}>
                     {displayOrderNumber}
                   </span>
                 </div>
