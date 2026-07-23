@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
-import { registerSeller, getSellerApplyStatus } from '@/lib/sellers';
+import { registerSeller } from '@/lib/sellers';
+import { getUserMe } from '@/lib/users';
 import {
   ArrowLeft, Store, Send, SearchCheck, Check, Clock,
   Link as LinkIcon, BadgePercent, Lock,
@@ -139,9 +140,9 @@ export default function ApplyPage() {
 
   useEffect(() => {
     if (!isLoggedIn) return;
-    getSellerApplyStatus()
-      .then(({ status }) => {
-        if (status && status !== 'NOT_APPLIED') {
+    getUserMe()
+      .then(({ sellerStatus }) => {
+        if (sellerStatus !== null) {
           setDone(true);
         }
       })

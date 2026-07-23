@@ -23,13 +23,6 @@ export async function registerSeller(params: SellerRegisterRequest): Promise<Sel
   return res.data.data
 }
 
-export async function getSellerApplyStatus(): Promise<{ status: string }> {
-  const res = await api.get<{ success: boolean; data: { status: string }; message: string }>(
-    `${API_BASE}/sellers/apply-status`,
-  )
-  return res.data.data
-}
-
 interface SellerBatchItem {
   sellerId: string
   sellerName: string | null
