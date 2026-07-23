@@ -117,9 +117,9 @@ export default function AdminSellersPage() {
     ? byStatus
     : byStatus.filter(
         (a) =>
-          a.name.toLowerCase().includes(q) ||
-          a.email.toLowerCase().includes(q) ||
-          a.userId.toLowerCase().includes(q),
+          (a.name ?? '').toLowerCase().includes(q) ||
+          (a.email ?? '').toLowerCase().includes(q) ||
+          (a.userId ?? '').toLowerCase().includes(q),
       )
 
   return (

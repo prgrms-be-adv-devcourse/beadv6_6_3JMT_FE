@@ -95,7 +95,10 @@ export default function AdminUsersPage() {
   const filtered = !q
     ? byRole
     : byRole.filter(
-        (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.id.toLowerCase().includes(q),
+        (u) =>
+          (u.name ?? '').toLowerCase().includes(q) ||
+          (u.email ?? '').toLowerCase().includes(q) ||
+          (u.id ?? '').toLowerCase().includes(q),
       )
   const users = filtered.slice(0, visibleCount)
   const hasMore = filtered.length > visibleCount

@@ -40,11 +40,11 @@ export default function AdminOrdersPage() {
     ? byStatus
     : byStatus.filter(
         (o) =>
-          o.orderNumber.toLowerCase().includes(q) ||
-          o.productTitle.toLowerCase().includes(q) ||
+          (o.orderNumber ?? '').toLowerCase().includes(q) ||
+          (o.productTitle ?? '').toLowerCase().includes(q) ||
           (o.buyer?.buyerName ?? '').toLowerCase().includes(q) ||
           (o.buyer?.email ?? '').toLowerCase().includes(q) ||
-          o.sellers.some((s) => s.sellerNickname.toLowerCase().includes(q)),
+          (o.sellers ?? []).some((s) => (s.sellerNickname ?? '').toLowerCase().includes(q)),
       )
 
   useEffect(() => {
