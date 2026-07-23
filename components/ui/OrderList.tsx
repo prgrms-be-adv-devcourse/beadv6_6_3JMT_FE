@@ -22,6 +22,8 @@ export interface OrderListProps {
   orders: GroupedOrder[];
   refundingOrderId: string | null;
   onRefund: (target: RefundTarget) => void;
+  payingOrderId: string | null;
+  onPay: (order: GroupedOrder) => void;
 }
 
 const GRID_COLS = 'grid-cols-[2fr_1fr_1fr_1fr_40px]';
@@ -56,7 +58,7 @@ function unavailableReason(item: GroupedOrderItem): string {
   return '현재 환불할 수 없는 상품입니다.';
 }
 
-export default function OrderList({ orders, refundingOrderId, onRefund }: OrderListProps) {
+export default function OrderList({ orders, refundingOrderId, onRefund, payingOrderId, onPay }: OrderListProps) {
   const [openOrderId, setOpenOrderId] = useState<string | null>(null);
   const [selectedByOrder, setSelectedByOrder] = useState<Record<string, string[]>>({});
 
@@ -99,12 +101,18 @@ export default function OrderList({ orders, refundingOrderId, onRefund }: OrderL
 
           return (
             <div key={order.orderId}>
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={0}
                 aria-expanded={isOpen}
                 aria-controls={panelId}
                 className={`grid w-full ${GRID_COLS} cursor-pointer items-center border-0 border-b border-ph-border bg-transparent px-ph-16 py-4.5 text-left text-ph-body-sm font-[inherit] hover:bg-ph-gray-50`}
                 onClick={() => setOpenOrderId(isOpen ? null : order.orderId)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  setOpenOrderId(isOpen ? null : order.orderId);
+                }}
               >
                 <div className="flex flex-col min-w-0 pr-2">
                   <span className="font-bold text-ph-text truncate" title={order.titleSummary}>
@@ -116,12 +124,23 @@ export default function OrderList({ orders, refundingOrderId, onRefund }: OrderL
                 </div>
                 <span className="text-ph-text-secondary">{formatDate(order.paidAt)}</span>
                 <span className="font-bold text-ph-text">{won(order.amount)}</span>
-                <span>
-                  <span
-                    className={`inline-block rounded-ph-full px-ph-12 py-ph-4 text-ph-caption font-medium ${ORDER_STATUS_CLASS[order.status]}`}
-                  >
-                    {order.status}
-                  </span>
+                <span onClick={(event) => event.stopPropagation()}>
+                  {order.status === '결제 대기' ? (
+                    <button
+                      type="button"
+                      disabled={payingOrderId === order.orderId}
+                      onClick={() => onPay(order)}
+                      className="inline-block rounded-ph-full bg-ph-primary px-ph-12 py-ph-4 text-ph-caption font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {payingOrderId === order.orderId ? '결제 진행 중...' : '결제하기'}
+                    </button>
+                  ) : (
+                    <span
+                      className={`inline-block rounded-ph-full px-ph-12 py-ph-4 text-ph-caption font-medium ${ORDER_STATUS_CLASS[order.status]}`}
+                    >
+                      {order.status}
+                    </span>
+                  )}
                 </span>
                 <span className="text-right">
                   <ChevronDown
@@ -130,7 +149,7 @@ export default function OrderList({ orders, refundingOrderId, onRefund }: OrderL
                     className={`inline-block text-ph-text-muted transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`}
                   />
                 </span>
-              </button>
+              </div>
 
               {isOpen && (
                 <div id={panelId} className="bg-ph-gray-50" aria-busy={isRefunding}>

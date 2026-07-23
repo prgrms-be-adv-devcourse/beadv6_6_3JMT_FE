@@ -7,6 +7,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useToast } from '@/store/useToastStore';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
+import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
 import { deleteUserMe, updateUserMe } from '@/lib/users';
 import { getWishlists } from '@/lib/wishlists';
 import { getProductsByIds, getProductsForOrders, type ProductByIdsItem } from '@/lib/products';
@@ -15,7 +16,8 @@ import { composeWishlistCards } from '@/lib/wishlistComposition';
 import { requestRefund as apiRequestRefund } from '@/lib/payments';
 import { getOrders } from '@/lib/orders';
 import { composePurchasedPrompts, mapOrderToPrompt } from '@/lib/orderAdapters';
-import { groupOrders, markRefundRequested } from '@/lib/orderGrouping';
+import { groupOrders, markRefundRequested, type GroupedOrder } from '@/lib/orderGrouping';
+import { CheckoutStageError, normalizeCheckoutFailure } from '@/lib/checkoutContracts';
 import { OrderListItem } from '@/types/api/orders';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';
@@ -250,6 +252,8 @@ function MyPageContent() {
   const [refunds, setRefunds] = useState<Record<string, 'requested' | 'refunded'>>({});
   const [refundTarget, setRefundTarget] = useState<RefundTarget | null>(null);
   const [refundingOrderId, setRefundingOrderId] = useState<string | null>(null);
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+  const [tossPayments, setTossPayments] = useState<any>(null);
   const [purchased, setPurchased] = useState<Prompt[]>([]);
   const [wishlist, setWishlist] = useState<Prompt[]>([]);
   const [orderItems, setOrderItems] = useState<OrderListItem[]>([]);
@@ -362,6 +366,13 @@ function MyPageContent() {
       .finally(() => setLoadingWishlist(false));
   }, [isLoggedIn, _hasHydrated, openLoginModal, fetchUser, fetchOrders]);
 
+  useEffect(() => {
+    const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+    if (clientKey) {
+      loadTossPayments(clientKey).then(setTossPayments).catch(console.error);
+    }
+  }, []);
+
   const cart = cartItems;
   const groupedOrders = useMemo(() => groupOrders(orderItems), [orderItems]);
 
@@ -427,6 +438,36 @@ function MyPageContent() {
     } finally {
       setRefundingOrderId(null);
       setRefundTarget(null);
+    }
+  };
+
+  const handlePay = async (order: GroupedOrder) => {
+    if (payingOrderId) return;
+    setPayingOrderId(order.orderId);
+    try {
+      let paymentInstance = tossPayments;
+      if (!paymentInstance) {
+        const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+        if (!clientKey) {
+          throw new CheckoutStageError('payment_setup', '결제 설정이 완료되지 않았습니다.');
+        }
+        paymentInstance = await loadTossPayments(clientKey);
+        setTossPayments(paymentInstance);
+      }
+
+      const payment = paymentInstance.payment({ customerKey: authUser!.id });
+      await payment.requestPayment({
+        method: 'CARD',
+        amount: { currency: 'KRW', value: order.amount },
+        orderId: order.orderId,
+        orderName: order.titleSummary,
+        successUrl: `${window.location.origin}/checkout/success`,
+        failUrl: `${window.location.origin}/checkout/fail`,
+      });
+    } catch (ex: unknown) {
+      const failure = normalizeCheckoutFailure(ex, 'payment_request');
+      showToast(failure.message);
+      setPayingOrderId(null);
     }
   };
 
@@ -725,6 +766,8 @@ function MyPageContent() {
                     orders={groupedOrders}
                     refundingOrderId={refundingOrderId}
                     onRefund={setRefundTarget}
+                    payingOrderId={payingOrderId}
+                    onPay={handlePay}
                   />
                 </>
               )}
