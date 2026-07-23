@@ -8,6 +8,7 @@ import { SectionCard } from '@/components/admin/SectionCard'
 import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { StatusBadge } from '@/components/admin/Badge'
 import { formatAdminOrderSellers } from '@/lib/adminOrderAdapters'
+import { getSellerProfile } from '@/lib/sellers'
 
 import { AdminOrder } from '@/types/api/orders'
 
@@ -31,6 +32,7 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [sellerImages, setSellerImages] = useState<Record<string, string | null>>({})
 
   const filtered = filter === 'all' ? orders : orders.filter((o) => o.orderStatus === filter)
 
@@ -38,7 +40,19 @@ export default function AdminOrdersPage() {
     if (!token) return
     api
       .get(`${API_BASE}/admin/orders`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => setOrders(res.data.data ?? []))
+      .then((res) => {
+        const list: AdminOrder[] = res.data.data ?? []
+        setOrders(list)
+
+        const sellerIds = Array.from(new Set(list.map((o) => o.sellers[0]?.sellerId).filter(Boolean)))
+        Promise.all(sellerIds.map((id) => getSellerProfile(id))).then((profiles) => {
+          const images: Record<string, string | null> = {}
+          sellerIds.forEach((id, i) => {
+            images[id] = profiles[i]?.profileImageUrl ?? null
+          })
+          setSellerImages(images)
+        })
+      })
       .finally(() => setLoading(false))
   }, [token])
 
@@ -93,7 +107,10 @@ export default function AdminOrdersPage() {
                       <span className="text-[12.5px] text-ph-text-muted">{order.orderNumber}</span>
                     </Td>
                     <Td>
-                      <Identity name={formatAdminOrderSellers(order)} />
+                      <Identity
+                        name={formatAdminOrderSellers(order)}
+                        imageUrl={sellerImages[order.sellers[0]?.sellerId ?? '']}
+                      />
                     </Td>
                     <Td>
                       <span>{order.buyer?.buyerName ?? '탈퇴한 회원'}</span>

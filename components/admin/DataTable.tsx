@@ -2,6 +2,7 @@
 
 // 원본 shared-admin-ui.js Table 프리미티브 이식
 import { useState } from 'react'
+import Image from 'next/image'
 import type { CSSProperties, ReactNode } from 'react'
 
 export function Table({ children }: { children: ReactNode }) {
@@ -73,8 +74,16 @@ export function Tr({
   )
 }
 
-// 원형 아바타 (design-system.js Avatar 이식 — 이니셜 fallback)
-export function Avatar({ name = '', size = 40 }: { name?: string; size?: number }) {
+// 원형 아바타 (design-system.js Avatar 이식 — imageUrl 있으면 실제 프로필 이미지, 없으면 이니셜 fallback)
+export function Avatar({
+  name = '',
+  size = 40,
+  imageUrl,
+}: {
+  name?: string
+  size?: number
+  imageUrl?: string | null
+}) {
   const initials =
     name
       .trim()
@@ -83,6 +92,18 @@ export function Avatar({ name = '', size = 40 }: { name?: string; size?: number 
       .map((w) => w[0])
       .join('')
       .toUpperCase() || '?'
+  if (imageUrl) {
+    return (
+      <Image
+        src={imageUrl}
+        alt={name}
+        width={size}
+        height={size}
+        className="flex-shrink-0 rounded-full object-cover"
+        style={{ width: size, height: size }}
+      />
+    )
+  }
   return (
     <span
       className="inline-flex flex-shrink-0 items-center justify-center rounded-full bg-ph-secondary font-bold text-ph-primary"
@@ -94,10 +115,20 @@ export function Avatar({ name = '', size = 40 }: { name?: string; size?: number 
 }
 
 // 아바타 + 이름 + 부가정보 셀 (shared-admin-ui.js Identity)
-export function Identity({ name, sub, size = 36 }: { name: string; sub?: ReactNode; size?: number }) {
+export function Identity({
+  name,
+  sub,
+  size = 36,
+  imageUrl,
+}: {
+  name: string
+  sub?: ReactNode
+  size?: number
+  imageUrl?: string | null
+}) {
   return (
     <div className="flex items-center gap-[11px]">
-      <Avatar name={name} size={size} />
+      <Avatar name={name} size={size} imageUrl={imageUrl} />
       <div className="min-w-0">
         <div className="text-[14px] font-semibold text-ph-text">{name}</div>
         {sub && <div className="truncate text-[12.5px] text-ph-text-muted">{sub}</div>}
