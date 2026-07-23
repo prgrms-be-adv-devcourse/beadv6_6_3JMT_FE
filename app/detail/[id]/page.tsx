@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { hasPurchasedProduct } from '@/lib/orderAdapters';
-import { getOrders } from '@/lib/orders';
+import { getOrders, createOrder } from '@/lib/orders';
 import { addCartItem } from '@/lib/cart';
 import { getWishlistIdForProduct, addWishlist, removeWishlist } from '@/lib/wishlists';
 import { getSellerProfile } from '@/lib/sellers';
@@ -14,7 +14,6 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useToast } from '@/store/useToastStore';
-import { useDirectBuyStore } from '@/store/useDirectBuyStore';
 import {
   ArrowLeft, Star,
   CheckCircle2, ShoppingCart, Check, History,
@@ -227,6 +226,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
   const [showVersions, setShowVersions] = useState(false);
   const [purchased, setPurchased] = useState(false);
   const [wishlistId, setWishlistId] = useState<string | null>(null);
+  const [buying, setBuying] = useState(false);
 
   const inWish = wishItems.some((i) => i.id === String(p.id));
   const inCart = cartItems.some((i) => i.productId === String(p.id));
@@ -244,22 +244,19 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
       .catch(() => {});
   }, [isLoggedIn, p.id]);
 
-  const onBuy = () => {
+  const onBuy = async () => {
     if (!isLoggedIn) { openLoginModal(); return; }
     if (ownProduct) { showToast(SELF_PURCHASE_MESSAGE); return; }
-    if (purchased) return;
-    
-    useDirectBuyStore.getState().setItem({
-      id: String(p.id),
-      productId: String(p.id),
-      cartProductId: String(p.id),
-      title: p.title,
-      amount: p.amount,
-      thumbnailUrl: p.thumbnail_url ?? null,
-      sellerId: p.sellerId,
-    });
-    
-    router.push(`/checkout?id=${p.id}`);
+    if (purchased || buying) return;
+
+    setBuying(true);
+    try {
+      await createOrder([{ productId: String(p.id), productTitle: p.title }]);
+      router.push('/mypage?tab=payments');
+    } catch {
+      showToast('주문 생성에 실패했어요. 다시 시도해주세요.');
+      setBuying(false);
+    }
   };
 
   const onCart = () => {
@@ -387,12 +384,14 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
                 size="lg"
                 fullWidth
                 onClick={onBuy}
-                disabled={purchased || ownProduct}
+                disabled={purchased || ownProduct || buying}
               >
                 {ownProduct
                   ? SELF_PURCHASE_MESSAGE
                   : purchased
                   ? p.amount === 0 ? '받기 완료 ✓' : '구매 완료 ✓'
+                  : buying
+                  ? '처리 중...'
                   : p.amount === 0 ? '무료로 받기' : '프롬프트 구매하기'}
               </Button>
 
