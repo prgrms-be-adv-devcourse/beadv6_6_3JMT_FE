@@ -143,6 +143,7 @@ export interface PaymentItem extends Omit<PaymentHistoryItem, 'paymentStatus'> {
 export interface AdminOrderSellerSummary {
   sellerId: string;
   sellerNickname: string;
+  profileImageUrl: string | null;
   productCount: number;
   orderAmount: number;
 }

@@ -209,7 +209,7 @@
   - `imageUrl` 있으면 Next.js `<Image>`로 실제 프로필 이미지(원형, `object-cover`) 렌더링
   - 없으면 이니셜(이름 앞 2단어 첫 글자) 원형 배지(`bg-ph-secondary` / `text-ph-primary`) fallback
 - `Identity` props: `name`, `sub?`, `size?`(기본 36), `imageUrl?: string | null` — `Avatar` + 이름(14px/600) + `sub`(12.5px muted) 조합
-- 사용처: `admin/orders`(판매자 컬럼 — `getSellerProfile`로 실제 프로필 이미지 조회), `admin/users`, `admin/sellers`, `admin/settlements`(이니셜만 사용)
+- 사용처: `admin/orders`(판매자 컬럼 — `sellers[0].profileImageUrl`을 그대로 사용, 백엔드 필드 추가 요청은 `docs/specs/2026-07-23-admin-orders-seller-profile-image-api-spec.md` 참고), `admin/users`, `admin/sellers`, `admin/settlements`(이니셜만 사용)
 
 ---
 
