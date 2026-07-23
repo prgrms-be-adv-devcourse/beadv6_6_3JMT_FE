@@ -158,7 +158,7 @@ export interface AdminOrder {
   orderNumber: string;
   sellerCount: number;
   sellers: AdminOrderSellerSummary[];
-  buyer: AdminOrderBuyer;
+  buyer: AdminOrderBuyer | null;
   productTitle: string;
   totalOrderCount: number;
   totalOrderAmount: number;

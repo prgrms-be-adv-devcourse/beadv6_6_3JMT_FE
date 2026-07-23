@@ -96,7 +96,7 @@ export default function AdminOrdersPage() {
                       <Identity name={formatAdminOrderSellers(order)} />
                     </Td>
                     <Td>
-                      <Identity name={order.buyer.buyerName} />
+                      <Identity name={order.buyer?.buyerName ?? '탈퇴한 회원'} />
                     </Td>
                     <Td>
                       <span className="block max-w-[200px] truncate">{order.productTitle}</span>

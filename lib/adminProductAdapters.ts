@@ -10,7 +10,7 @@ export interface AdminProduct {
 export interface AdminProductResponse {
   productId: string
   title: string
-  sellerNickname: string
+  sellerNickname: string | null
   productType: string
   model?: string
   status: string
@@ -28,7 +28,7 @@ export function mapAdminProducts(items: AdminProductResponse[]): AdminProduct[] 
   return items.map((item) => ({
     id: item.productId,
     title: item.title,
-    seller: item.sellerNickname,
+    seller: item.sellerNickname ?? '탈퇴한 판매자',
     model: item.model ?? '',
     icon: item.productType,
     status: displayStatus(item.status),

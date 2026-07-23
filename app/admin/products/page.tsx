@@ -82,7 +82,7 @@ export default function AdminProductsPage() {
         productId: string
         title: string
         productType: string
-        sellerNickname: string
+        sellerNickname: string | null
         model?: string
         amount: number
         status: string
@@ -93,7 +93,7 @@ export default function AdminProductsPage() {
           id: p.productId,
           title: p.title,
           productType: p.productType,
-          seller: p.sellerNickname,
+          seller: p.sellerNickname ?? '탈퇴한 판매자',
           model: p.model,
           amount: p.amount,
           status: toLocalStatus(p.status),

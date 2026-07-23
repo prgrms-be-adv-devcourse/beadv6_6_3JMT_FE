@@ -25,3 +25,17 @@ test('mapAdminProducts maps the current admin-service product response', () => {
     },
   ])
 })
+
+test('mapAdminProducts falls back when sellerNickname is null', () => {
+  const result = mapAdminProducts([
+    {
+      productId: 'product-2',
+      title: '탈퇴 판매자 상품',
+      sellerNickname: null,
+      productType: 'PROMPT',
+      status: 'ON_SALE',
+    },
+  ])
+
+  assert.equal(result[0].seller, '탈퇴한 판매자')
+})
