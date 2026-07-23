@@ -17,7 +17,7 @@ export interface SellerRegisterResponse {
 
 export async function registerSeller(params: SellerRegisterRequest): Promise<SellerRegisterResponse> {
   const res = await api.post<{ success: boolean; data: SellerRegisterResponse; message: string }>(
-    `${API_BASE}/seller`,
+    `${API_BASE}/seller/register`,
     params,
   )
   return res.data.data
