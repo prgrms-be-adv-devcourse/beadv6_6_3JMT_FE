@@ -43,7 +43,7 @@ export const useAuthStore = create<AuthState>()(
           document.cookie = `token=${token}; path=/; max-age=${COOKIE_MAX_AGE}`
           document.cookie = `roles=${user.roles.join(',')}; path=/; max-age=${COOKIE_MAX_AGE}`
         }
-        set({ user, token, refreshToken: refreshToken ?? null, isLoggedIn: true })
+        set((state) => ({ user, token, refreshToken: refreshToken ?? state.refreshToken, isLoggedIn: true }))
       },
       logout: () => {
         if (typeof document !== 'undefined') {
