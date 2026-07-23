@@ -5,16 +5,10 @@ import { SectionCard } from '@/components/admin/SectionCard'
 import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { StatusBadge } from '@/components/admin/Badge'
 import { CircleCheck, CirclePause, CircleX, Search } from 'lucide-react'
-import {
-  type AdminUser,
-  type GetAdminUsersParams,
-  getAdminUsers,
-  updateAdminUserRole,
-  updateAdminUserStatus,
-} from '@/lib/adminUsers'
+import { type AdminUser, getAdminUsers, updateAdminUserRole, updateAdminUserStatus } from '@/lib/adminUsers'
 
 type UserStatus = AdminUser['status']
-type RoleFilter = NonNullable<GetAdminUsersParams['role']>
+type RoleFilter = 'ALL' | AdminUser['role']
 
 const PAGE_SIZE = 20
 
@@ -38,14 +32,15 @@ const STATUS_OPTS: { id: UserStatus; label: string; icon: typeof CircleCheck; da
 ]
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<AdminUser[]>([])
-  const [meta, setMeta] = useState({ page: 1, size: PAGE_SIZE, total: 0, hasNext: false })
-  const [counts, setCounts] = useState({ ALL: 0, admin: 0, buyer: 0, seller: 0 })
+  // 백엔드 role 파라미터는 계정이 과거 보유했던 역할까지 매칭해 중복으로 잡힌다
+  // (예: 관리자 계정이 buyer/seller 필터에도 함께 걸림). 그래서 유형 탭은 표시되는
+  // u.role 값 기준으로 클라이언트에서만 필터링한다 — 전체 목록을 한 번에 받아온다.
+  const [allUsers, setAllUsers] = useState<AdminUser[]>([])
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL')
   const [searchInput, setSearchInput] = useState('')
   const [keyword, setKeyword] = useState('')
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
   const [changing, setChanging] = useState<string | null>(null)
 
   useEffect(() => {
@@ -54,57 +49,20 @@ export default function AdminUsersPage() {
   }, [searchInput])
 
   useEffect(() => {
-    setLoading(true)
-    fetchUsers(1).finally(() => setLoading(false))
-  }, [roleFilter, keyword])
-
-  useEffect(() => {
-    fetchCounts()
+    fetchAllUsers().finally(() => setLoading(false))
   }, [])
 
-  // 백엔드 role 파라미터가 'admin' 값의 서버 사이드 필터를 지원하지 않아
-  // (role=admin 요청이 total 0으로 응답) 관리자 탭만 전체 목록을 받아 클라이언트에서 걸러낸다.
-  async function fetchUsers(page: number) {
-    if (roleFilter === 'admin') {
-      const total = await getAdminUsers({ role: 'ALL', page: 1, size: 1 }).then((res) => res.meta.total)
-      const all = await getAdminUsers({ role: 'ALL', page: 1, size: total || 1 })
-      const q = keyword.trim().toLowerCase()
-      const admins = all.data.filter(
-        (u) =>
-          u.role === 'admin' &&
-          (!q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.id.toLowerCase().includes(q)),
-      )
-      setUsers(admins)
-      setMeta({ page: 1, size: admins.length, total: admins.length, hasNext: false })
-      return
-    }
-    const res = await getAdminUsers({ role: roleFilter, page, size: PAGE_SIZE, keyword: keyword || undefined })
-    setUsers((prev) => (page === 1 ? res.data : [...prev, ...res.data]))
-    setMeta(res.meta)
-  }
-
-  async function fetchCounts() {
-    const countFor = (role: RoleFilter) =>
-      getAdminUsers({ role, page: 1, size: 1 }).then((res) => res.meta.total).catch(() => 0)
-    const [ALL, buyer, seller] = await Promise.all([countFor('ALL'), countFor('buyer'), countFor('seller')])
-    // role=admin 필터가 서버에서 지원되지 않아 나머지 값으로 역산한다
-    setCounts({ ALL, admin: Math.max(0, ALL - buyer - seller), buyer, seller })
-  }
-
-  async function loadMore() {
-    setLoadingMore(true)
-    try {
-      await fetchUsers(meta.page + 1)
-    } finally {
-      setLoadingMore(false)
-    }
+  async function fetchAllUsers() {
+    const total = await getAdminUsers({ role: 'ALL', page: 1, size: 1 }).then((res) => res.meta.total)
+    const res = await getAdminUsers({ role: 'ALL', page: 1, size: total || 1 })
+    setAllUsers(res.data)
   }
 
   async function handleRoleChange(userId: string, newRole: 'buyer' | 'seller') {
     setChanging(userId)
     try {
       await updateAdminUserRole(userId, newRole)
-      await Promise.all([fetchUsers(1), fetchCounts()])
+      setAllUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)))
     } finally {
       setChanging(null)
     }
@@ -114,11 +72,33 @@ export default function AdminUsersPage() {
     setChanging(userId)
     try {
       await updateAdminUserStatus(userId, newStatus)
-      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, status: newStatus } : u)))
+      setAllUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, status: newStatus } : u)))
     } finally {
       setChanging(null)
     }
   }
+
+  function selectTab(id: RoleFilter) {
+    setRoleFilter(id)
+    setVisibleCount(PAGE_SIZE)
+  }
+
+  const counts = {
+    ALL: allUsers.length,
+    admin: allUsers.filter((u) => u.role === 'admin').length,
+    buyer: allUsers.filter((u) => u.role === 'buyer').length,
+    seller: allUsers.filter((u) => u.role === 'seller').length,
+  }
+
+  const byRole = roleFilter === 'ALL' ? allUsers : allUsers.filter((u) => u.role === roleFilter)
+  const q = keyword.trim().toLowerCase()
+  const filtered = !q
+    ? byRole
+    : byRole.filter(
+        (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.id.toLowerCase().includes(q),
+      )
+  const users = filtered.slice(0, visibleCount)
+  const hasMore = filtered.length > visibleCount
 
   return (
     <div className="flex flex-col gap-[20px]">
@@ -147,7 +127,7 @@ export default function AdminUsersPage() {
             return (
               <button
                 key={t.id}
-                onClick={() => setRoleFilter(t.id)}
+                onClick={() => selectTab(t.id)}
                 className={`inline-flex items-center gap-[6px] rounded-ph-full px-[14px] py-[7px] text-[13.5px] font-semibold transition-colors ${
                   active
                     ? 'bg-ph-secondary text-ph-primary'
@@ -253,15 +233,14 @@ export default function AdminUsersPage() {
                 })}
               </tbody>
             </Table>
-            {meta.hasNext && (
+            {hasMore && (
               <div className="border-t border-ph-border p-[16px] text-center">
                 <button
                   type="button"
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className="h-[38px] rounded-ph-sm border border-ph-border bg-ph-white px-[20px] text-[13.5px] font-semibold text-ph-text-secondary disabled:opacity-40"
+                  onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+                  className="h-[38px] rounded-ph-sm border border-ph-border bg-ph-white px-[20px] text-[13.5px] font-semibold text-ph-text-secondary"
                 >
-                  {loadingMore ? '불러오는 중…' : '더 보기'}
+                  더 보기
                 </button>
               </div>
             )}

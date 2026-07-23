@@ -40,11 +40,6 @@ export async function getAdminUsers(params?: GetAdminUsersParams): Promise<GetAd
   return { data: res.data.data, meta: res.data.meta }
 }
 
-export async function getAdminUserCount(role: GetAdminUsersParams['role']): Promise<number> {
-  const res = await getAdminUsers({ role, page: 1, size: 1 })
-  return res.meta.total
-}
-
 export interface UpdateAdminUserRoleResponse {
   id: string
   role: AdminUser['role']
