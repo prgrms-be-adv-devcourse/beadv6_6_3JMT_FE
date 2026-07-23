@@ -391,7 +391,7 @@ export default function Header() {
                 <button
                   onClick={() => { close(); router.push('/checkout'); }}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: 36, border: 'none', borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-primary)', color: '#fff', fontFamily: 'var(--ph-font-family)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-                >결제하기</button>
+                >주문하기</button>
               </div>
             </React.Fragment>
           )}
