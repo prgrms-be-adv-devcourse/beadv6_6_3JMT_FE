@@ -4,12 +4,11 @@ import { useEffect, useState } from 'react'
 import { SectionCard } from '@/components/admin/SectionCard'
 import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { StatusBadge } from '@/components/admin/Badge'
-import { CircleCheck, CirclePause, CircleX } from 'lucide-react'
+import { CircleCheck, CirclePause, CircleX, Search } from 'lucide-react'
 import {
   type AdminUser,
   type GetAdminUsersParams,
   getAdminUsers,
-  getAdminUserCount,
   updateAdminUserRole,
   updateAdminUserStatus,
 } from '@/lib/adminUsers'
@@ -43,31 +42,40 @@ export default function AdminUsersPage() {
   const [meta, setMeta] = useState({ page: 1, size: PAGE_SIZE, total: 0, hasNext: false })
   const [counts, setCounts] = useState({ ALL: 0, admin: 0, buyer: 0, seller: 0 })
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL')
+  const [searchInput, setSearchInput] = useState('')
+  const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [changing, setChanging] = useState<string | null>(null)
 
   useEffect(() => {
+    const t = setTimeout(() => setKeyword(searchInput.trim()), 300)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
+  useEffect(() => {
     setLoading(true)
     fetchUsers(1).finally(() => setLoading(false))
-  }, [roleFilter])
+  }, [roleFilter, keyword])
 
   useEffect(() => {
     fetchCounts()
   }, [])
 
   async function fetchUsers(page: number) {
-    const res = await getAdminUsers({ role: roleFilter, page, size: PAGE_SIZE })
+    const res = await getAdminUsers({ role: roleFilter, page, size: PAGE_SIZE, keyword: keyword || undefined })
     setUsers((prev) => (page === 1 ? res.data : [...prev, ...res.data]))
     setMeta(res.meta)
   }
 
   async function fetchCounts() {
+    const countFor = (role: RoleFilter) =>
+      getAdminUsers({ role, page: 1, size: 1 }).then((res) => res.meta.total).catch(() => 0)
     const [ALL, admin, buyer, seller] = await Promise.all([
-      getAdminUserCount('ALL').catch(() => 0),
-      getAdminUserCount('admin').catch(() => 0),
-      getAdminUserCount('buyer').catch(() => 0),
-      getAdminUserCount('seller').catch(() => 0),
+      countFor('ALL'),
+      countFor('admin'),
+      countFor('buyer'),
+      countFor('seller'),
     ])
     setCounts({ ALL, admin, buyer, seller })
   }
@@ -107,6 +115,20 @@ export default function AdminUsersPage() {
         title="사용자 목록"
         sub={`총 ${counts.ALL.toLocaleString('ko-KR')}명 · 관리자 ${counts.admin}명 · 구매자 ${counts.buyer}명 · 판매자 ${counts.seller}명`}
         bodyStyle={{ padding: 0 }}
+        action={
+          <div className="relative">
+            <Search
+              size={15}
+              className="pointer-events-none absolute left-[12px] top-1/2 -translate-y-1/2 text-ph-text-muted"
+            />
+            <input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="닉네임, 이메일, 회원 ID 검색"
+              className="h-[36px] w-[260px] rounded-ph-md border border-ph-border bg-ph-bg pl-[34px] pr-[12px] text-[13.5px] text-ph-text placeholder:text-ph-text-muted focus:border-ph-primary focus:outline-none"
+            />
+          </div>
+        }
       >
         <div className="flex gap-[8px] border-b border-ph-border px-[22px] py-[16px]">
           {ROLE_TABS.map((t) => {
