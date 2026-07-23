@@ -42,27 +42,34 @@ export default function AdminOrdersPage() {
       .finally(() => setLoading(false))
   }, [token])
 
-  const filterBar = (
-    <div className="flex flex-wrap gap-[8px]">
-      {FILTER_OPTIONS.map((opt) => (
-        <button
-          key={opt.value}
-          onClick={() => setFilter(opt.value)}
-          className="rounded-ph-full px-[14px] py-[7px] text-[13px] font-semibold transition-colors"
-          style={
-            filter === opt.value
-              ? { backgroundColor: 'var(--ph-primary)', color: 'var(--ph-on-accent)' }
-              : { backgroundColor: 'var(--ph-gray-100)', color: 'var(--ph-gray-600)' }
-          }
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  )
-
   return (
-    <SectionCard title="주문 관리" sub={`총 ${filtered.length}건`} headerExtra={filterBar}>
+    <SectionCard title="주문 관리" sub={`총 ${orders.length}건`} bodyStyle={{ padding: 0 }}>
+      <div className="flex gap-[8px] border-b border-ph-border px-[22px] py-[16px]">
+        {FILTER_OPTIONS.map((opt) => {
+          const active = filter === opt.value
+          const count = opt.value === 'all' ? orders.length : orders.filter((o) => o.orderStatus === opt.value).length
+          return (
+            <button
+              key={opt.value}
+              onClick={() => setFilter(opt.value)}
+              className={`inline-flex items-center gap-[6px] rounded-ph-full px-[14px] py-[7px] text-[13.5px] font-semibold transition-colors ${
+                active
+                  ? 'bg-ph-secondary text-ph-primary'
+                  : 'text-ph-text-secondary hover:bg-ph-gray-50'
+              }`}
+            >
+              {opt.label}
+              <span
+                className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-ph-full px-[5px] text-[11.5px] font-bold ${
+                  active ? 'bg-ph-primary text-ph-on-accent' : 'bg-ph-gray-100 text-ph-text-secondary'
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
       <div className="overflow-x-auto">
         <Table>
           <thead>
