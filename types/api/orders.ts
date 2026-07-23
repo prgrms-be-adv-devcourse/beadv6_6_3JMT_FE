@@ -151,7 +151,6 @@ export interface AdminOrderBuyer {
   buyerId: string;
   buyerName: string;
   email?: string;
-  profileImageUrl: string | null;
 }
 
 export interface AdminOrder {
