@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Search } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/auth'
 import { API_BASE } from '@/lib/apiBase'
@@ -31,8 +32,20 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [keyword, setKeyword] = useState('')
 
-  const filtered = filter === 'all' ? orders : orders.filter((o) => o.orderStatus === filter)
+  const byStatus = filter === 'all' ? orders : orders.filter((o) => o.orderStatus === filter)
+  const q = keyword.trim().toLowerCase()
+  const filtered = !q
+    ? byStatus
+    : byStatus.filter(
+        (o) =>
+          o.orderNumber.toLowerCase().includes(q) ||
+          o.productTitle.toLowerCase().includes(q) ||
+          (o.buyer?.buyerName ?? '').toLowerCase().includes(q) ||
+          (o.buyer?.email ?? '').toLowerCase().includes(q) ||
+          o.sellers.some((s) => s.sellerNickname.toLowerCase().includes(q)),
+      )
 
   useEffect(() => {
     if (!token) return
@@ -43,7 +56,25 @@ export default function AdminOrdersPage() {
   }, [token])
 
   return (
-    <SectionCard title="주문 관리" sub={`총 ${orders.length}건`} bodyStyle={{ padding: 0 }}>
+    <SectionCard
+      title="주문 관리"
+      sub={`총 ${orders.length}건`}
+      bodyStyle={{ padding: 0 }}
+      action={
+        <div className="relative">
+          <Search
+            size={15}
+            className="pointer-events-none absolute left-[12px] top-1/2 -translate-y-1/2 text-ph-text-muted"
+          />
+          <input
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="주문 번호, 판매자, 구매자 검색"
+            className="h-[36px] w-[260px] rounded-ph-md border border-ph-border bg-ph-bg pl-[34px] pr-[12px] text-[13.5px] text-ph-text placeholder:text-ph-text-muted focus:border-ph-primary focus:outline-none"
+          />
+        </div>
+      }
+    >
       <div className="flex gap-[8px] border-b border-ph-border px-[22px] py-[16px]">
         {FILTER_OPTIONS.map((opt) => {
           const active = filter === opt.value
@@ -128,7 +159,7 @@ export default function AdminOrdersPage() {
         </Table>
         {!loading && filtered.length === 0 && (
           <div className="py-[48px] text-center text-[14px] text-ph-text-muted">
-            {filter === 'all' ? '주문이 없습니다.' : '해당 상태의 주문이 없습니다.'}
+            {q ? '검색 결과가 없습니다.' : filter === 'all' ? '주문이 없습니다.' : '해당 상태의 주문이 없습니다.'}
           </div>
         )}
       </div>

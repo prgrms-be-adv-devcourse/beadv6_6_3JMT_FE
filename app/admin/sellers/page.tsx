@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, X, Store } from 'lucide-react'
+import { Check, X, Store, Search } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import { type SellerRegister, getSellerRegisters, approveSellerRegister, rejectSellerRegister } from '@/lib/adminSellers'
 import { notifyAdminSellerRegistersChanged } from '@/lib/adminSellerEvents'
@@ -39,6 +39,7 @@ export default function AdminSellersPage() {
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterId>('pending')
+  const [keyword, setKeyword] = useState('')
 
   const [rejectModal, setRejectModal] = useState<{ registerId: string; name: string } | null>(null)
   const [rejectReason, setRejectReason] = useState('')
@@ -110,7 +111,16 @@ export default function AdminSellersPage() {
     { id: 'all', label: '전체', count: counts.all },
   ]
 
-  const filtered = filter === 'all' ? visibleApplies : visibleApplies.filter((a) => a.status === filter)
+  const byStatus = filter === 'all' ? visibleApplies : visibleApplies.filter((a) => a.status === filter)
+  const q = keyword.trim().toLowerCase()
+  const filtered = !q
+    ? byStatus
+    : byStatus.filter(
+        (a) =>
+          a.name.toLowerCase().includes(q) ||
+          a.email.toLowerCase().includes(q) ||
+          a.userId.toLowerCase().includes(q),
+      )
 
   return (
     <>
@@ -119,6 +129,20 @@ export default function AdminSellersPage() {
           title="판매자 신청"
           sub={`${counts.pending}건 승인 대기 중`}
           bodyStyle={{ padding: 0 }}
+          action={
+            <div className="relative">
+              <Search
+                size={15}
+                className="pointer-events-none absolute left-[12px] top-1/2 -translate-y-1/2 text-ph-text-muted"
+              />
+              <input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="닉네임, 이메일, 회원 ID 검색"
+                className="h-[36px] w-[260px] rounded-ph-md border border-ph-border bg-ph-bg pl-[34px] pr-[12px] text-[13.5px] text-ph-text placeholder:text-ph-text-muted focus:border-ph-primary focus:outline-none"
+              />
+            </div>
+          }
         >
           {/* 필터 탭 */}
           <div className="flex gap-[8px] border-b border-ph-border px-[22px] py-[16px]">
