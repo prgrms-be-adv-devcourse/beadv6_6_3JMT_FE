@@ -22,6 +22,17 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 type FilterId = 'pending' | 'approved' | 'rejected' | 'all'
 
+function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function dedupeRejectedIfApproved(list: SellerApply[]): SellerApply[] {
+  const approvedUserIds = new Set(list.filter((a) => a.status === 'approved').map((a) => a.userId))
+  return list.filter((a) => !(a.status === 'rejected' && approvedUserIds.has(a.userId)))
+}
+
 export default function AdminSellersPage() {
   const { token } = useAuthStore()
   const [applies, setApplies] = useState<SellerApply[]>([])
@@ -83,11 +94,13 @@ export default function AdminSellersPage() {
     }
   }
 
+  const visibleApplies = dedupeRejectedIfApproved(applies)
+
   const counts = {
-    all: applies.length,
-    pending: applies.filter((a) => a.status === 'pending').length,
-    approved: applies.filter((a) => a.status === 'approved').length,
-    rejected: applies.filter((a) => a.status === 'rejected').length,
+    all: visibleApplies.length,
+    pending: visibleApplies.filter((a) => a.status === 'pending').length,
+    approved: visibleApplies.filter((a) => a.status === 'approved').length,
+    rejected: visibleApplies.filter((a) => a.status === 'rejected').length,
   }
 
   const tabs: { id: FilterId; label: string; count: number }[] = [
@@ -97,7 +110,7 @@ export default function AdminSellersPage() {
     { id: 'all', label: '전체', count: counts.all },
   ]
 
-  const filtered = filter === 'all' ? applies : applies.filter((a) => a.status === filter)
+  const filtered = filter === 'all' ? visibleApplies : visibleApplies.filter((a) => a.status === filter)
 
   return (
     <>
@@ -209,7 +222,7 @@ export default function AdminSellersPage() {
                     </Td>
                     <Td>
                       <span className="text-ph-text-secondary">
-                        {new Date(a.submittedAt).toLocaleDateString('ko-KR')}
+                        {formatDateTime(a.submittedAt)}
                       </span>
                     </Td>
                     <Td>
