@@ -11,6 +11,12 @@ import { formatAdminOrderSellers } from '@/lib/adminOrderAdapters'
 
 import { AdminOrder } from '@/types/api/orders'
 
+function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 const FILTER_OPTIONS = [
   { value: 'all', label: '전체' },
   { value: 'CREATED', label: '생성' },
@@ -61,8 +67,9 @@ export default function AdminOrdersPage() {
         <Table>
           <thead>
             <tr>
-              <Th>주문 ID</Th>
+              <Th>주문 번호</Th>
               <Th>판매자</Th>
+              <Th>구매자</Th>
               <Th>상품명</Th>
               <Th align="right">금액</Th>
               <Th align="center">상태</Th>
@@ -73,7 +80,7 @@ export default function AdminOrdersPage() {
             {loading
               ? Array.from({ length: 6 }).map((_, i) => (
                   <Tr key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <Td key={j}>
                         <div className="h-[16px] animate-pulse rounded-ph-sm bg-ph-gray-100" />
                       </Td>
@@ -81,12 +88,15 @@ export default function AdminOrdersPage() {
                   </Tr>
                 ))
               : filtered.map((order) => (
-                  <Tr key={order.orderId}>
+                  <Tr key={order.orderNumber}>
                     <Td>
-                      <span className="text-[12.5px] text-ph-text-muted">{order.orderId}</span>
+                      <span className="text-[12.5px] text-ph-text-muted">{order.orderNumber}</span>
                     </Td>
                     <Td>
                       <Identity name={formatAdminOrderSellers(order)} />
+                    </Td>
+                    <Td>
+                      <Identity name={order.buyer.buyerName} />
                     </Td>
                     <Td>
                       <span className="block max-w-[200px] truncate">{order.productTitle}</span>
@@ -99,7 +109,7 @@ export default function AdminOrdersPage() {
                     </Td>
                     <Td>
                       <span className="text-[13px] text-ph-text-secondary">
-                        {new Date(order.createdAt).toLocaleDateString('ko-KR')}
+                        {formatDateTime(order.createdAt)}
                       </span>
                     </Td>
                   </Tr>

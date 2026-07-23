@@ -147,10 +147,18 @@ export interface AdminOrderSellerSummary {
   orderAmount: number;
 }
 
+export interface AdminOrderBuyer {
+  buyerId: string;
+  buyerName: string;
+  email?: string;
+  profileImageUrl: string | null;
+}
+
 export interface AdminOrder {
-  orderId: string;
+  orderNumber: string;
   sellerCount: number;
   sellers: AdminOrderSellerSummary[];
+  buyer: AdminOrderBuyer;
   productTitle: string;
   totalOrderCount: number;
   totalOrderAmount: number;
