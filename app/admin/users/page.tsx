@@ -62,7 +62,22 @@ export default function AdminUsersPage() {
     fetchCounts()
   }, [])
 
+  // 백엔드 role 파라미터가 'admin' 값의 서버 사이드 필터를 지원하지 않아
+  // (role=admin 요청이 total 0으로 응답) 관리자 탭만 전체 목록을 받아 클라이언트에서 걸러낸다.
   async function fetchUsers(page: number) {
+    if (roleFilter === 'admin') {
+      const total = await getAdminUsers({ role: 'ALL', page: 1, size: 1 }).then((res) => res.meta.total)
+      const all = await getAdminUsers({ role: 'ALL', page: 1, size: total || 1 })
+      const q = keyword.trim().toLowerCase()
+      const admins = all.data.filter(
+        (u) =>
+          u.role === 'admin' &&
+          (!q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.id.toLowerCase().includes(q)),
+      )
+      setUsers(admins)
+      setMeta({ page: 1, size: admins.length, total: admins.length, hasNext: false })
+      return
+    }
     const res = await getAdminUsers({ role: roleFilter, page, size: PAGE_SIZE, keyword: keyword || undefined })
     setUsers((prev) => (page === 1 ? res.data : [...prev, ...res.data]))
     setMeta(res.meta)
@@ -71,13 +86,9 @@ export default function AdminUsersPage() {
   async function fetchCounts() {
     const countFor = (role: RoleFilter) =>
       getAdminUsers({ role, page: 1, size: 1 }).then((res) => res.meta.total).catch(() => 0)
-    const [ALL, admin, buyer, seller] = await Promise.all([
-      countFor('ALL'),
-      countFor('admin'),
-      countFor('buyer'),
-      countFor('seller'),
-    ])
-    setCounts({ ALL, admin, buyer, seller })
+    const [ALL, buyer, seller] = await Promise.all([countFor('ALL'), countFor('buyer'), countFor('seller')])
+    // role=admin 필터가 서버에서 지원되지 않아 나머지 값으로 역산한다
+    setCounts({ ALL, admin: Math.max(0, ALL - buyer - seller), buyer, seller })
   }
 
   async function loadMore() {
