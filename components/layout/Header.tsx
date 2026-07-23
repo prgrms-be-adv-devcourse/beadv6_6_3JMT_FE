@@ -6,11 +6,13 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishStore } from '@/store/useWishStore';
+import { useToast } from '@/store/useToastStore';
 import Logo from '@/components/ui/Logo';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { won } from '@/lib/utils';
 import { getCartItems, removeCartItem as deleteCartItem } from '@/lib/cart';
+import { createOrder } from '@/lib/orders';
 import {
   Search,
   Bell,
@@ -247,11 +249,13 @@ export default function Header() {
   const pathname = usePathname();
 
   const { user, logout, openLoginModal } = useAuthStore();
-  const { items: cart, setItems: setCartItems, removeItem: removeCartItem } = useCartStore();
+  const { items: cart, setItems: setCartItems, removeItem: removeCartItem, clearCart } = useCartStore();
   const { items: wishItems } = useWishStore();
+  const showToast = useToast();
   const [query, setQuery] = React.useState('');
   const [menu, setMenu] = React.useState<string | null>(null);
   const [notifList, setNotifList] = React.useState<Notif[]>([]);
+  const [ordering, setOrdering] = React.useState(false);
 
   React.useEffect(() => {
     if (!user) {
@@ -302,6 +306,19 @@ export default function Header() {
       removeCartItem(cartProductId);
     } catch {
       // API 실패 시 서버와 로컬 장바구니가 어긋나지 않도록 로컬 반영을 보류합니다.
+    }
+  };
+  const onOrder = async () => {
+    if (ordering || cart.length === 0) return;
+    setOrdering(true);
+    try {
+      await createOrder(cart.map((it) => ({ productId: it.productId, productTitle: it.title })));
+      clearCart();
+      router.push('/mypage?tab=payments');
+    } catch {
+      showToast('주문 생성에 실패했어요. 다시 시도해주세요.');
+    } finally {
+      setOrdering(false);
     }
   };
 
@@ -389,9 +406,10 @@ export default function Header() {
               </div>
               <div style={{ padding: 8 }}>
                 <button
-                  onClick={() => { close(); router.push('/checkout'); }}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: 36, border: 'none', borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-primary)', color: '#fff', fontFamily: 'var(--ph-font-family)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-                >주문하기</button>
+                  onClick={() => { close(); onOrder(); }}
+                  disabled={ordering}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: 36, border: 'none', borderRadius: 'var(--ph-radius-sm)', background: 'var(--ph-primary)', color: '#fff', fontFamily: 'var(--ph-font-family)', fontSize: 14, fontWeight: 600, cursor: ordering ? 'not-allowed' : 'pointer', opacity: ordering ? 0.6 : 1 }}
+                >{ordering ? '처리 중...' : '주문하기'}</button>
               </div>
             </React.Fragment>
           )}
