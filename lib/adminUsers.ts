@@ -10,7 +10,7 @@ export type AdminUser = {
   id: string
   name: string
   email: string
-  role: 'buyer' | 'seller'
+  role: 'buyer' | 'seller' | 'admin'
   status: 'active' | 'suspended' | 'withdrawn'
 }
 
@@ -18,7 +18,7 @@ export interface GetAdminUsersParams {
   page?: number
   size?: number
   status?: 'active' | 'suspended' | 'withdrawn' | 'ALL'
-  role?: 'buyer' | 'seller' | 'ALL'
+  role?: 'buyer' | 'seller' | 'admin' | 'ALL'
   keyword?: string
 }
 
@@ -38,6 +38,11 @@ export async function getAdminUsers(params?: GetAdminUsersParams): Promise<GetAd
     { params },
   )
   return { data: res.data.data, meta: res.data.meta }
+}
+
+export async function getAdminUserCount(role: GetAdminUsersParams['role']): Promise<number> {
+  const res = await getAdminUsers({ role, size: 1 })
+  return res.meta.total
 }
 
 export interface UpdateAdminUserRoleResponse {
