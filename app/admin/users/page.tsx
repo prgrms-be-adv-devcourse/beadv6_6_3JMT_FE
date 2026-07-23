@@ -64,10 +64,10 @@ export default function AdminUsersPage() {
 
   async function fetchCounts() {
     const [ALL, admin, buyer, seller] = await Promise.all([
-      getAdminUserCount('ALL'),
-      getAdminUserCount('admin'),
-      getAdminUserCount('buyer'),
-      getAdminUserCount('seller'),
+      getAdminUserCount('ALL').catch(() => 0),
+      getAdminUserCount('admin').catch(() => 0),
+      getAdminUserCount('buyer').catch(() => 0),
+      getAdminUserCount('seller').catch(() => 0),
     ])
     setCounts({ ALL, admin, buyer, seller })
   }
