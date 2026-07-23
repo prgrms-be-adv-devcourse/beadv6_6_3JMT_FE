@@ -1,19 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Sparkles, ShieldCheck, Mail, Lock, LockKeyhole, MessageCircle } from 'lucide-react'
+import { Sparkles, ShieldCheck, LockKeyhole, MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
-import api from '@/lib/auth'
-import { API_BASE } from '@/lib/apiBase'
 
 export default function AdminLoginPage() {
   const router = useRouter()
-  const { user, isLoggedIn, login } = useAuthStore()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const { user, isLoggedIn } = useAuthStore()
 
   const kakaoAdminLogin = () => {
     const params = new URLSearchParams({
@@ -33,28 +27,6 @@ export default function AdminLoginPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      const res = await api.post(`${API_BASE}/auth/login`, { email, password })
-      const { user: loginUser, accessToken, refreshToken } = res.data.data
-      const loginRoles = ((loginUser.roles ?? (loginUser.role ? [loginUser.role] : [])) as string[]).map((r: string) => r.toLowerCase())
-      if (!loginRoles.includes('admin')) {
-        setError('관리자 계정이 아닙니다.')
-        return
-      }
-      login({ ...loginUser, roles: loginRoles }, accessToken, refreshToken)
-      router.push('/admin')
-    } catch (err: unknown) {
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setError(message ?? '로그인에 실패했습니다.')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div
@@ -104,73 +76,6 @@ export default function AdminLoginPage() {
             <MessageCircle style={{ width: 19, height: 19 }} />
             카카오로 관리자 로그인
           </button>
-
-          {/* 구분선 */}
-          <div className="flex items-center gap-3 my-1">
-            <div className="flex-1 h-px bg-ph-border" />
-            <span className="text-[13px] text-ph-text-muted">또는 이메일로</span>
-            <div className="flex-1 h-px bg-ph-border" />
-          </div>
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-[14px]">
-            {/* 이메일 */}
-            <label className="flex flex-col gap-1.5 text-[14px] font-semibold text-ph-text">
-              이메일
-              <div className="relative">
-                <Mail
-                  className="pointer-events-none absolute left-[14px] top-1/2 -translate-y-1/2 text-ph-text-muted"
-                  style={{ width: 17, height: 17 }}
-                />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value)
-                    setError('')
-                  }}
-                  placeholder="admin@prompthub.kr"
-                  required
-                  className="h-11 w-full rounded-ph-md border border-ph-border bg-ph-white pl-[41px] pr-[14px] text-[15px] font-normal text-ph-text outline-none placeholder:text-ph-text-muted focus:border-ph-primary"
-                />
-              </div>
-            </label>
-
-            {/* 비밀번호 */}
-            <label className="flex flex-col gap-1.5 text-[14px] font-semibold text-ph-text">
-              비밀번호
-              <div className="relative">
-                <Lock
-                  className="pointer-events-none absolute left-[14px] top-1/2 -translate-y-1/2 text-ph-text-muted"
-                  style={{ width: 17, height: 17 }}
-                />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value)
-                    setError('')
-                  }}
-                  placeholder="••••••••"
-                  required
-                  className="h-11 w-full rounded-ph-md border border-ph-border bg-ph-white pl-[41px] pr-[14px] text-[15px] font-normal text-ph-text outline-none placeholder:text-ph-text-muted focus:border-ph-primary"
-                />
-              </div>
-            </label>
-
-            {error && (
-              <div className="rounded-ph-sm border border-[#fecaca] bg-[#fff1f1] px-2.5 py-1.5 text-[13px] text-ph-error">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-1 h-[52px] rounded-ph-md bg-ph-primary text-[16px] font-bold text-ph-on-accent transition-colors hover:bg-ph-blue-hover disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {loading ? '로그인 중…' : '로그인'}
-            </button>
-          </form>
 
           {/* 접근 제한 안내 */}
           <div className="mt-[22px] flex items-center justify-center gap-[7px] text-[13.5px] text-ph-text-muted">
