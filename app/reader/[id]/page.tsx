@@ -6,7 +6,9 @@ import Image from 'next/image';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import { mapOrderToPrompt } from '@/lib/orderAdapters';
-import { downloadOrderProduct, getOrderContent, getOrders } from '@/lib/orders';
+import { downloadOrderProduct, getOrders } from '@/lib/orders';
+import { getPurchasedProduct, resolveDeliverable, type PurchasedProductDetail } from '@/lib/purchasedProducts';
+import { getOrderProductSellerNames } from '@/lib/sellers';
 import {
   ArrowLeft, CalendarCheck, FileText, Lock, Download,
   CheckCircle2, MessageCircle, Sparkles, ExternalLink,
@@ -93,6 +95,8 @@ export default function ReaderPage() {
   const id = params?.id;
 
   const [p, setP] = useState<Prompt | null>(null);
+  const [detail, setDetail] = useState<PurchasedProductDetail | null>(null);
+  const [sellerName, setSellerName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloaded, setDownloaded] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -102,43 +106,40 @@ export default function ReaderPage() {
 
   useEffect(() => {
     if (!id) { router.push('/mypage'); return; }
-    getOrders()
-      .then((orders) => {
+    Promise.all([getOrders(), getPurchasedProduct(String(id))])
+      .then(async ([orders, fetched]) => {
         const products = orders.map(mapOrderToPrompt).filter(Boolean) as Prompt[];
         const found = products.find((product) => String(product.id) === String(id));
         if (!found) {
           router.push('/mypage');
           return;
         }
-        setP(found);
+        setP({
+          ...found,
+          title: fetched.title,
+          productType: fetched.productType,
+          model: fetched.model || 'Prompt',
+          rating: fetched.averageRating,
+          thumbnail_url: fetched.thumbnailUrl,
+        });
+        setDetail(fetched);
+        setMyRating(fetched.myRating ?? 0);
         if (found.downloaded) {
           setDownloaded(true);
-          if (found.orderId && found.orderProductId) {
-            getOrderContent(found.orderId, found.orderProductId)
-              .then((oc) => setContent(oc.content))
-              .catch(() => {});
-          }
-        } else if (localStorage.getItem(`ph_downloaded_${id}`) === 'true') {
-          // 서버에서 downloaded 응답이 내려오기 전 과도기 지원
-          setDownloaded(true);
+          const deliverable = resolveDeliverable(fetched);
+          if (deliverable) setContent(deliverable.value);
         }
+        const names = await getOrderProductSellerNames([fetched.sellerId]);
+        setSellerName(names[fetched.sellerId] ?? null);
       })
       .catch(() => router.push('/mypage'))
       .finally(() => setLoading(false));
   }, [id, router]);
 
-  // localStorage로 rating 상태를 새로고침 후에도 유지
-  useEffect(() => {
-    if (!id) return;
-    const saved = localStorage.getItem(`ph_rating_${id}`);
-    if (saved) setMyRating(Number(saved));
-  }, [id]);
-
   const handleRate = async (n: number) => {
     try {
       await api.post(`${API_BASE}/products/${id}/reviews`, { rating: n });
       setMyRating(n);
-      localStorage.setItem(`ph_rating_${id}`, String(n));
       showToast(`${n}점 별점을 남겼어요`);
     } catch {
       showToast('별점 저장에 실패했어요. 다시 시도해 주세요');
@@ -208,25 +209,23 @@ export default function ReaderPage() {
   const openLink = (url: string) => window.open(url, '_blank', 'noopener');
 
   const confirmDownload = async () => {
-    if (!p || !p.orderId || !p.orderProductId) {
+    if (!p || !detail || !p.orderId || !p.orderProductId) {
       // API 호출에 필요한 정보가 없을 경우 로컬 처리만 (에러 상황 대비)
       setConfirmOpen(false);
       setDownloaded(true);
-      if (id) localStorage.setItem(`ph_downloaded_${id}`, 'true');
       return;
     }
 
     try {
-      // 실제 산출물(유형별: 본문 텍스트 / 파일 presigned URL / 외부 링크)을 조회
-      const oc = await getOrderContent(p.orderId, p.orderProductId);
-      setContent(oc.content);
+      // 유형별 산출물(본문 텍스트 / 파일 presigned URL / 외부 링크)은 구매 상품 조회 응답에서 온다
+      const deliverable = resolveDeliverable(detail);
+      if (deliverable) setContent(deliverable.value);
       await downloadOrderProduct(p.orderId, p.orderProductId);
       setConfirmOpen(false);
       setDownloaded(true);
       setP((prev) => prev ? { ...prev, downloaded: true, isRefundable: false } : prev);
-      if (id) localStorage.setItem(`ph_downloaded_${id}`, 'true'); // 과도기적 호환용
-      if (isFile) openFile(oc.content);
-      else if (isNotion) openLink(oc.content);
+      if (deliverable?.kind === 'file') openFile(deliverable.value);
+      else if (deliverable?.kind === 'link') openLink(deliverable.value);
     } catch {
       showToast('콘텐츠를 불러오지 못했어요. 다시 시도해 주세요');
     }
@@ -397,9 +396,9 @@ export default function ReaderPage() {
         {/* Seller info card */}
         <Card padding="22px 24px" style={{ marginTop: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <Avatar name={p.seller} size={48} />
+            <Avatar name={sellerName ?? p.seller} size={48} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>{p.seller}</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{sellerName ?? p.seller}</div>
               <div style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 2 }}>
                 판매자 · 별점 {p.rating}
               </div>
