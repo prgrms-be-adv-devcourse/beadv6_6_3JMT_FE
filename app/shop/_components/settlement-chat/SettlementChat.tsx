@@ -9,6 +9,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react'
+import Image from 'next/image'
 import {
   useCallback,
   useEffect,
@@ -417,8 +418,15 @@ export default function SettlementChat() {
         ].join(' ')}
       >
         <header className="flex min-h-[72px] items-center gap-3 border-b border-ph-border px-4 py-3.5">
-          <span className="inline-flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-ph-md bg-ph-primary text-ph-white">
-            <Sparkles className="h-[18px] w-[18px]" aria-hidden="true" />
+          <span className="relative inline-flex h-[38px] w-[38px] shrink-0 overflow-hidden rounded-ph-md bg-ph-white">
+            <Image
+              src="/images/settlement-assistant.png"
+              alt=""
+              fill
+              sizes="38px"
+              className="object-contain"
+              aria-hidden="true"
+            />
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="m-0 text-base font-bold">정산 도우미</h2>
