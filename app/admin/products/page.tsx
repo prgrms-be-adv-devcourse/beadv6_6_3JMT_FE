@@ -1,20 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import {
-  ClipboardCheck,
-  FileSearch,
-  Box,
-  Check,
-  X,
-  RotateCcw,
-  Info,
-  Search,
-} from 'lucide-react'
+import { ClipboardCheck, FileSearch, Box, Check, X, RotateCcw, Info, Search } from 'lucide-react'
 import api from '@/lib/auth'
 import { API_BASE } from '@/lib/apiBase'
 import { useAuthStore } from '@/store/useAuthStore'
 import { SectionCard } from '@/components/admin/SectionCard'
+import { DataPagination } from '@/components/admin/DataTable'
 import { Badge, StatusBadge } from '@/components/admin/Badge'
 import { PRODUCT_TYPE_LABEL, PRODUCT_TYPE_ICON } from '@/lib/productTypes'
 
@@ -39,6 +31,7 @@ const STATUS_KEY: Record<string, string> = {
 }
 
 type FilterId = 'review' | 'active' | 'rejected' | 'all'
+const PAGE_SIZE = 20
 
 function toLocalStatus(status: string): string {
   if (status === 'PENDING_REVIEW') return 'review'
@@ -67,17 +60,22 @@ export default function AdminProductsPage() {
   const [acting, setActing] = useState(false)
   const [rejectMode, setRejectMode] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [hasNext, setHasNext] = useState(false)
 
   useEffect(() => {
-    fetchProducts()
+    fetchProducts(page)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
+  }, [token, page])
 
-  async function fetchProducts() {
+  async function fetchProducts(nextPage: number) {
     if (!token) return
     setLoading(true)
     try {
-      const res = await api.get(`${API_BASE}/admin/products`)
+      const res = await api.get(`${API_BASE}/admin/products`, {
+        params: { page: nextPage, size: PAGE_SIZE },
+      })
       const raw: {
         productId: string
         title: string
@@ -88,6 +86,8 @@ export default function AdminProductsPage() {
         status: string
         createdAt: string
       }[] = res.data.data ?? []
+      setTotal(res.data.meta?.total ?? raw.length)
+      setHasNext(!!res.data.meta?.hasNext)
       setProducts(
         raw.map((p) => ({
           id: p.productId,
@@ -123,7 +123,8 @@ export default function AdminProductsPage() {
   ]
 
   const list = useMemo(() => {
-    const byStatus = filter === 'all' ? products : products.filter((p) => (p.status ?? 'active') === filter)
+    const byStatus =
+      filter === 'all' ? products : products.filter((p) => (p.status ?? 'active') === filter)
     if (!search.trim()) return byStatus
     const q = search.trim().toLowerCase()
     return byStatus.filter(
@@ -186,7 +187,11 @@ export default function AdminProductsPage() {
   return (
     <div className="grid items-start gap-[20px] [grid-template-columns:minmax(360px,420px)_1fr]">
       {/* ── 목록 ─────────────────────────────────────── */}
-      <SectionCard title="검수 대기 상품" sub={`${counts.review}건 대기`} bodyStyle={{ padding: 0 }}>
+      <SectionCard
+        title="검수 대기 상품"
+        sub={`${counts.review}건 대기`}
+        bodyStyle={{ padding: 0 }}
+      >
         <div className="border-b border-ph-border px-[18px] py-[14px]">
           <div className="mb-[12px] flex items-center gap-[8px] rounded-ph-md border border-ph-border bg-ph-white px-[12px] py-[8px]">
             <Search size={14} className="flex-shrink-0 text-ph-text-muted" />
@@ -198,7 +203,10 @@ export default function AdminProductsPage() {
               className="flex-1 bg-transparent text-[13.5px] text-ph-text outline-none placeholder:text-ph-text-muted"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="flex-shrink-0 text-ph-text-muted hover:text-ph-text">
+              <button
+                onClick={() => setSearch('')}
+                className="flex-shrink-0 text-ph-text-muted hover:text-ph-text"
+              >
                 <X size={13} />
               </button>
             )}
@@ -209,7 +217,10 @@ export default function AdminProductsPage() {
               return (
                 <button
                   key={t.id}
-                  onClick={() => setFilter(t.id)}
+                  onClick={() => {
+                    setFilter(t.id)
+                    setPage(0)
+                  }}
                   className={`inline-flex items-center gap-[6px] rounded-ph-sm px-[12px] py-[6px] text-[13px] font-semibold transition-colors ${
                     on
                       ? 'bg-ph-white text-ph-primary shadow-sm'
@@ -282,6 +293,15 @@ export default function AdminProductsPage() {
             })}
           </div>
         )}
+        {!loading && products.length > 0 && (
+          <DataPagination
+            page={page}
+            size={PAGE_SIZE}
+            total={total}
+            hasNext={hasNext}
+            onPageChange={setPage}
+          />
+        )}
       </SectionCard>
 
       {/* ── 미리보기 ─────────────────────────────────── */}
@@ -298,7 +318,9 @@ export default function AdminProductsPage() {
       ) : (
         <SectionCard
           title="상품 내용 미리보기"
-          action={<StatusBadge status={STATUS_KEY[sel.status ?? 'active'] ?? (sel.status ?? 'active')} />}
+          action={
+            <StatusBadge status={STATUS_KEY[sel.status ?? 'active'] ?? sel.status ?? 'active'} />
+          }
           bodyStyle={{ padding: 0 }}
         >
           <div className="px-[26px] py-[22px]">
@@ -309,7 +331,9 @@ export default function AdminProductsPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <div className="mb-[8px] flex gap-[8px]">
-                  <Badge tone="neutral">{PRODUCT_TYPE_LABEL[sel.productType] ?? sel.productType}</Badge>
+                  <Badge tone="neutral">
+                    {PRODUCT_TYPE_LABEL[sel.productType] ?? sel.productType}
+                  </Badge>
                   {sel.model && (
                     <Badge tone="neutral" soft={false}>
                       {sel.model}
@@ -372,7 +396,10 @@ export default function AdminProductsPage() {
                   />
                   <div className="flex justify-end gap-[8px]">
                     <button
-                      onClick={() => { setRejectMode(false); setRejectReason('') }}
+                      onClick={() => {
+                        setRejectMode(false)
+                        setRejectReason('')
+                      }}
                       className="inline-flex h-[36px] items-center rounded-ph-md border border-ph-border bg-ph-white px-[14px] text-[13.5px] font-semibold text-ph-text-secondary transition-colors hover:bg-ph-gray-50"
                     >
                       취소
@@ -410,7 +437,9 @@ export default function AdminProductsPage() {
             ) : (
               <div className="flex items-center gap-[10px]">
                 <span className="flex flex-1 items-center gap-[8px] text-[13.5px] text-ph-text-secondary">
-                  <StatusBadge status={STATUS_KEY[sel.status ?? 'active'] ?? (sel.status ?? 'active')} />{' '}
+                  <StatusBadge
+                    status={STATUS_KEY[sel.status ?? 'active'] ?? sel.status ?? 'active'}
+                  />{' '}
                   처리된 상품입니다.
                 </span>
                 <button

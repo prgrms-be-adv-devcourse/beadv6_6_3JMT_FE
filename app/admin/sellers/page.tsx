@@ -3,13 +3,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, X, Store, Search } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
-import { type SellerRegister, getSellerRegisters, approveSellerRegister, rejectSellerRegister } from '@/lib/adminSellers'
+import {
+  type SellerRegister,
+  getSellerRegisters,
+  approveSellerRegister,
+  rejectSellerRegister,
+} from '@/lib/adminSellers'
 import { notifyAdminSellerRegistersChanged } from '@/lib/adminSellerEvents'
 import { SectionCard } from '@/components/admin/SectionCard'
-import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
+import { DataPagination, Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { Badge, StatusBadge } from '@/components/admin/Badge'
 
 type SellerApply = SellerRegister
+const PAGE_SIZE = 20
 
 const CATEGORY_LABEL: Record<string, string> = {
   image: '이미지',
@@ -40,14 +46,17 @@ export default function AdminSellersPage() {
   const [acting, setActing] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterId>('pending')
   const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [hasNext, setHasNext] = useState(false)
 
   const [rejectModal, setRejectModal] = useState<{ registerId: string; name: string } | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    fetchApplies()
-  }, [token])
+    fetchApplies(page)
+  }, [token, page])
 
   useEffect(() => {
     if (rejectModal) {
@@ -56,11 +65,14 @@ export default function AdminSellersPage() {
     }
   }, [rejectModal])
 
-  async function fetchApplies() {
+  async function fetchApplies(nextPage: number) {
     if (!token) return
+    setLoading(true)
     try {
-      const res = await getSellerRegisters()
+      const res = await getSellerRegisters({ page: nextPage, size: PAGE_SIZE })
       setApplies(res.data ?? [])
+      setTotal(res.meta?.total ?? res.data?.length ?? 0)
+      setHasNext(!!res.meta?.hasNext)
     } finally {
       setLoading(false)
     }
@@ -70,7 +82,9 @@ export default function AdminSellersPage() {
     setActing(registerId)
     try {
       await approveSellerRegister(registerId)
-      setApplies((prev) => prev.map((a) => (a.registerId === registerId ? { ...a, status: 'approved' } : a)))
+      setApplies((prev) =>
+        prev.map((a) => (a.registerId === registerId ? { ...a, status: 'approved' } : a)),
+      )
       notifyAdminSellerRegistersChanged()
     } finally {
       setActing(null)
@@ -88,7 +102,9 @@ export default function AdminSellersPage() {
     setRejectModal(null)
     try {
       await rejectSellerRegister(registerId, rejectReason.trim())
-      setApplies((prev) => prev.map((a) => (a.registerId === registerId ? { ...a, status: 'rejected' } : a)))
+      setApplies((prev) =>
+        prev.map((a) => (a.registerId === registerId ? { ...a, status: 'rejected' } : a)),
+      )
       notifyAdminSellerRegistersChanged()
     } finally {
       setActing(null)
@@ -111,7 +127,8 @@ export default function AdminSellersPage() {
     { id: 'all', label: '전체', count: counts.all },
   ]
 
-  const byStatus = filter === 'all' ? visibleApplies : visibleApplies.filter((a) => a.status === filter)
+  const byStatus =
+    filter === 'all' ? visibleApplies : visibleApplies.filter((a) => a.status === filter)
   const q = keyword.trim().toLowerCase()
   const filtered = !q
     ? byStatus
@@ -151,7 +168,10 @@ export default function AdminSellersPage() {
               return (
                 <button
                   key={t.id}
-                  onClick={() => setFilter(t.id)}
+                  onClick={() => {
+                    setFilter(t.id)
+                    setPage(0)
+                  }}
                   className={`inline-flex items-center gap-[6px] rounded-ph-full px-[14px] py-[7px] text-[13.5px] font-semibold transition-colors ${
                     active
                       ? 'bg-ph-secondary text-ph-primary'
@@ -161,7 +181,9 @@ export default function AdminSellersPage() {
                   {t.label}
                   <span
                     className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-ph-full px-[5px] text-[11.5px] font-bold ${
-                      active ? 'bg-ph-primary text-ph-on-accent' : 'bg-ph-gray-100 text-ph-text-secondary'
+                      active
+                        ? 'bg-ph-primary text-ph-on-accent'
+                        : 'bg-ph-gray-100 text-ph-text-secondary'
                     }`}
                   >
                     {t.count}
@@ -184,103 +206,114 @@ export default function AdminSellersPage() {
               <div className="text-[13px] text-ph-text-muted">다른 상태 탭을 확인해 보세요.</div>
             </div>
           ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th width="22%">신청자</Th>
-                  <Th>판매 소개</Th>
-                  <Th>카테고리</Th>
-                  <Th align="right">샘플</Th>
-                  <Th>신청일</Th>
-                  <Th>상태</Th>
-                  <Th align="right" width={170}>처리</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((a) => (
-                  <Tr key={a.registerId}>
-                    <Td>
-                      <Identity name={a.name} sub={a.email} />
-                    </Td>
-                    <Td style={{ maxWidth: 360 }}>
-                      <span
-                        className="text-[13.5px] text-ph-text-secondary"
-                        style={{
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          lineHeight: 1.5,
-                        }}
-                      >
-                        {a.introduction || '—'}
-                      </span>
-                    </Td>
-                    <Td>
-                      {a.categories.length > 0 ? (
-                        <div className="flex flex-wrap gap-[6px]">
-                          {a.categories.map((cat) => (
-                            <Badge key={cat} tone="blue">
-                              {CATEGORY_LABEL[cat] ?? cat}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-[13.5px] text-ph-text-muted">—</span>
-                      )}
-                    </Td>
-                    <Td align="right">
-                      {a.portfolioUrl ? (
-                        <a
-                          href={a.portfolioUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[13.5px] font-semibold text-ph-primary hover:underline"
+            <>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th width="22%">신청자</Th>
+                    <Th>판매 소개</Th>
+                    <Th>카테고리</Th>
+                    <Th align="right">샘플</Th>
+                    <Th>신청일</Th>
+                    <Th>상태</Th>
+                    <Th align="right" width={170}>
+                      처리
+                    </Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((a) => (
+                    <Tr key={a.registerId}>
+                      <Td>
+                        <Identity name={a.name} sub={a.email} />
+                      </Td>
+                      <Td style={{ maxWidth: 360 }}>
+                        <span
+                          className="text-[13.5px] text-ph-text-secondary"
+                          style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            lineHeight: 1.5,
+                          }}
                         >
-                          보기
-                        </a>
-                      ) : (
-                        <span className="text-[13.5px] text-ph-text-muted">—</span>
-                      )}
-                    </Td>
-                    <Td>
-                      <span className="text-ph-text-secondary">
-                        {formatDateTime(a.submittedAt)}
-                      </span>
-                    </Td>
-                    <Td>
-                      <StatusBadge status={a.status} />
-                    </Td>
-                    <Td align="right">
-                      {a.status === 'pending' ? (
-                        <div className="inline-flex justify-end gap-[6px]">
-                          <button
-                            onClick={() => handleApprove(a.registerId)}
-                            disabled={acting === a.registerId}
-                            className="inline-flex items-center gap-[5px] rounded-ph-md bg-ph-secondary px-[12px] py-[7px] text-[13px] font-semibold text-ph-primary transition-colors hover:bg-ph-blue-hover hover:text-ph-on-accent disabled:opacity-50"
+                          {a.introduction || '—'}
+                        </span>
+                      </Td>
+                      <Td>
+                        {a.categories.length > 0 ? (
+                          <div className="flex flex-wrap gap-[6px]">
+                            {a.categories.map((cat) => (
+                              <Badge key={cat} tone="blue">
+                                {CATEGORY_LABEL[cat] ?? cat}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-[13.5px] text-ph-text-muted">—</span>
+                        )}
+                      </Td>
+                      <Td align="right">
+                        {a.portfolioUrl ? (
+                          <a
+                            href={a.portfolioUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[13.5px] font-semibold text-ph-primary hover:underline"
                           >
-                            <Check size={15} />
-                            승인
-                          </button>
-                          <button
-                            onClick={() => openRejectModal(a.registerId, a.name)}
-                            disabled={acting === a.registerId}
-                            className="inline-flex items-center gap-[5px] rounded-ph-md px-[12px] py-[7px] text-[13px] font-semibold text-ph-error transition-colors hover:bg-[#fdeceb] disabled:opacity-50"
-                            style={{ backgroundColor: '#fdeceb' }}
-                          >
-                            <X size={15} />
-                            반려
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-[13px] text-ph-text-muted">처리 완료</span>
-                      )}
-                    </Td>
-                  </Tr>
-                ))}
-              </tbody>
-            </Table>
+                            보기
+                          </a>
+                        ) : (
+                          <span className="text-[13.5px] text-ph-text-muted">—</span>
+                        )}
+                      </Td>
+                      <Td>
+                        <span className="text-ph-text-secondary">
+                          {formatDateTime(a.submittedAt)}
+                        </span>
+                      </Td>
+                      <Td>
+                        <StatusBadge status={a.status} />
+                      </Td>
+                      <Td align="right">
+                        {a.status === 'pending' ? (
+                          <div className="inline-flex justify-end gap-[6px]">
+                            <button
+                              onClick={() => handleApprove(a.registerId)}
+                              disabled={acting === a.registerId}
+                              className="inline-flex items-center gap-[5px] rounded-ph-md bg-ph-secondary px-[12px] py-[7px] text-[13px] font-semibold text-ph-primary transition-colors hover:bg-ph-blue-hover hover:text-ph-on-accent disabled:opacity-50"
+                            >
+                              <Check size={15} />
+                              승인
+                            </button>
+                            <button
+                              onClick={() => openRejectModal(a.registerId, a.name)}
+                              disabled={acting === a.registerId}
+                              className="inline-flex items-center gap-[5px] rounded-ph-md px-[12px] py-[7px] text-[13px] font-semibold text-ph-error transition-colors hover:bg-[#fdeceb] disabled:opacity-50"
+                              style={{ backgroundColor: '#fdeceb' }}
+                            >
+                              <X size={15} />
+                              반려
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[13px] text-ph-text-muted">처리 완료</span>
+                        )}
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+              <DataPagination
+                page={page}
+                size={PAGE_SIZE}
+                total={total}
+                hasNext={hasNext}
+                onPageChange={setPage}
+              />
+            </>
           )}
         </SectionCard>
       </div>
@@ -298,7 +331,8 @@ export default function AdminSellersPage() {
             <div className="mb-[20px]">
               <h3 className="text-[16px] font-bold text-ph-text">반려 사유 입력</h3>
               <p className="mt-[4px] text-[13.5px] text-ph-text-secondary">
-                <span className="font-semibold text-ph-text">{rejectModal.name}</span> 님의 신청을 반려합니다.
+                <span className="font-semibold text-ph-text">{rejectModal.name}</span> 님의 신청을
+                반려합니다.
               </p>
             </div>
 

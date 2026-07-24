@@ -2,10 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { SectionCard } from '@/components/admin/SectionCard'
-import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
+import { DataPagination, Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { StatusBadge } from '@/components/admin/Badge'
 import { CircleCheck, CirclePause, CircleX, Search } from 'lucide-react'
-import { type AdminUser, getAdminUsers, updateAdminUserRole, updateAdminUserStatus } from '@/lib/adminUsers'
+import {
+  type AdminUser,
+  getAdminUsers,
+  updateAdminUserRole,
+  updateAdminUserStatus,
+} from '@/lib/adminUsers'
 
 type UserStatus = AdminUser['status']
 type RoleFilter = 'ALL' | AdminUser['role']
@@ -25,21 +30,21 @@ const ROLE_TABS: { id: RoleFilter; label: string }[] = [
   { id: 'seller', label: '판매자' },
 ]
 
-const STATUS_OPTS: { id: UserStatus; label: string; icon: typeof CircleCheck; danger?: boolean }[] = [
-  { id: 'active', label: '활성', icon: CircleCheck },
-  { id: 'suspended', label: '정지', icon: CirclePause },
-  { id: 'withdrawn', label: '탈퇴', icon: CircleX, danger: true },
-]
+const STATUS_OPTS: { id: UserStatus; label: string; icon: typeof CircleCheck; danger?: boolean }[] =
+  [
+    { id: 'active', label: '활성', icon: CircleCheck },
+    { id: 'suspended', label: '정지', icon: CirclePause },
+    { id: 'withdrawn', label: '탈퇴', icon: CircleX, danger: true },
+  ]
 
 export default function AdminUsersPage() {
-  // 백엔드 role 파라미터는 계정이 과거 보유했던 역할까지 매칭해 중복으로 잡힌다
-  // (예: 관리자 계정이 buyer/seller 필터에도 함께 걸림). 그래서 유형 탭은 표시되는
-  // u.role 값 기준으로 클라이언트에서만 필터링한다 — 전체 목록을 한 번에 받아온다.
   const [allUsers, setAllUsers] = useState<AdminUser[]>([])
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL')
   const [searchInput, setSearchInput] = useState('')
   const [keyword, setKeyword] = useState('')
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [hasNext, setHasNext] = useState(false)
   const [loading, setLoading] = useState(true)
   const [changing, setChanging] = useState<string | null>(null)
 
@@ -49,13 +54,19 @@ export default function AdminUsersPage() {
   }, [searchInput])
 
   useEffect(() => {
-    fetchAllUsers().finally(() => setLoading(false))
-  }, [])
+    fetchUsers(page)
+  }, [page])
 
-  async function fetchAllUsers() {
-    const total = await getAdminUsers({ role: 'ALL', page: 1, size: 1 }).then((res) => res.meta.total)
-    const res = await getAdminUsers({ role: 'ALL', page: 1, size: total || 1 })
-    setAllUsers(res.data)
+  async function fetchUsers(nextPage: number) {
+    setLoading(true)
+    try {
+      const res = await getAdminUsers({ page: nextPage, size: PAGE_SIZE })
+      setAllUsers(res.data)
+      setTotal(res.meta?.total ?? res.data.length)
+      setHasNext(!!res.meta?.hasNext)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleRoleChange(userId: string, newRole: 'buyer' | 'seller') {
@@ -80,7 +91,7 @@ export default function AdminUsersPage() {
 
   function selectTab(id: RoleFilter) {
     setRoleFilter(id)
-    setVisibleCount(PAGE_SIZE)
+    setPage(0)
   }
 
   const counts = {
@@ -100,8 +111,7 @@ export default function AdminUsersPage() {
           (u.email ?? '').toLowerCase().includes(q) ||
           (u.id ?? '').toLowerCase().includes(q),
       )
-  const users = filtered.slice(0, visibleCount)
-  const hasMore = filtered.length > visibleCount
+  const users = filtered
 
   return (
     <div className="flex flex-col gap-[20px]">
@@ -140,7 +150,9 @@ export default function AdminUsersPage() {
                 {t.label}
                 <span
                   className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-ph-full px-[5px] text-[11.5px] font-bold ${
-                    active ? 'bg-ph-primary text-ph-on-accent' : 'bg-ph-gray-100 text-ph-text-secondary'
+                    active
+                      ? 'bg-ph-primary text-ph-on-accent'
+                      : 'bg-ph-gray-100 text-ph-text-secondary'
                   }`}
                 >
                   {counts[t.id]}
@@ -151,9 +163,13 @@ export default function AdminUsersPage() {
         </div>
 
         {loading ? (
-          <div className="px-[22px] py-[40px] text-center text-[14px] text-ph-text-muted">불러오는 중…</div>
+          <div className="px-[22px] py-[40px] text-center text-[14px] text-ph-text-muted">
+            불러오는 중…
+          </div>
         ) : users.length === 0 ? (
-          <div className="px-[22px] py-[40px] text-center text-[14px] text-ph-text-muted">사용자가 없습니다.</div>
+          <div className="px-[22px] py-[40px] text-center text-[14px] text-ph-text-muted">
+            사용자가 없습니다.
+          </div>
         ) : (
           <>
             <Table>
@@ -176,7 +192,10 @@ export default function AdminUsersPage() {
                         <Identity name={u.name} sub={u.email} />
                       </Td>
                       <Td>
-                        <span className="text-[13px] text-ph-text-muted" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        <span
+                          className="text-[13px] text-ph-text-muted"
+                          style={{ fontVariantNumeric: 'tabular-nums' }}
+                        >
                           {u.id}
                         </span>
                       </Td>
@@ -195,7 +214,9 @@ export default function AdminUsersPage() {
                           <select
                             value={u.role}
                             disabled={changing === u.id}
-                            onChange={(e) => handleRoleChange(u.id, e.target.value as 'buyer' | 'seller')}
+                            onChange={(e) =>
+                              handleRoleChange(u.id, e.target.value as 'buyer' | 'seller')
+                            }
                             className="cursor-pointer rounded-ph-sm border border-ph-border px-[8px] py-[6px] text-[13px] text-ph-text disabled:opacity-50"
                           >
                             <option value="buyer">구매자</option>
@@ -218,10 +239,22 @@ export default function AdminUsersPage() {
                                 className="inline-flex items-center gap-[5px] rounded-ph-sm border px-[9px] py-[6px] text-[12.5px] font-semibold disabled:cursor-default disabled:opacity-50"
                                 style={
                                   isActive
-                                    ? { borderColor: 'var(--ph-primary)', color: 'var(--ph-primary)', background: 'var(--ph-secondary)' }
+                                    ? {
+                                        borderColor: 'var(--ph-primary)',
+                                        color: 'var(--ph-primary)',
+                                        background: 'var(--ph-secondary)',
+                                      }
                                     : o.danger
-                                      ? { borderColor: 'var(--ph-border)', color: 'var(--ph-error)', background: 'transparent' }
-                                      : { borderColor: 'var(--ph-border)', color: 'var(--ph-text-secondary)', background: 'transparent' }
+                                      ? {
+                                          borderColor: 'var(--ph-border)',
+                                          color: 'var(--ph-error)',
+                                          background: 'transparent',
+                                        }
+                                      : {
+                                          borderColor: 'var(--ph-border)',
+                                          color: 'var(--ph-text-secondary)',
+                                          background: 'transparent',
+                                        }
                                 }
                               >
                                 <Icon size={14} />
@@ -236,17 +269,13 @@ export default function AdminUsersPage() {
                 })}
               </tbody>
             </Table>
-            {hasMore && (
-              <div className="border-t border-ph-border p-[16px] text-center">
-                <button
-                  type="button"
-                  onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
-                  className="h-[38px] rounded-ph-sm border border-ph-border bg-ph-white px-[20px] text-[13.5px] font-semibold text-ph-text-secondary"
-                >
-                  더 보기
-                </button>
-              </div>
-            )}
+            <DataPagination
+              page={page}
+              size={PAGE_SIZE}
+              total={total}
+              hasNext={hasNext}
+              onPageChange={setPage}
+            />
           </>
         )}
       </SectionCard>

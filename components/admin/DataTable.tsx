@@ -4,10 +4,14 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import type { CSSProperties, ReactNode } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export function Table({ children }: { children: ReactNode }) {
   return (
-    <table className="w-full border-collapse font-ph" style={{ fontVariantNumeric: 'tabular-nums' }}>
+    <table
+      className="w-full border-collapse font-ph"
+      style={{ fontVariantNumeric: 'tabular-nums' }}
+    >
       {children}
     </table>
   )
@@ -67,7 +71,11 @@ export function Tr({
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      style={{ cursor: onClick ? 'pointer' : 'default', background: bg, transition: 'background-color .12s ease' }}
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        background: bg,
+        transition: 'background-color .12s ease',
+      }}
     >
       {children}
     </tr>
@@ -134,5 +142,75 @@ export function Identity({
         {sub && <div className="truncate text-[12.5px] text-ph-text-muted">{sub}</div>}
       </div>
     </div>
+  )
+}
+
+export function DataPagination({
+  page,
+  size,
+  total,
+  hasNext,
+  onPageChange,
+}: {
+  page: number
+  size: number
+  total?: number
+  hasNext?: boolean
+  onPageChange: (page: number) => void
+}) {
+  const totalPages = total === undefined ? undefined : Math.max(1, Math.ceil(total / size))
+  const canPrevious = page > 0
+  const canNext = totalPages === undefined ? !!hasNext : page + 1 < totalPages
+  const pages =
+    totalPages === undefined
+      ? [page]
+      : Array.from({ length: totalPages }, (_, index) => index).filter(
+          (pageNumber) =>
+            pageNumber === 0 || pageNumber === totalPages - 1 || Math.abs(pageNumber - page) <= 1,
+        )
+
+  return (
+    <nav className="flex items-center justify-center gap-[8px] border-t border-ph-border px-[18px] py-[14px]">
+      <button
+        type="button"
+        disabled={!canPrevious}
+        onClick={() => onPageChange(page - 1)}
+        className="inline-flex h-[32px] items-center gap-[4px] rounded-ph-sm px-[8px] text-[13px] font-semibold text-ph-primary transition-colors hover:bg-ph-gray-50 disabled:cursor-default disabled:text-ph-text-muted disabled:opacity-50"
+      >
+        <ChevronLeft size={15} />
+        Previous
+      </button>
+      {pages.map((pageNumber, index) => {
+        const previousPage = pages[index - 1]
+        const showGap = previousPage !== undefined && pageNumber - previousPage > 1
+        const active = pageNumber === page
+        return (
+          <span key={pageNumber} className="inline-flex items-center gap-[8px]">
+            {showGap && <span className="text-[13px] text-ph-text-muted">...</span>}
+            <button
+              type="button"
+              onClick={() => onPageChange(pageNumber)}
+              aria-current={active ? 'page' : undefined}
+              className={`inline-flex h-[32px] min-w-[32px] items-center justify-center rounded-ph-md px-[10px] text-[13px] font-semibold transition-colors ${
+                active
+                  ? 'bg-ph-primary text-ph-on-accent'
+                  : 'text-ph-text-secondary hover:bg-ph-gray-50 hover:text-ph-text'
+              }`}
+            >
+              {pageNumber + 1}
+            </button>
+          </span>
+        )
+      })}
+      <button
+        type="button"
+        disabled={!canNext}
+        onClick={() => onPageChange(page + 1)}
+        className="inline-flex h-[32px] items-center gap-[4px] rounded-ph-sm px-[8px] text-[13px] font-semibold text-ph-primary transition-colors hover:bg-ph-gray-50 disabled:cursor-default disabled:text-ph-text-muted disabled:opacity-50"
+      >
+        Next
+        <ChevronRight size={15} />
+      </button>
+    </nav>
   )
 }

@@ -14,7 +14,7 @@ import {
   X,
 } from 'lucide-react'
 import { StatusBadge } from '@/components/admin/Badge'
-import { Identity, Table, Td, Th, Tr } from '@/components/admin/DataTable'
+import { DataPagination, Identity, Table, Td, Th, Tr } from '@/components/admin/DataTable'
 import { SectionCard } from '@/components/admin/SectionCard'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import { SETTLEMENT_STATUS_FILTERS, type SettlementFilter } from '@/lib/constants'
@@ -102,8 +102,9 @@ export default function AdminSettlementsView() {
   const [settlementMonth, setSettlementMonth] = useState('')
   const [expandedKey, setExpandedKey] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
   const [hasNext, setHasNext] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
   const [detailErrors, setDetailErrors] = useState<Record<string, string>>({})
@@ -128,8 +129,7 @@ export default function AdminSettlementsView() {
     append: boolean,
   ) => {
     const requestId = ++listRequestRef.current
-    if (append) setLoadingMore(true)
-    else setLoading(true)
+    setLoading(true)
     setListError(null)
     try {
       const result = await getAdminSettlements({
@@ -139,7 +139,9 @@ export default function AdminSettlementsView() {
         size: PAGE_SIZE,
       })
       if (requestId !== listRequestRef.current) return
-      setItems((current) => (append ? [...current, ...result.items] : result.items))
+      setItems(result.items)
+      setPage(result.page)
+      setTotal(result.totalElements)
       setHasNext((result.page + 1) * result.size < result.totalElements)
     } catch {
       if (requestId !== listRequestRef.current) return
@@ -148,7 +150,6 @@ export default function AdminSettlementsView() {
     } finally {
       if (requestId === listRequestRef.current) {
         setLoading(false)
-        setLoadingMore(false)
       }
     }
   }
@@ -568,20 +569,13 @@ export default function AdminSettlementsView() {
                 })}
               </tbody>
             </Table>
-            {hasNext && (
-              <div className="border-t border-ph-border p-4 text-center">
-                <button
-                  type="button"
-                  onClick={() =>
-                    loadList(filter, settlementMonth, Math.ceil(items.length / PAGE_SIZE), true)
-                  }
-                  disabled={loadingMore}
-                  className="h-[38px] rounded-ph-sm border border-ph-border bg-ph-white px-5 text-[13.5px] font-semibold text-ph-text-secondary disabled:opacity-40"
-                >
-                  {loadingMore ? '불러오는 중…' : '더 보기'}
-                </button>
-              </div>
-            )}
+            <DataPagination
+              page={page}
+              size={PAGE_SIZE}
+              total={total}
+              hasNext={hasNext}
+              onPageChange={(nextPage) => loadList(filter, settlementMonth, nextPage, false)}
+            />
           </div>
         )}
       </SectionCard>

@@ -6,11 +6,13 @@ import { useAuthStore } from '@/store/useAuthStore'
 import api from '@/lib/auth'
 import { API_BASE } from '@/lib/apiBase'
 import { SectionCard } from '@/components/admin/SectionCard'
-import { Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
+import { DataPagination, Table, Th, Td, Tr, Identity } from '@/components/admin/DataTable'
 import { StatusBadge } from '@/components/admin/Badge'
 import { formatAdminOrderSellers } from '@/lib/adminOrderAdapters'
 
-import { AdminOrder } from '@/types/api/orders'
+import { AdminOrder, type ApiResponse } from '@/types/api/orders'
+
+const PAGE_SIZE = 20
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso)
@@ -33,6 +35,9 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [hasNext, setHasNext] = useState(false)
 
   const byStatus = filter === 'all' ? orders : orders.filter((o) => o.orderStatus === filter)
   const q = keyword.trim().toLowerCase()
@@ -49,11 +54,19 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     if (!token) return
+    setLoading(true)
     api
-      .get(`${API_BASE}/admin/orders`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => setOrders(res.data.data ?? []))
+      .get<ApiResponse<AdminOrder[]>>(`${API_BASE}/admin/orders`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { page, size: PAGE_SIZE },
+      })
+      .then((res) => {
+        setOrders(res.data.data ?? [])
+        setTotal(res.data.meta?.total ?? res.data.data?.length ?? 0)
+        setHasNext(!!res.data.meta?.hasNext)
+      })
       .finally(() => setLoading(false))
-  }, [token])
+  }, [token, page])
 
   return (
     <SectionCard
@@ -78,11 +91,17 @@ export default function AdminOrdersPage() {
       <div className="flex gap-[8px] border-b border-ph-border px-[22px] py-[16px]">
         {FILTER_OPTIONS.map((opt) => {
           const active = filter === opt.value
-          const count = opt.value === 'all' ? orders.length : orders.filter((o) => o.orderStatus === opt.value).length
+          const count =
+            opt.value === 'all'
+              ? orders.length
+              : orders.filter((o) => o.orderStatus === opt.value).length
           return (
             <button
               key={opt.value}
-              onClick={() => setFilter(opt.value)}
+              onClick={() => {
+                setFilter(opt.value)
+                setPage(0)
+              }}
               className={`inline-flex items-center gap-[6px] rounded-ph-full px-[14px] py-[7px] text-[13.5px] font-semibold transition-colors ${
                 active
                   ? 'bg-ph-secondary text-ph-primary'
@@ -92,7 +111,9 @@ export default function AdminOrdersPage() {
               {opt.label}
               <span
                 className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-ph-full px-[5px] text-[11.5px] font-bold ${
-                  active ? 'bg-ph-primary text-ph-on-accent' : 'bg-ph-gray-100 text-ph-text-secondary'
+                  active
+                    ? 'bg-ph-primary text-ph-on-accent'
+                    : 'bg-ph-gray-100 text-ph-text-secondary'
                 }`}
               >
                 {count}
@@ -143,7 +164,9 @@ export default function AdminOrdersPage() {
                       <span className="block max-w-[200px] truncate">{order.productTitle}</span>
                     </Td>
                     <Td align="right" style={{ fontWeight: 600 }}>
-                      {order.totalOrderAmount === 0 ? '무료' : `${order.totalOrderAmount.toLocaleString()}원`}
+                      {order.totalOrderAmount === 0
+                        ? '무료'
+                        : `${order.totalOrderAmount.toLocaleString()}원`}
                     </Td>
                     <Td align="center">
                       <StatusBadge status={order.orderStatus} />
@@ -159,10 +182,23 @@ export default function AdminOrdersPage() {
         </Table>
         {!loading && filtered.length === 0 && (
           <div className="py-[48px] text-center text-[14px] text-ph-text-muted">
-            {q ? '검색 결과가 없습니다.' : filter === 'all' ? '주문이 없습니다.' : '해당 상태의 주문이 없습니다.'}
+            {q
+              ? '검색 결과가 없습니다.'
+              : filter === 'all'
+                ? '주문이 없습니다.'
+                : '해당 상태의 주문이 없습니다.'}
           </div>
         )}
       </div>
+      {!loading && orders.length > 0 && (
+        <DataPagination
+          page={page}
+          size={PAGE_SIZE}
+          total={total}
+          hasNext={hasNext}
+          onPageChange={setPage}
+        />
+      )}
     </SectionCard>
   )
 }
