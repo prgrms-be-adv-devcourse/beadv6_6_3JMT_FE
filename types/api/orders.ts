@@ -152,6 +152,7 @@ export interface AdminOrderBuyer {
   buyerId: string;
   buyerName: string;
   email?: string;
+  profileImageUrl?: string | null;
 }
 
 export interface AdminOrder {
@@ -165,3 +166,58 @@ export interface AdminOrder {
   orderStatus: string;
   createdAt: string;
 }
+
+export interface UserSummary {
+  userId?: string;
+  name?: string;
+  profileImageUrl?: string | null;
+  // 호환용 옵셔널 필드
+  buyerId?: string;
+  buyerName?: string;
+  sellerId?: string;
+  sellerNickname?: string;
+  email?: string;
+}
+
+export interface OrderProductSummary {
+  seller?: UserSummary | null;
+  productTitle: string;
+  productAmount: number;
+  orderProductStatus: OrderProductStatus | string;
+}
+
+export interface AdminOrderListResponse {
+  orderNumber: string;
+  buyer?: UserSummary | null;
+  totalOrderAmount: number;
+  orderStatus: string;
+  orderedAt?: string;
+  createdAt?: string;
+  orderProducts?: OrderProductSummary[];
+}
+
+export type AdminOrderProductV2 = OrderProductSummary;
+export type AdminOrderBuyerV2 = UserSummary;
+export type AdminOrderV2 = AdminOrderListResponse;
+
+export interface PageResponse<T> {
+  success: boolean;
+  data: T[];
+  message: string;
+  meta: {
+    page: number;
+    size: number;
+    total: number;
+    hasNext: boolean;
+  };
+}
+
+export const ORDER_PRODUCT_STATUS_LABEL: Record<string, string> = {
+  PENDING: '결제 대기',
+  PAID: '결제 완료',
+  FAILED: '결제 실패',
+  REFUND_REQUESTED: '환불 처리 중',
+  REFUNDED: '환불 완료',
+};
+
+
