@@ -1,9 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { ClipboardCheck, FileSearch, Box, Check, X, RotateCcw, Info, Search } from 'lucide-react'
-import api from '@/lib/auth'
-import { API_BASE } from '@/lib/apiBase'
+import { useEffect, useState } from 'react'
+import { ClipboardCheck, FileSearch, Box, X, RotateCcw, Info, Search } from 'lucide-react'
+import {
+  getAdminProducts,
+  revertAdminProduct,
+  type AdminProductStatusParam,
+} from '@/lib/adminProducts'
 import { useAuthStore } from '@/store/useAuthStore'
 import { SectionCard } from '@/components/admin/SectionCard'
 import { DataPagination } from '@/components/admin/DataTable'
@@ -33,6 +36,19 @@ const STATUS_KEY: Record<string, string> = {
 type FilterId = 'review' | 'active' | 'rejected' | 'all'
 const PAGE_SIZE = 20
 
+// 탭 → API status 쿼리스트링 매핑
+const STATUS_PARAM: Record<FilterId, AdminProductStatusParam> = {
+  review: 'pending_review',
+  active: 'on_sale',
+  rejected: 'rejected',
+  all: 'ALL',
+}
+
+// "2026-07-24T01:02:03..." → "2026-07-24 01:02:03"
+function formatDateTime(iso: string): string {
+  return iso.slice(0, 19).replace('T', ' ')
+}
+
 function toLocalStatus(status: string): string {
   if (status === 'PENDING_REVIEW') return 'review'
   if (status === 'ON_SALE') return 'active'
@@ -55,41 +71,43 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [filter, setFilter] = useState<FilterId>('review')
   const [search, setSearch] = useState('')
+  const [keyword, setKeyword] = useState('')
   const [selId, setSelId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)
-  const [rejectMode, setRejectMode] = useState(false)
-  const [rejectReason, setRejectReason] = useState('')
   const [page, setPage] = useState(0)
   const [total, setTotal] = useState(0)
   const [hasNext, setHasNext] = useState(false)
 
+  // 검색어 300ms debounce — 확정 시 첫 페이지부터 다시 조회
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setKeyword(search.trim())
+      setPage(0)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
   useEffect(() => {
     fetchProducts(page)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, page])
+  }, [token, page, filter, keyword])
 
   async function fetchProducts(nextPage: number) {
     if (!token) return
     setLoading(true)
     try {
-      const res = await api.get(`${API_BASE}/admin/products`, {
-        params: { page: nextPage, size: PAGE_SIZE },
+      // page는 0-base (DataPagination·API 동일 계약), size는 20 고정
+      const { data, meta } = await getAdminProducts({
+        status: STATUS_PARAM[filter],
+        keyword: keyword || undefined,
+        page: nextPage,
+        size: PAGE_SIZE,
       })
-      const raw: {
-        productId: string
-        title: string
-        productType: string
-        sellerNickname: string | null
-        model?: string
-        amount: number
-        status: string
-        createdAt: string
-      }[] = res.data.data ?? []
-      setTotal(res.data.meta?.total ?? raw.length)
-      setHasNext(!!res.data.meta?.hasNext)
+      setTotal(meta.total)
+      setHasNext(meta.hasNext)
       setProducts(
-        raw.map((p) => ({
+        data.map((p) => ({
           id: p.productId,
           title: p.title,
           productType: p.productType,
@@ -105,80 +123,30 @@ export default function AdminProductsPage() {
     }
   }
 
-  const counts = useMemo(
-    () => ({
-      review: products.filter((p) => (p.status ?? 'active') === 'review').length,
-      active: products.filter((p) => (p.status ?? 'active') === 'active').length,
-      rejected: products.filter((p) => (p.status ?? 'active') === 'rejected').length,
-      all: products.length,
-    }),
-    [products],
-  )
-
-  const tabs: { id: FilterId; label: string; count: number }[] = [
-    { id: 'review', label: '검수 대기', count: counts.review },
-    { id: 'active', label: '게시중', count: counts.active },
-    { id: 'rejected', label: '반려', count: counts.rejected },
-    { id: 'all', label: '전체', count: counts.all },
+  const tabs: { id: FilterId; label: string }[] = [
+    { id: 'review', label: '검수 대기' },
+    { id: 'active', label: '게시중' },
+    { id: 'rejected', label: '반려' },
+    { id: 'all', label: '전체' },
   ]
-
-  const list = useMemo(() => {
-    const byStatus =
-      filter === 'all' ? products : products.filter((p) => (p.status ?? 'active') === filter)
-    if (!search.trim()) return byStatus
-    const q = search.trim().toLowerCase()
-    return byStatus.filter(
-      (p) => p.title.toLowerCase().includes(q) || p.seller.toLowerCase().includes(q),
-    )
-  }, [products, filter, search])
 
   // 현재 목록 내에서 유효한 선택 유지
   useEffect(() => {
-    if (!list.length) {
+    if (!products.length) {
       setSelId(null)
       return
     }
-    setSelId((prev) => (prev && list.some((p) => p.id === prev) ? prev : list[0].id))
-  }, [list])
-
-  // 선택 변경 시 반려 모드 초기화
-  useEffect(() => {
-    setRejectMode(false)
-    setRejectReason('')
-  }, [selId])
+    setSelId((prev) => (prev && products.some((p) => p.id === prev) ? prev : products[0].id))
+  }, [products])
 
   const sel = products.find((p) => p.id === selId)
-
-  async function approve() {
-    if (!sel || acting) return
-    setActing(true)
-    try {
-      await api.patch(`${API_BASE}/admin/products/${sel.id}/approve`, {})
-      setProducts((prev) => prev.map((p) => (p.id === sel.id ? { ...p, status: 'active' } : p)))
-    } finally {
-      setActing(false)
-    }
-  }
 
   async function revert() {
     if (!sel || acting) return
     setActing(true)
     try {
-      await api.patch(`${API_BASE}/admin/products/${sel.id}/revert`, {})
-      setProducts((prev) => prev.map((p) => (p.id === sel.id ? { ...p, status: 'review' } : p)))
-    } finally {
-      setActing(false)
-    }
-  }
-
-  async function reject() {
-    if (!sel || acting || !rejectReason.trim()) return
-    setActing(true)
-    try {
-      await api.patch(`${API_BASE}/admin/products/${sel.id}/reject`, { reason: rejectReason })
-      setProducts((prev) => prev.map((p) => (p.id === sel.id ? { ...p, status: 'rejected' } : p)))
-      setRejectMode(false)
-      setRejectReason('')
+      await revertAdminProduct(sel.id)
+      await fetchProducts(page)
     } finally {
       setActing(false)
     }
@@ -188,8 +156,8 @@ export default function AdminProductsPage() {
     <div className="grid items-start gap-[20px] [grid-template-columns:minmax(360px,420px)_1fr]">
       {/* ── 목록 ─────────────────────────────────────── */}
       <SectionCard
-        title="검수 대기 상품"
-        sub={`${counts.review}건 대기`}
+        title="상품 목록"
+        sub={`${total}건`}
         bodyStyle={{ padding: 0 }}
       >
         <div className="border-b border-ph-border px-[18px] py-[14px]">
@@ -228,13 +196,11 @@ export default function AdminProductsPage() {
                   }`}
                 >
                   {t.label}
-                  <span
-                    className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-ph-full px-[5px] text-[11px] font-bold ${
-                      on ? 'bg-ph-secondary text-ph-primary' : 'bg-ph-gray-100 text-ph-text-muted'
-                    }`}
-                  >
-                    {t.count}
-                  </span>
+                  {on && (
+                    <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-ph-full bg-ph-secondary px-[5px] text-[11px] font-bold text-ph-primary">
+                      {total}
+                    </span>
+                  )}
                 </button>
               )
             })}
@@ -245,15 +211,15 @@ export default function AdminProductsPage() {
           <div className="px-[18px] py-[40px] text-center text-[13.5px] text-ph-text-muted">
             불러오는 중...
           </div>
-        ) : list.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="flex flex-col items-center gap-[10px] px-[18px] py-[48px] text-center">
             <ClipboardCheck size={28} className="text-ph-text-muted" />
-            <div className="text-[15px] font-bold text-ph-text">검수할 상품이 없어요</div>
-            <div className="text-[13px] text-ph-text-muted">모든 상품을 처리했습니다.</div>
+            <div className="text-[15px] font-bold text-ph-text">표시할 상품이 없어요</div>
+            <div className="text-[13px] text-ph-text-muted">조건에 맞는 상품이 없습니다.</div>
           </div>
         ) : (
           <div className="max-h-[620px] overflow-y-auto">
-            {list.map((p, i) => {
+            {products.map((p, i) => {
               const on = p.id === selId
               const status = p.status ?? 'active'
               return (
@@ -284,7 +250,7 @@ export default function AdminProductsPage() {
                       {p.title}
                     </span>
                     <span className="mt-[2px] block text-[12.5px] text-ph-text-muted">
-                      {p.seller} · {p.createdAt.slice(5, 10)}
+                      {p.seller} · {formatDateTime(p.createdAt)}
                     </span>
                   </span>
                   {status !== 'review' && <StatusBadge status={STATUS_KEY[status] ?? status} />}
@@ -354,7 +320,7 @@ export default function AdminProductsPage() {
             {/* meta */}
             <div className="mt-[20px] flex gap-[28px] border-y border-ph-border py-[14px]">
               <Meta label="판매자" value={sel.seller} />
-              <Meta label="등록일" value={sel.createdAt.slice(0, 10)} />
+              <Meta label="등록일" value={formatDateTime(sel.createdAt)} />
               {sel.model && <Meta label="모델" value={sel.model} />}
               <Meta label="가격" value={sel.amount === 0 ? '무료' : won(sel.amount)} />
             </div>
@@ -382,59 +348,9 @@ export default function AdminProductsPage() {
             )}
           </div>
 
-          {/* action bar */}
-          <div className="rounded-b-ph-lg border-t border-ph-border bg-ph-gray-50 px-[26px] py-[16px]">
-            {(sel.status ?? 'active') === 'review' ? (
-              rejectMode ? (
-                <div className="flex flex-col gap-[10px]">
-                  <textarea
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                    placeholder="반려 사유를 입력하세요"
-                    rows={2}
-                    className="w-full resize-none rounded-ph-md border border-ph-border bg-ph-white px-[12px] py-[8px] text-[13.5px] text-ph-text outline-none focus:border-ph-primary"
-                  />
-                  <div className="flex justify-end gap-[8px]">
-                    <button
-                      onClick={() => {
-                        setRejectMode(false)
-                        setRejectReason('')
-                      }}
-                      className="inline-flex h-[36px] items-center rounded-ph-md border border-ph-border bg-ph-white px-[14px] text-[13.5px] font-semibold text-ph-text-secondary transition-colors hover:bg-ph-gray-50"
-                    >
-                      취소
-                    </button>
-                    <button
-                      onClick={reject}
-                      disabled={acting || !rejectReason.trim()}
-                      className="inline-flex h-[36px] items-center gap-[6px] rounded-ph-md border-none bg-ph-error px-[16px] text-[13.5px] font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
-                    >
-                      <X size={15} /> 반려 확정
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-[10px]">
-                  <span className="flex-1 text-[13.5px] text-ph-text-muted">
-                    가이드라인을 확인한 뒤 승인 또는 반려하세요.
-                  </span>
-                  <button
-                    onClick={() => setRejectMode(true)}
-                    disabled={acting}
-                    className="inline-flex h-[40px] items-center gap-[6px] rounded-ph-md border border-ph-border bg-ph-white px-[16px] text-[15px] font-semibold text-ph-error transition-colors hover:bg-[#fdeceb] disabled:opacity-50"
-                  >
-                    <X size={17} /> 반려
-                  </button>
-                  <button
-                    onClick={approve}
-                    disabled={acting}
-                    className="inline-flex h-[40px] items-center gap-[6px] rounded-ph-md border-none bg-ph-primary px-[20px] text-[15px] font-semibold text-white transition-colors hover:bg-ph-blue-hover disabled:opacity-50"
-                  >
-                    <Check size={17} /> 승인하기
-                  </button>
-                </div>
-              )
-            ) : (
+          {/* action bar — 처리된 상품만 되돌리기 노출 */}
+          {(sel.status ?? 'active') !== 'review' && (
+            <div className="rounded-b-ph-lg border-t border-ph-border bg-ph-gray-50 px-[26px] py-[16px]">
               <div className="flex items-center gap-[10px]">
                 <span className="flex flex-1 items-center gap-[8px] text-[13.5px] text-ph-text-secondary">
                   <StatusBadge
@@ -450,8 +366,8 @@ export default function AdminProductsPage() {
                   <RotateCcw size={15} /> 검수 대기로 되돌리기
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </SectionCard>
       )}
     </div>
