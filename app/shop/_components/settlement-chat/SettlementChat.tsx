@@ -37,10 +37,22 @@ import {
 } from './settlementChatState'
 
 const SUGGESTIONS = [
-  '이번 달 정산 요약해줘',
-  '지난달과 이번 달 정산을 비교해줘',
-  '이번 달 정산을 주간별로 분석해줘',
-  '이번 달 정산 지급 상태를 알려줘',
+  {
+    label: '이번 달 정산 요약',
+    question: '이번 달 정산 판매액, 환불액, 수수료와 지급액을 요약해줘',
+  },
+  {
+    label: '지난달과 이번 달 비교',
+    question: '지난달과 이번 달 정산 금액과 증감률을 비교해줘',
+  },
+  {
+    label: '이번 달 주간별 정산',
+    question: '이번 달 정산을 완료된 주 단위로 나눠서 보여줘',
+  },
+  {
+    label: '이번 달 지급 상태',
+    question: '이번 달 주간 정산별 지급 상태와 상태별 건수를 알려줘',
+  },
 ] as const
 
 const STAGE_LABEL: Record<SettlementRunStage, string> = {
@@ -439,21 +451,22 @@ export default function SettlementChat() {
                 <strong className="mb-1 block">
                   정산과 관련해 무엇을 확인할까요?
                 </strong>
-                월·주 단위 정산 금액과 지급 상태를 분석해드릴게요.
+                월·주 정산 요약, 기간별 비교, 주간 내역과 지급 상태를
+                확인할 수 있어요.
               </div>
             </div>
           )}
 
           {showSuggestions && (
             <div className="grid gap-2" aria-label="추천 질문">
-              {SUGGESTIONS.map((question) => (
+              {SUGGESTIONS.map(({ label, question }) => (
                 <button
-                  key={question}
+                  key={label}
                   type="button"
                   onClick={() => handleSuggestion(question)}
                   className="flex min-h-[42px] w-full items-center justify-between gap-2.5 rounded-ph-md border border-ph-border bg-ph-surface px-3 py-2.5 text-left text-ph-caption font-semibold text-ph-text-secondary hover:border-ph-primary hover:bg-ph-secondary hover:text-ph-primary"
                 >
-                  <span>{question}</span>
+                  <span>{label}</span>
                   <ChevronRight
                     className="h-[18px] w-[18px] shrink-0"
                     aria-hidden="true"
