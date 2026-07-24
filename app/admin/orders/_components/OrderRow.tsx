@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
 import { Tr, Td, Identity } from '@/components/admin/DataTable'
 import { StatusBadge } from '@/components/admin/Badge'
-import { AdminOrderV2, ORDER_PRODUCT_STATUS_LABEL } from '@/types/api/orders'
+import { AdminOrderV2, ORDER_PRODUCT_STATUS_LABEL, ORDER_STATUS_LABEL } from '@/types/api/orders'
 
 function formatDateTime(iso?: string): string {
   if (!iso) return '-'
@@ -82,7 +82,10 @@ export function OrderRow({ order, index }: OrderRowProps) {
           {formatCurrency(order.totalOrderAmount)}
         </Td>
         <Td align="center">
-          <StatusBadge status={order.orderStatus} />
+          <StatusBadge
+            status={order.orderStatus}
+            label={ORDER_STATUS_LABEL[order.orderStatus] ?? order.orderStatus}
+          />
         </Td>
         <Td align="center">
           <button

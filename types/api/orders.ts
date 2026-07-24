@@ -212,6 +212,15 @@ export interface PageResponse<T> {
   };
 }
 
+export const ORDER_STATUS_LABEL: Record<string, string> = {
+  CREATED: '결제 대기',
+  COMPLETED: '결제 완료',
+  FAILED: '결제 실패',
+  REFUND_REQUESTED: '환불 요청',
+  PARTIAL_REFUNDED: '부분 환불',
+  ALL_REFUNDED: '전체 환불',
+};
+
 export const ORDER_PRODUCT_STATUS_LABEL: Record<string, string> = {
   PENDING: '결제 대기',
   PAID: '결제 완료',

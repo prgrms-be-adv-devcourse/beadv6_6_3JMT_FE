@@ -58,6 +58,12 @@ const STATUS: Record<string, { label: string; tone: Tone; soft: boolean; dot: st
   FAILED: { label: '실패', tone: 'error', soft: true, dot: '#d92d20' },
   CANCELED: { label: '취소', tone: 'neutral', soft: true, dot: '#8b95a1' },
   REFUNDED: { label: '환불', tone: 'error', soft: true, dot: '#d92d20' },
+  // 주문 상태 코드 (OrderStatus)
+  CREATED: { label: '결제 대기', tone: 'neutral', soft: true, dot: '#8b95a1' },
+  COMPLETED: { label: '결제 완료', tone: 'blue', soft: true, dot: '#1b64da' },
+  REFUND_REQUESTED: { label: '환불 요청', tone: 'error', soft: true, dot: '#d92d20' },
+  PARTIAL_REFUNDED: { label: '부분 환불', tone: 'error', soft: true, dot: '#d92d20' },
+  ALL_REFUNDED: { label: '전체 환불', tone: 'error', soft: true, dot: '#d92d20' },
   // 정산 표시 상태 (SettlementDisplayStatus)
   WAITING: { label: '대기', tone: 'neutral', soft: true, dot: '#8b95a1' },
   APPROVAL_ON_HOLD: { label: '승인 보류', tone: 'error', soft: true, dot: '#d92d20' },
