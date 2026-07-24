@@ -8,6 +8,10 @@
 
 **Tech Stack:** Next.js 16.2.9, React 19.2.4, TypeScript, Axios, Fetch `ReadableStream`, Tailwind CSS v4, Lucide React, `node:test`.
 
+> **Execution note (2026-07-24):** 프론트는 주요 개발 범위가 아니며 속도를 우선한다는 사용자 결정에
+> 따라 Trigger·Panel·Messages·Composer·hook을 `SettlementChat.tsx` 하나로 합쳤다. REST, SSE,
+> 순수 상태와 테스트 경계는 계획대로 분리한다.
+
 ## Global Constraints
 
 - 설계 기준 문서: `docs/superpowers/specs/2026-07-24-seller-settlement-chat-frontend-design.md`.

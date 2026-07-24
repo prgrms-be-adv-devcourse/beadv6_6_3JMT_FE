@@ -99,29 +99,22 @@ SSE 이벤트 계약은 다음과 같다.
 ```text
 app/shop/_components/settlement-chat/
 ├── SettlementChat.tsx
-├── SettlementChatTrigger.tsx
-├── SettlementChatPanel.tsx
-├── SettlementChatMessages.tsx
-├── SettlementChatComposer.tsx
-├── useSettlementChat.ts
 ├── settlementChatState.ts
-└── types.ts
+└── settlementChatState.test.ts
 
 lib/
 ├── settlementChat.ts
-└── settlementChatSse.ts
+├── settlementChatSse.ts
+└── settlementChatSse.test.ts
 ```
 
-- `SettlementChat.tsx`: 열림 상태와 기능 훅을 조립하고 Trigger·Panel을 연결한다.
-- `SettlementChatTrigger.tsx`: PC 탭 영역 버튼과 모바일 플로팅 형태를 담당한다.
-- `SettlementChatPanel.tsx`: 패널 헤더, 메시지 영역, 입력 영역을 조립한다.
-- `SettlementChatMessages.tsx`: 기존 메시지, 추천 질문, 진행 상태, 재시도 UI를 렌더링한다.
-- `SettlementChatComposer.tsx`: 최대 2,000자 질문 입력과 전송 제어를 담당한다.
-- `useSettlementChat.ts`: 대화 복원, 질문 등록, SSE 연결·종료·재연결을 오케스트레이션한다.
+- `SettlementChat.tsx`: 열림 상태, 대화 복원, 질문 등록, SSE 연결과 패널 UI를 한 기능 단위로 조립한다.
 - `settlementChatState.ts`: 테스트 가능한 순수 상태 전이를 제공한다.
-- `types.ts`: `/shop` UI 전용 상태와 props 타입을 정의한다.
 - `lib/settlementChat.ts`: REST DTO와 Axios 호출을 제공한다.
 - `lib/settlementChatSse.ts`: SSE block 파싱과 인증 fetch 스트림을 제공한다.
+
+프론트가 주요 개발 범위가 아니라는 결정에 따라, 화면 전용 컴포넌트는 과도하게 나누지 않고
+`SettlementChat.tsx`에 모았다. API·SSE·순수 상태만 분리해 테스트와 추후 재사용 경계는 유지한다.
 
 ## 접근성
 

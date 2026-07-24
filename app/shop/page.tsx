@@ -18,6 +18,7 @@ import {
   type SellerSettlementSummary,
 } from '@/lib/settlements';
 import SellerSettlementsPanel from '@/app/shop/_components/SellerSettlementsPanel';
+import SettlementChat from '@/app/shop/_components/settlement-chat/SettlementChat';
 import {
   getSellerProductSummary,
   type SellerProductSummary,
@@ -175,7 +176,7 @@ export default function ShopPage() {
       </div>
 
       {/* ── 탭 ── */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--ph-border)', marginTop: 36 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, borderBottom: '1px solid var(--ph-border)', marginTop: 36 }}>
         {([
           { id: 'listings', label: '내 상품', icon: Layers },
           { id: 'settlements', label: '정산 내역', icon: Receipt },
@@ -199,6 +200,7 @@ export default function ShopPage() {
             <Icon style={{ width: 16, height: 16 }} /> {label}
           </button>
         ))}
+        <SettlementChat />
       </div>
 
       {/* ── 내 상품 탭 ── */}
