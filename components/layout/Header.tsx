@@ -103,6 +103,7 @@ function SearchBar({
   onSubmit?: (v: string) => void;
   size?: 'hero' | 'header' | 'lg';
 }) {
+  const pathname = usePathname();
   const [focus, setFocus] = React.useState(false);
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
   const [open, setOpen] = React.useState(false);
@@ -148,6 +149,17 @@ function SearchBar({
     document.addEventListener('mousedown', onDocPointerDown);
     return () => document.removeEventListener('mousedown', onDocPointerDown);
   }, [open]);
+
+  // Header는 레이아웃 컴포넌트라 페이지를 옮겨도 언마운트되지 않는다. 닫아주지 않으면
+  // 검색 후 이동한 화면에도 드롭다운이 그대로 떠 있는다.
+  React.useEffect(() => {
+    setOpen(false);
+    setActive(-1);
+    setSuggestions([]);
+    suppressed.current = value.trim();
+    // value는 의도적으로 의존성에서 뺀다 — 경로가 바뀔 때만 닫는다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const choose = (keyword: string) => {
     suppressed.current = keyword;
