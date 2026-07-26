@@ -15,6 +15,12 @@ import { getCartItems, removeCartItem as deleteCartItem } from '@/lib/cart';
 import { createOrder } from '@/lib/orders';
 import { getProductSuggestions } from '@/lib/products';
 import {
+  getRecentSearches,
+  addRecentSearch,
+  removeRecentSearch,
+  clearRecentSearches,
+} from '@/lib/recentSearches';
+import {
   Search,
   Bell,
   ShoppingCart,
@@ -106,6 +112,7 @@ function SearchBar({
   const pathname = usePathname();
   const [focus, setFocus] = React.useState(false);
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
+  const [recent, setRecent] = React.useState<string[]>([]);
   const [open, setOpen] = React.useState(false);
   const [active, setActive] = React.useState(-1);
   // 사용자가 제안을 고르거나 Esc로 닫은 뒤, 같은 입력값으로 드롭다운이 다시 열리지 않게 한다.
@@ -116,8 +123,15 @@ function SearchBar({
   const pad = hero ? '0 8px 0 22px' : '0 6px 0 16px';
   const h = hero ? 64 : 44;
 
+  const keyword = value.trim();
+  // 입력이 비어 있으면 최근 검색어, 입력 중이면 상품명 제안 — 드롭다운 하나를 나눠 쓴다.
+  const showRecent = keyword === '' && recent.length > 0;
+  const items = showRecent ? recent : suggestions;
+
+  // localStorage는 서버 렌더링 시 없으므로 마운트 후에 읽는다.
+  React.useEffect(() => setRecent(getRecentSearches()), []);
+
   React.useEffect(() => {
-    const keyword = value.trim();
     if (!keyword || keyword === suppressed.current) {
       setSuggestions([]);
       setOpen(false);
@@ -139,7 +153,7 @@ function SearchBar({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [value]);
+  }, [keyword]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -161,33 +175,42 @@ function SearchBar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  const choose = (keyword: string) => {
-    suppressed.current = keyword;
+  const choose = (picked: string) => {
+    suppressed.current = picked;
+    setRecent(addRecentSearch(picked));
     setOpen(false);
     setActive(-1);
-    onChange(keyword);
-    onSubmit && onSubmit(keyword);
+    onChange(picked);
+    onSubmit && onSubmit(picked);
   };
+
+  const dropRecent = (target: string) => setRecent(removeRecentSearch(target));
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') {
-      suppressed.current = value.trim();
+      suppressed.current = keyword;
       setOpen(false);
       setActive(-1);
       return;
     }
-    if (!open || suggestions.length === 0) return;
+    if (e.key === 'ArrowDown' && !open && (showRecent || suggestions.length > 0)) {
+      // 닫혀 있을 때 아래 화살표로 다시 연다 — 빈 입력에서 최근 검색어를 꺼내는 주 경로다.
+      e.preventDefault();
+      setOpen(true);
+      return;
+    }
+    if (!open || items.length === 0) return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActive((i) => (i + 1) % suggestions.length);
+      setActive((i) => (i + 1) % items.length);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActive((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+      setActive((i) => (i <= 0 ? items.length - 1 : i - 1));
     } else if (e.key === 'Enter' && active >= 0) {
-      // 항목을 고른 상태면 form submit 대신 그 제안어로 검색한다.
+      // 항목을 고른 상태면 form submit 대신 그 항목으로 검색한다.
       e.preventDefault();
-      choose(suggestions[active]);
+      choose(items[active]);
     }
   };
 
@@ -198,7 +221,8 @@ function SearchBar({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          suppressed.current = value.trim();
+          suppressed.current = keyword;
+          setRecent(addRecentSearch(keyword));
           setOpen(false);
           onSubmit && onSubmit(value);
         }}
@@ -214,7 +238,7 @@ function SearchBar({
         <input
           value={value}
           onChange={(e) => { suppressed.current = ''; onChange(e.target.value); }}
-          onFocus={() => { setFocus(true); if (suggestions.length > 0) setOpen(true); }}
+          onFocus={() => { setFocus(true); if (showRecent || suggestions.length > 0) setOpen(true); }}
           onBlur={() => setFocus(false)}
           onKeyDown={onKeyDown}
           role="combobox"
@@ -239,36 +263,80 @@ function SearchBar({
         >검색</button>
       </form>
 
-      {open && suggestions.length > 0 && (
-        <ul
-          id={listboxId}
-          role="listbox"
+      {open && items.length > 0 && (
+        <div
           style={{
             position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 60,
-            margin: 0, padding: 6, listStyle: 'none',
+            padding: 6,
             background: 'var(--ph-white)', border: '1px solid var(--ph-border)',
             borderRadius: 'var(--ph-radius-lg)',
           }}
         >
-          {suggestions.map((suggestion, i) => (
-            <li key={suggestion} id={`${listboxId}-${i}`} role="option" aria-selected={i === active}>
+          {showRecent && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '4px 12px 8px', fontFamily: 'var(--ph-font-family)', fontSize: 13,
+              color: 'var(--ph-text-muted)',
+            }}>
+              <span>최근 검색어</span>
               <button
                 type="button"
-                onMouseEnter={() => setActive(i)}
-                onClick={() => choose(suggestion)}
+                onClick={() => setRecent(clearRecentSearches())}
                 style={{
-                  display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
-                  border: 'none', borderRadius: 'var(--ph-radius-sm)',
+                  border: 'none', background: 'none', cursor: 'pointer',
+                  fontFamily: 'var(--ph-font-family)', fontSize: 13, color: 'var(--ph-text-muted)',
+                  padding: 0,
+                }}
+              >전체 삭제</button>
+            </div>
+          )}
+
+          <ul id={listboxId} role="listbox" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+            {items.map((item, i) => (
+              <li
+                key={item}
+                id={`${listboxId}-${i}`}
+                role="option"
+                aria-selected={i === active}
+                onMouseEnter={() => setActive(i)}
+                style={{
+                  display: 'flex', alignItems: 'center',
+                  borderRadius: 'var(--ph-radius-sm)',
                   background: i === active ? 'var(--ph-bg-soft, #f5f5f5)' : 'transparent',
-                  fontFamily: 'var(--ph-font-family)', fontSize: 15, color: 'var(--ph-text)',
-                  padding: '10px 12px',
                 }}
               >
-                {highlightMatch(suggestion, value.trim())}
-              </button>
-            </li>
-          ))}
-        </ul>
+                <button
+                  type="button"
+                  onClick={() => choose(item)}
+                  style={{
+                    flex: 1, minWidth: 0, textAlign: 'left', cursor: 'pointer',
+                    border: 'none', background: 'none',
+                    fontFamily: 'var(--ph-font-family)', fontSize: 15, color: 'var(--ph-text)',
+                    padding: '10px 12px',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}
+                >
+                  {showRecent ? item : highlightMatch(item, keyword)}
+                </button>
+
+                {showRecent && (
+                  <button
+                    type="button"
+                    aria-label={`${item} 삭제`}
+                    onClick={() => dropRecent(item)}
+                    style={{
+                      flexShrink: 0, border: 'none', background: 'none', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', padding: '10px 12px',
+                      color: 'var(--ph-text-muted)',
+                    }}
+                  >
+                    <X style={{ width: 15, height: 15 }} />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
