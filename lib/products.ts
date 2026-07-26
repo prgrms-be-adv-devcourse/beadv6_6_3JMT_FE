@@ -53,6 +53,25 @@ export async function getProductsForOrders(productIds: string[]): Promise<Produc
   return responses.flatMap((res) => res.data.data ?? [])
 }
 
+// GET /api/v2/products/suggest — 검색창 자동완성용 상품명 제안 (최대 5건, 판매량 순)
+//
+// BE는 실패해도 예외 대신 빈 목록을 준다. FE도 같은 태도를 유지한다 — 자동완성은
+// 드롭다운이 안 뜰 뿐 검색 자체를 막지 않으므로, 실패를 호출부로 던지지 않는다.
+export async function getProductSuggestions(q: string, signal?: AbortSignal): Promise<string[]> {
+  const keyword = q.trim()
+  if (!keyword) return []
+
+  try {
+    const res = await api.get<{ success: boolean; data?: string[]; message: string }>(
+      `${API_BASE}/products/suggest`,
+      { params: { q: keyword }, signal },
+    )
+    return res.data.data ?? []
+  } catch {
+    return []
+  }
+}
+
 // GET /api/v2/products/sellers/me/summary — 판매자의 등록 상품 수·누적 판매 수
 export async function getSellerProductSummary(): Promise<SellerProductSummary> {
   const res = await api.get<{

@@ -13,6 +13,7 @@ import { API_BASE } from '@/lib/apiBase';
 import { won } from '@/lib/utils';
 import { getCartItems, removeCartItem as deleteCartItem } from '@/lib/cart';
 import { createOrder } from '@/lib/orders';
+import { getProductSuggestions } from '@/lib/products';
 import {
   Search,
   Bell,
@@ -73,6 +74,24 @@ const PAGE_ROUTES: Record<string, string> = {
 
 /* ── SearchBar ─────────────────────────────────────────── */
 
+const SUGGEST_DEBOUNCE_MS = 200;
+
+/** 제안어에서 입력한 문자열이 나타나는 부분을 강조한다. BE가 중간 단어도 매칭하므로 앞부분에 한정하지 않는다. */
+function highlightMatch(suggestion: string, keyword: string) {
+  const at = suggestion.toLowerCase().indexOf(keyword.toLowerCase());
+  if (!keyword || at < 0) return suggestion;
+
+  return (
+    <>
+      {suggestion.slice(0, at)}
+      <mark style={{ background: 'none', color: 'var(--ph-primary)', fontWeight: 600 }}>
+        {suggestion.slice(at, at + keyword.length)}
+      </mark>
+      {suggestion.slice(at + keyword.length)}
+    </>
+  );
+}
+
 function SearchBar({
   value,
   onChange,
@@ -85,42 +104,161 @@ function SearchBar({
   size?: 'hero' | 'header' | 'lg';
 }) {
   const [focus, setFocus] = React.useState(false);
+  const [suggestions, setSuggestions] = React.useState<string[]>([]);
+  const [open, setOpen] = React.useState(false);
+  const [active, setActive] = React.useState(-1);
+  // 사용자가 제안을 고르거나 Esc로 닫은 뒤, 같은 입력값으로 드롭다운이 다시 열리지 않게 한다.
+  const suppressed = React.useRef('');
+  const boxRef = React.useRef<HTMLDivElement>(null);
+
   const hero = size === 'hero';
   const pad = hero ? '0 8px 0 22px' : '0 6px 0 16px';
   const h = hero ? 64 : 44;
+
+  React.useEffect(() => {
+    const keyword = value.trim();
+    if (!keyword || keyword === suppressed.current) {
+      setSuggestions([]);
+      setOpen(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      const result = await getProductSuggestions(keyword, controller.signal);
+      if (controller.signal.aborted) return;
+      setSuggestions(result);
+      setActive(-1);
+      setOpen(result.length > 0);
+    }, SUGGEST_DEBOUNCE_MS);
+
+    // 입력이 바뀌면 대기 중인 타이머와 진행 중인 요청을 모두 버린다.
+    // 이렇게 하지 않으면 느린 이전 요청이 나중에 도착해 최신 제안을 덮어쓴다.
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [value]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onDocPointerDown = (e: MouseEvent) => {
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocPointerDown);
+    return () => document.removeEventListener('mousedown', onDocPointerDown);
+  }, [open]);
+
+  const choose = (keyword: string) => {
+    suppressed.current = keyword;
+    setOpen(false);
+    setActive(-1);
+    onChange(keyword);
+    onSubmit && onSubmit(keyword);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      suppressed.current = value.trim();
+      setOpen(false);
+      setActive(-1);
+      return;
+    }
+    if (!open || suggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActive((i) => (i + 1) % suggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActive((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+    } else if (e.key === 'Enter' && active >= 0) {
+      // 항목을 고른 상태면 form submit 대신 그 제안어로 검색한다.
+      e.preventDefault();
+      choose(suggestions[active]);
+    }
+  };
+
+  const listboxId = React.useId();
+
   return (
-    <form
-      onSubmit={(e) => { e.preventDefault(); onSubmit && onSubmit(value); }}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-        height: h, background: 'var(--ph-white)', padding: pad,
-        borderRadius: hero ? 'var(--ph-radius-xl)' : 'var(--ph-radius-md)',
-        border: `1px solid ${focus ? 'var(--ph-primary)' : 'var(--ph-border)'}`,
-        transition: 'border-color .15s ease',
-      }}
-    >
-      <Search style={{ width: hero ? 22 : 18, height: hero ? 22 : 18, color: 'var(--ph-text-muted)', flexShrink: 0 }} />
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setFocus(true)}
-        onBlur={() => setFocus(false)}
-        placeholder={hero ? '어떤 작업에 필요한 프롬프트를 찾으세요?' : '상품, 크리에이터 검색'}
-        style={{
-          flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent',
-          fontFamily: 'var(--ph-font-family)', fontSize: hero ? 18 : 15, color: 'var(--ph-text)',
+    <div ref={boxRef} style={{ position: 'relative', width: '100%' }}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          suppressed.current = value.trim();
+          setOpen(false);
+          onSubmit && onSubmit(value);
         }}
-      />
-      <button
-        type="submit"
         style={{
-          flexShrink: 0, border: 'none', cursor: 'pointer', fontFamily: 'var(--ph-font-family)',
-          fontWeight: 600, color: '#fff', background: 'var(--ph-primary)',
-          borderRadius: hero ? 'calc(var(--ph-radius-xl) - 6px)' : 'var(--ph-radius-sm)',
-          height: hero ? 50 : 34, padding: hero ? '0 24px' : '0 14px', fontSize: hero ? 16 : 14,
+          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+          height: h, background: 'var(--ph-white)', padding: pad,
+          borderRadius: hero ? 'var(--ph-radius-xl)' : 'var(--ph-radius-md)',
+          border: `1px solid ${focus ? 'var(--ph-primary)' : 'var(--ph-border)'}`,
+          transition: 'border-color .15s ease',
         }}
-      >검색</button>
-    </form>
+      >
+        <Search style={{ width: hero ? 22 : 18, height: hero ? 22 : 18, color: 'var(--ph-text-muted)', flexShrink: 0 }} />
+        <input
+          value={value}
+          onChange={(e) => { suppressed.current = ''; onChange(e.target.value); }}
+          onFocus={() => { setFocus(true); if (suggestions.length > 0) setOpen(true); }}
+          onBlur={() => setFocus(false)}
+          onKeyDown={onKeyDown}
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-autocomplete="list"
+          aria-activedescendant={active >= 0 ? `${listboxId}-${active}` : undefined}
+          placeholder={hero ? '어떤 작업에 필요한 프롬프트를 찾으세요?' : '상품, 크리에이터 검색'}
+          style={{
+            flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent',
+            fontFamily: 'var(--ph-font-family)', fontSize: hero ? 18 : 15, color: 'var(--ph-text)',
+          }}
+        />
+        <button
+          type="submit"
+          style={{
+            flexShrink: 0, border: 'none', cursor: 'pointer', fontFamily: 'var(--ph-font-family)',
+            fontWeight: 600, color: '#fff', background: 'var(--ph-primary)',
+            borderRadius: hero ? 'calc(var(--ph-radius-xl) - 6px)' : 'var(--ph-radius-sm)',
+            height: hero ? 50 : 34, padding: hero ? '0 24px' : '0 14px', fontSize: hero ? 16 : 14,
+          }}
+        >검색</button>
+      </form>
+
+      {open && suggestions.length > 0 && (
+        <ul
+          id={listboxId}
+          role="listbox"
+          style={{
+            position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 60,
+            margin: 0, padding: 6, listStyle: 'none',
+            background: 'var(--ph-white)', border: '1px solid var(--ph-border)',
+            borderRadius: 'var(--ph-radius-lg)',
+          }}
+        >
+          {suggestions.map((suggestion, i) => (
+            <li key={suggestion} id={`${listboxId}-${i}`} role="option" aria-selected={i === active}>
+              <button
+                type="button"
+                onMouseEnter={() => setActive(i)}
+                onClick={() => choose(suggestion)}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+                  border: 'none', borderRadius: 'var(--ph-radius-sm)',
+                  background: i === active ? 'var(--ph-bg-soft, #f5f5f5)' : 'transparent',
+                  fontFamily: 'var(--ph-font-family)', fontSize: 15, color: 'var(--ph-text)',
+                  padding: '10px 12px',
+                }}
+              >
+                {highlightMatch(suggestion, value.trim())}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
