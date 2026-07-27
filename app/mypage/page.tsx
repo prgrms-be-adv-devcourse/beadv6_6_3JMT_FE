@@ -398,14 +398,10 @@ function MyPageContent() {
     }
   };
   const updateEmail = async (e: string) => {
-    try {
-      const updated = await updateUserMe({ email: e });
-      setUser((u) => u ? { ...u, email: updated.email ?? u.email } : u);
-      if (authToken && authUser) authLogin({ ...authUser, ...updated }, authToken);
-      showToast('이메일이 변경됐어요');
-    } catch {
-      setUser((u) => u ? { ...u, email: e } : u);
-    }
+    const updated = await updateUserMe({ email: e });
+    setUser((u) => u ? { ...u, email: updated.email ?? u.email } : u);
+    if (authToken && authUser) authLogin({ ...authUser, ...updated }, authToken);
+    showToast('이메일이 변경됐어요');
   };
   const handleRefund = async () => {
     if (!refundTarget || refundingOrderId) return;
@@ -889,7 +885,7 @@ function MyPageContent() {
         <EmailChangeModal
           currentEmail={user.email}
           onClose={() => setEmailModal(false)}
-          onVerified={(newEmail) => { updateEmail(newEmail); setEmailModal(false); }}
+          onSubmit={updateEmail}
         />
       )}
 
