@@ -166,33 +166,32 @@ export default function OrderList({ orders, refundingOrderId, onRefund, payingOr
                         <div className="text-ph-body-sm text-ph-text-secondary">{won(item.amount)}</div>
                         <div>
                           <span
-                            className={`inline-block rounded-ph-full px-2.5 py-0.5 text-xs font-medium ${ITEM_STATUS_CLASS[item.orderProductStatus]}`}
+                            className={`inline-block rounded-ph-full px-2.5 py-0.5 text-xs font-medium ${
+                              item.orderProductStatus === 'PAID' && item.downloaded
+                                ? 'bg-ph-gray-100 text-ph-text-secondary'
+                                : ITEM_STATUS_CLASS[item.orderProductStatus]
+                            }`}
+                            title={reason}
                           >
-                            {orderProductStatusLabel(item.orderProductStatus)}
+                            {item.orderProductStatus === 'PAID' && item.downloaded
+                              ? '다운로드 완료 (환불 불가)'
+                              : orderProductStatusLabel(item.orderProductStatus)}
                           </span>
                         </div>
-                        <div className="flex justify-end">
-                          <span className="relative inline-flex" title={reason}>
+                        <div className="flex justify-end min-w-[18px]">
+                          {item.selectable && (
                             <input
                               type="checkbox"
                               checked={checked}
-                              disabled={!item.selectable || isRefunding}
-                              aria-label={`${item.title} 환불 선택${reason ? `, ${reason}` : ''}`}
-                              className="size-[18px] cursor-pointer rounded-ph-sm disabled:cursor-not-allowed disabled:appearance-none disabled:border disabled:border-ph-gray-400 disabled:bg-ph-gray-100"
+                              disabled={isRefunding}
+                              aria-label={`${item.title} 환불 선택`}
+                              className="size-[18px] cursor-pointer rounded-ph-sm"
                               style={{ accentColor: 'var(--ph-primary)' }}
                               onChange={(event) =>
                                 toggleSelection(order, item.orderProductId, event.target.checked)
                               }
                             />
-                            {!item.selectable && (
-                              <span
-                                aria-hidden="true"
-                                className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-ph-text-secondary"
-                              >
-                                ×
-                              </span>
-                            )}
-                          </span>
+                          )}
                         </div>
                       </div>
                     );
