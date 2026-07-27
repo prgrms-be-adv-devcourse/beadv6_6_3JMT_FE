@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ClipboardCheck, FileSearch, Box, X, RotateCcw, Info, Search, AlertTriangle } from 'lucide-react'
+import { ClipboardCheck, FileSearch, Box, X, RotateCcw, Info, Search } from 'lucide-react'
 import {
   getAdminProducts,
   revertAdminProduct,
@@ -354,26 +354,19 @@ export default function AdminProductsPage() {
           {(sel.status ?? 'active') !== 'review' && (
             <div className="rounded-b-ph-lg border-t border-ph-border bg-ph-gray-50 px-[26px] py-[16px]">
               <div className="flex items-center gap-[10px]">
-                <span className="flex flex-1 items-center gap-[8px] text-[13.5px] text-ph-text-secondary">
-                  <StatusBadge
-                    status={STATUS_KEY[sel.status ?? 'active'] ?? sel.status ?? 'active'}
-                  />{' '}
-                  처리된 상품입니다.
-                </span>
+                {sel.status === 'rejected' && sel.rejectionReason && (
+                  <span className="flex-1 text-[13.5px] font-medium text-ph-error">
+                    {sel.rejectionReason}
+                  </span>
+                )}
                 <button
                   onClick={revert}
                   disabled={acting}
-                  className="inline-flex h-[40px] items-center gap-[6px] rounded-ph-md border border-ph-border bg-ph-white px-[16px] text-[14px] font-semibold text-ph-text-secondary transition-colors hover:bg-ph-gray-50 disabled:opacity-50"
+                  className="ml-auto inline-flex h-[40px] items-center gap-[6px] rounded-ph-md border border-ph-border bg-ph-white px-[16px] text-[14px] font-semibold text-ph-text-secondary transition-colors hover:bg-ph-gray-50 disabled:opacity-50"
                 >
                   <RotateCcw size={15} /> 검수 대기로 되돌리기
                 </button>
               </div>
-              {sel.status === 'rejected' && sel.rejectionReason && (
-                <div className="mt-[10px] flex items-start gap-[8px] text-[13.5px] text-ph-error">
-                  <AlertTriangle size={15} className="mt-[2px] flex-shrink-0" />
-                  <span className="leading-[1.5]">{sel.rejectionReason}</span>
-                </div>
-              )}
             </div>
           )}
         </SectionCard>
