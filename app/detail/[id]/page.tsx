@@ -253,8 +253,9 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
     try {
       await createOrder([{ productId: String(p.id), productTitle: p.title }]);
       router.push('/mypage?tab=payments');
-    } catch {
-      showToast('주문 생성에 실패했어요. 다시 시도해주세요.');
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showToast(message ?? '주문 생성에 실패했어요. 다시 시도해주세요.');
       setBuying(false);
     }
   };

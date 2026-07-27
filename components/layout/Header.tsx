@@ -499,8 +499,9 @@ export default function Header() {
       await createOrder(cart.map((it) => ({ productId: it.productId, productTitle: it.title })));
       clearCart();
       router.push('/mypage?tab=payments');
-    } catch {
-      showToast('주문 생성에 실패했어요. 다시 시도해주세요.');
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showToast(message ?? '주문 생성에 실패했어요. 다시 시도해주세요.');
     } finally {
       setOrdering(false);
     }
