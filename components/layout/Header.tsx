@@ -213,7 +213,7 @@ function SearchBar({
           aria-controls={listboxId}
           aria-autocomplete="list"
           aria-activedescendant={active >= 0 ? `${listboxId}-${active}` : undefined}
-          placeholder={hero ? '어떤 작업에 필요한 프롬프트를 찾으세요?' : '상품, 크리에이터 검색'}
+          placeholder={hero ? '어떤 작업에 필요한 프롬프트를 찾으세요?' : '상품 검색'}
           style={{
             flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent',
             fontFamily: 'var(--ph-font-family)', fontSize: hero ? 18 : 15, color: 'var(--ph-text)',
