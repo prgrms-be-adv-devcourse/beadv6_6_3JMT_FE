@@ -23,6 +23,7 @@ import api from '@/lib/auth'
 import { API_BASE } from '@/lib/apiBase'
 import { ADMIN_SELLER_REGISTERS_CHANGED_EVENT } from '@/lib/adminSellerEvents'
 import { getPendingSellerRegisterCount } from '@/lib/adminSellers'
+import { getAdminProducts } from '@/lib/adminProducts'
 
 type BadgeKey = 'sellers' | 'products' | 'settlements'
 
@@ -74,7 +75,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const load = async () => {
       const [sellersResult, productsResult] = await Promise.allSettled([
         getPendingSellerRegisterCount(),
-        api.get(`${API_BASE}/admin/products`, { params: { status: 'review' } }),
+        // 개수만 필요하므로 size: 1로 받고 meta.total을 쓴다.
+        getAdminProducts({ status: 'pending_review', page: 0, size: 1 }),
       ])
 
       setBadges((prev) => {
@@ -85,8 +87,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
 
         if (productsResult.status === 'fulfilled') {
-          const products = productsResult.value.data.data ?? []
-          next.products = products.filter((product: { status: string }) => product.status === 'review').length
+          next.products = productsResult.value.meta.total
+        } else {
+          // allSettled가 실패를 삼켜 배지가 조용히 0이 된다. 이번 버그(status=review로
+          // 400)를 찾는 데 오래 걸린 이유라 흔적은 남긴다.
+          console.warn('검수 대기 상품 수 조회에 실패했습니다.', productsResult.reason)
         }
 
         return next
