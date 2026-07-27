@@ -13,7 +13,7 @@ import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
 import ImageUpload from '@/components/ui/ImageUpload';
 import FileUpload from '@/components/ui/FileUpload';
 import { useToast } from '@/store/useToastStore';
-import { isValidProductPrice } from '@/lib/utils';
+import { apiErrorMessage, isValidProductPrice } from '@/lib/utils';
 import Label from '@/components/ui/Label';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -527,7 +527,7 @@ export default function EditPage() {
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [versions, setVersions] = useState<Version[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -551,7 +551,7 @@ export default function EditPage() {
         });
         setVersions(d.version ? [{ ver: d.version, date: '', note: '' }] : []);
       })
-      .catch(() => setError(true))
+      .catch((err: unknown) => setError(apiErrorMessage(err, '프롬프트를 찾을 수 없어요.')))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -566,7 +566,7 @@ export default function EditPage() {
   if (error || !prompt) {
     return (
       <div style={{ maxWidth: 920, margin: '0 auto', padding: '80px 32px', textAlign: 'center' }}>
-        <p style={{ fontSize: 17, color: 'var(--ph-text-secondary)', marginBottom: 24 }}>프롬프트를 찾을 수 없어요.</p>
+        <p style={{ fontSize: 17, color: 'var(--ph-text-secondary)', marginBottom: 24 }}>{error ?? '프롬프트를 찾을 수 없어요.'}</p>
         <button
           onClick={() => router.push('/shop')}
           style={{ background: 'var(--ph-primary)', color: '#fff', border: 'none', borderRadius: 'var(--ph-radius-md)', padding: '12px 24px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--ph-font-family)' }}

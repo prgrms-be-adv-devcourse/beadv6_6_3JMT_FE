@@ -22,7 +22,7 @@ import {
 import { ICON_MAP } from '@/lib/iconMap';
 import ImageCarousel, { type CarouselSlide } from '@/components/ui/ImageCarousel';
 import PromptCard from '@/components/ui/PromptCard';
-import { won } from '@/lib/utils';
+import { apiErrorMessage, won } from '@/lib/utils';
 import { isSelfPurchase, SELF_PURCHASE_MESSAGE } from '@/lib/purchasePolicy';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -254,8 +254,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
       await createOrder([{ productId: String(p.id), productTitle: p.title }]);
       router.push('/mypage?tab=payments');
     } catch (err: unknown) {
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      showToast(message ?? '주문 생성에 실패했어요. 다시 시도해주세요.');
+      showToast(apiErrorMessage(err, '주문 생성에 실패했어요. 다시 시도해주세요.'));
       setBuying(false);
     }
   };
@@ -270,9 +269,9 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
       .then((saved) => {
         if (saved) upsertItem(saved);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         removeItem(productId);
-        showToast('장바구니 담기에 실패했습니다.');
+        showToast(apiErrorMessage(err, '장바구니 담기에 실패했습니다.'));
       });
   };
 
@@ -291,8 +290,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
       }
     } catch (err: unknown) {
       toggle(item); // 실패 시 롤백
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      showToast(message ?? '찜 처리에 실패했어요. 다시 시도해주세요.');
+      showToast(apiErrorMessage(err, '찜 처리에 실패했어요. 다시 시도해주세요.'));
     }
   };
 

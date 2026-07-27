@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useToast } from '@/store/useToastStore';
-import { won } from '@/lib/utils';
+import { apiErrorMessage, won } from '@/lib/utils';
 import { addCartItem } from '@/lib/cart';
 import { addWishlist, removeWishlist, getWishlistIdForProduct } from '@/lib/wishlists';
 import { PRODUCT_TYPE_LABEL } from '@/lib/productTypes';
@@ -178,8 +178,7 @@ export default function PromptCard({
       }
     } catch (err: unknown) {
       toggle(item); // 실패 시 롤백
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      showToast(message ?? '찜 처리에 실패했어요. 다시 시도해주세요.');
+      showToast(apiErrorMessage(err, '찜 처리에 실패했어요. 다시 시도해주세요.'));
     }
   };
 
@@ -193,9 +192,9 @@ export default function PromptCard({
       .then((saved) => {
         if (saved) upsertItem(saved);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         removeItem(productId);
-        showToast('장바구니 담기에 실패했습니다.');
+        showToast(apiErrorMessage(err, '장바구니 담기에 실패했습니다.'));
       });
   };
 

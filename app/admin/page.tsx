@@ -9,6 +9,7 @@ import { getAdminHome } from '@/lib/adminHome'
 import type { AdminHomeViewModel } from '@/lib/adminHomeAdapters'
 import { SectionCard, LinkAction } from '@/components/admin/SectionCard'
 import { ICON_MAP } from '@/lib/iconMap'
+import { apiErrorMessage } from '@/lib/utils'
 
 type SalesPoint = AdminHomeViewModel['stats']['sales7d'][number]
 
@@ -158,15 +159,15 @@ export default function AdminDashboardPage() {
   const router = useRouter()
   const [home, setHome] = useState<AdminHomeViewModel | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
-    setError(false)
+    setError(null)
     try {
       setHome(await getAdminHome())
-    } catch {
-      setError(true)
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, '대시보드 정보를 불러오지 못했어요'))
     } finally {
       setLoading(false)
     }
@@ -180,8 +181,8 @@ export default function AdminDashboardPage() {
       .then((data) => {
         if (active) setHome(data)
       })
-      .catch(() => {
-        if (active) setError(true)
+      .catch((err: unknown) => {
+        if (active) setError(apiErrorMessage(err, '대시보드 정보를 불러오지 못했어요'))
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -202,7 +203,7 @@ export default function AdminDashboardPage() {
   if (error) {
     return (
       <div className="rounded-ph-lg border border-ph-border bg-ph-white px-[24px] py-[56px] text-center">
-        <div className="text-[15px] font-bold text-ph-text">대시보드 정보를 불러오지 못했어요</div>
+        <div className="text-[15px] font-bold text-ph-text">{error}</div>
         <div className="mt-[6px] text-[13.5px] text-ph-text-muted">잠시 후 다시 시도해 주세요.</div>
         <button
           type="button"

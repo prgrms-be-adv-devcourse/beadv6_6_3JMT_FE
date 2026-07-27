@@ -10,7 +10,7 @@ import { useToast } from '@/store/useToastStore';
 import Logo from '@/components/ui/Logo';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
-import { won } from '@/lib/utils';
+import { apiErrorMessage, won } from '@/lib/utils';
 import { getCartItems, removeCartItem as deleteCartItem } from '@/lib/cart';
 import { createOrder } from '@/lib/orders';
 import {
@@ -500,8 +500,7 @@ export default function Header() {
       clearCart();
       router.push('/mypage?tab=payments');
     } catch (err: unknown) {
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      showToast(message ?? '주문 생성에 실패했어요. 다시 시도해주세요.');
+      showToast(apiErrorMessage(err, '주문 생성에 실패했어요. 다시 시도해주세요.'));
     } finally {
       setOrdering(false);
     }

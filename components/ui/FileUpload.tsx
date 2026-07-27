@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Upload, FileCheck2, X } from 'lucide-react';
 import { useToast } from '@/store/useToastStore';
 import { uploadViaPresign } from '@/lib/upload';
+import { apiErrorMessage } from '@/lib/utils';
 
 interface Props {
   value?: string | null; // 업로드된 fileUrl
@@ -33,8 +34,8 @@ export default function FileUpload({ value, onChange, productType }: Props) {
       const url = await uploadViaPresign(file, 'file', productType);
       setFileName(file.name);
       onChange(url);
-    } catch {
-      showToast('파일 업로드에 실패했어요. 허용된 형식인지 확인해 주세요');
+    } catch (err: unknown) {
+      showToast(apiErrorMessage(err, '파일 업로드에 실패했어요. 허용된 형식인지 확인해 주세요'));
     } finally {
       setUploading(false);
     }

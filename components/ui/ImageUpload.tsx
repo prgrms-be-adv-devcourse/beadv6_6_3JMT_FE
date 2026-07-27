@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { X, Upload } from 'lucide-react';
 import { useToast } from '@/store/useToastStore';
 import { uploadViaPresign, type UploadPurpose } from '@/lib/upload';
+import { apiErrorMessage } from '@/lib/utils';
 
 interface Props {
   value?: string | null;
@@ -42,8 +43,8 @@ export default function ImageUpload({
     try {
       const url = await uploadViaPresign(file, purpose);
       onChange(url);
-    } catch {
-      showToast('이미지 업로드에 실패했어요. 다시 시도해 주세요');
+    } catch (err: unknown) {
+      showToast(apiErrorMessage(err, '이미지 업로드에 실패했어요. 다시 시도해 주세요'));
     } finally {
       setUploading(false);
     }
