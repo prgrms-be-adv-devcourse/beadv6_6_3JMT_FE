@@ -113,6 +113,14 @@ test('only paid and refundable order products are selectable', () => {
   assert.equal(orderProductStatusLabel('REFUNDED'), '환불 완료')
 })
 
+test('order product with downloaded: true is not selectable even if isRefundable is true', () => {
+  const [result] = groupOrders([
+    orderProduct({ orderProductId: 'downloaded-inconsistent', downloaded: true, isRefundable: true }),
+  ])
+
+  assert.equal(result.items[0].selectable, false)
+})
+
 test('refund summary ignores unavailable selections', () => {
   const [result] = groupOrders([
     orderProduct({ orderProductId: 'line-1', amount: 6000 }),

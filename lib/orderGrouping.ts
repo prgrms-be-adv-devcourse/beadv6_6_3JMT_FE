@@ -104,7 +104,7 @@ export function groupOrders(orderItems: OrderListItem[]): GroupedOrder[] {
         orderProductStatus: item.orderProductStatus,
         downloaded: item.downloaded,
         isRefundable: item.isRefundable,
-        selectable: item.orderProductStatus === 'PAID' && item.isRefundable,
+        selectable: item.orderProductStatus === 'PAID' && item.isRefundable && !item.downloaded,
       })),
     };
   });
