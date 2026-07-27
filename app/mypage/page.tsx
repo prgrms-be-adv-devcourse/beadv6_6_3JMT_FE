@@ -815,19 +815,9 @@ function MyPageContent() {
                       <Check style={{ width: 12, height: 12 }} />인증됨
                     </span>
                   </div>
-                  {user.provider !== 'local' ? (
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
-                      padding: '3px 10px', borderRadius: 'var(--ph-radius-full)',
-                      background: 'var(--ph-secondary)', color: 'var(--ph-primary)', fontSize: 12, fontWeight: 600,
-                    }}>
-                      소셜 계정
-                    </span>
-                  ) : (
-                    <Button variant="secondary" onClick={() => setEmailModal(true)} style={{ whiteSpace: 'nowrap' }}>
-                      이메일 변경
-                    </Button>
-                  )}
+                  <Button variant="secondary" onClick={() => setEmailModal(true)} style={{ whiteSpace: 'nowrap' }}>
+                    이메일 변경
+                  </Button>
                 </Row>
               </Card>
 
