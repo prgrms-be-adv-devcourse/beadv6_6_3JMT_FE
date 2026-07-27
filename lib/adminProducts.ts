@@ -10,6 +10,7 @@ export interface AdminProductListItem {
   amount: number
   status: string
   createdAt: string
+  rejectionReason?: string | null
 }
 
 export type AdminProductStatusParam = 'pending_review' | 'on_sale' | 'rejected' | 'ALL'

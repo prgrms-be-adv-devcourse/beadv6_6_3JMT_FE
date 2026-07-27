@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ClipboardCheck, FileSearch, Box, X, RotateCcw, Info, Search } from 'lucide-react'
+import { ClipboardCheck, FileSearch, Box, X, RotateCcw, Info, Search, AlertTriangle } from 'lucide-react'
 import {
   getAdminProducts,
   revertAdminProduct,
@@ -24,6 +24,7 @@ interface AdminProduct {
   content?: string
   status?: string
   createdAt: string
+  rejectionReason?: string | null
 }
 
 // 상품 status → StatusBadge 키 매핑
@@ -116,6 +117,7 @@ export default function AdminProductsPage() {
           amount: p.amount,
           status: toLocalStatus(p.status),
           createdAt: p.createdAt,
+          rejectionReason: p.rejectionReason ?? null,
         })),
       )
     } finally {
@@ -366,6 +368,12 @@ export default function AdminProductsPage() {
                   <RotateCcw size={15} /> 검수 대기로 되돌리기
                 </button>
               </div>
+              {sel.status === 'rejected' && sel.rejectionReason && (
+                <div className="mt-[10px] flex items-start gap-[8px] text-[13.5px] text-ph-error">
+                  <AlertTriangle size={15} className="mt-[2px] flex-shrink-0" />
+                  <span className="leading-[1.5]">{sel.rejectionReason}</span>
+                </div>
+              )}
             </div>
           )}
         </SectionCard>
