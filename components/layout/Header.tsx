@@ -156,11 +156,11 @@ function SearchBar({
   React.useEffect(() => setRecent(getRecentSearches()), []);
 
   React.useEffect(() => {
-    if (!keyword || keyword === suppressed.current) {
+    if (!keyword) {
       setSuggestions([]);
       // 입력을 지워서 비웠을 때 그냥 닫아버리면 최근 검색어를 보려고 다시 클릭해야 한다.
       // 포커스가 남아 있으면 최근 검색어로 이어서 연다.
-      setOpen(focusRef.current && !keyword && recentCountRef.current > 0);
+      setOpen(focusRef.current && recentCountRef.current > 0);
       setActive(-1);
       return;
     }
@@ -171,8 +171,13 @@ function SearchBar({
       if (controller.signal.aborted) return;
       setSuggestions(result);
       setActive(-1);
-      // 제안이 0건이어도 일치하는 최근 검색어가 있으면 열어둔다.
-      setOpen(result.length > 0 || recentMatchCountRef.current > 0);
+      // suppressed는 "자동으로 열지 않는다"까지만이다. 조회는 항상 한다 —
+      // 검색 직후 입력칸에 그 검색어가 남아 있는데 조회까지 막으면, 다시 눌렀을 때
+      // 최근 검색어만 뜨고 제안이 영영 안 나온다.
+      if (keyword !== suppressed.current) {
+        // 제안이 0건이어도 일치하는 최근 검색어가 있으면 열어둔다.
+        setOpen(result.length > 0 || recentMatchCountRef.current > 0);
+      }
     }, SUGGEST_DEBOUNCE_MS);
 
     // 입력이 바뀌면 대기 중인 타이머와 진행 중인 요청을 모두 버린다.
@@ -194,13 +199,13 @@ function SearchBar({
 
   // Header는 레이아웃 컴포넌트라 페이지를 옮겨도 언마운트되지 않는다. 닫아주지 않으면
   // 검색 후 이동한 화면에도 드롭다운이 그대로 떠 있는다.
+  //
+  // 닫기만 하고 suggestions는 비우지 않는다. 조회 effect는 keyword에만 반응하는데
+  // 이동해도 검색어는 그대로라 다시 조회되지 않는다. 여기서 비우면 사용자가 검색창을
+  // 다시 눌렀을 때 최근 검색어만 뜨고 제안이 사라진다.
   React.useEffect(() => {
     setOpen(false);
     setActive(-1);
-    setSuggestions([]);
-    suppressed.current = value.trim();
-    // value는 의도적으로 의존성에서 뺀다 — 경로가 바뀔 때만 닫는다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   const choose = (picked: string) => {
