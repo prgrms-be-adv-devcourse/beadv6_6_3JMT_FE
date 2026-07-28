@@ -70,7 +70,7 @@ function won(amount: number) {
 export default function AdminProductsPage() {
   const { token } = useAuthStore()
   const [products, setProducts] = useState<AdminProduct[]>([])
-  const [filter, setFilter] = useState<FilterId>('all')
+  const [filter, setFilter] = useState<FilterId>('review')
   const [search, setSearch] = useState('')
   const [keyword, setKeyword] = useState('')
   const [selId, setSelId] = useState<string | null>(null)
