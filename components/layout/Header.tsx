@@ -14,6 +14,13 @@ import { won } from '@/lib/utils';
 import { getCartItems, removeCartItem as deleteCartItem } from '@/lib/cart';
 import { createOrder } from '@/lib/orders';
 import {
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+} from '@/lib/notifications';
+import { streamNotifications } from '@/lib/notificationSse';
+import type { NotificationItem } from '@/types/api/notifications';
+import {
   getRecentSearches,
   addRecentSearch,
   removeRecentSearch,
@@ -432,13 +439,13 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { user, logout, openLoginModal } = useAuthStore();
+  const { user, token, logout, openLoginModal } = useAuthStore();
   const { items: cart, setItems: setCartItems, removeItem: removeCartItem, clearCart } = useCartStore();
   const { items: wishItems } = useWishStore();
   const showToast = useToast();
   const [query, setQuery] = React.useState('');
   const [menu, setMenu] = React.useState<string | null>(null);
-  const [notifList, setNotifList] = React.useState<Notif[]>([]);
+  const [notifList, setNotifList] = React.useState<NotificationItem[]>([]);
   const [ordering, setOrdering] = React.useState(false);
 
   React.useEffect(() => {
@@ -446,10 +453,50 @@ export default function Header() {
       Promise.resolve().then(() => setNotifList([]));
       return;
     }
-    api.get(`${API_BASE}/notifications`)
-      .then((res) => setNotifList(res.data.data ?? []))
+    getNotifications()
+      .then((res) => setNotifList(res.data ?? []))
       .catch(() => {});
-  }, [user]);
+
+    const controller = new AbortController();
+    let lastEventId: string | undefined;
+
+    streamNotifications({
+      token: token ?? undefined,
+      userId: user.id,
+      lastEventId,
+      signal: controller.signal,
+      onEvent: (event) => {
+        if (event.type === 'notification') {
+          lastEventId = event.id;
+          const newItem: NotificationItem = {
+            notificationId: event.data.notificationId,
+            type: event.data.type,
+            category: 'SYSTEM',
+            title: event.data.title,
+            content: event.data.content,
+            linkUrl: null,
+            reference: { type: null, id: null },
+            read: false,
+            readAt: null,
+            occurredAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+          };
+          setNotifList((prev) => [newItem, ...prev.filter((n) => n.notificationId !== newItem.notificationId)]);
+          showToast(`🔔 ${event.data.title}`);
+        } else if (event.type === 'sync-required') {
+          getNotifications()
+            .then((res) => setNotifList(res.data ?? []))
+            .catch(() => {});
+        }
+      },
+    }).catch(() => {
+      // SSE disconnection / abort is handled silently
+    });
+
+    return () => {
+      controller.abort();
+    };
+  }, [user, token, showToast]);
 
   React.useEffect(() => {
     if (!user) {
@@ -463,12 +510,26 @@ export default function Header() {
 
   const unreadCount = notifList.filter((n) => !n.read).length;
 
-  const onNotifRead = async (id: string) => {
-    setNotifList((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+  const onNotifRead = async (id: string, linkUrl?: string | null) => {
+    setNotifList((prev) => prev.map((n) => n.notificationId === id ? { ...n, read: true, readAt: new Date().toISOString() } : n));
     try {
-      await api.post(`${API_BASE}/notifications/${id}/read`);
+      await markNotificationAsRead(id);
     } catch {
       // 로컬 상태는 이미 업데이트됨, 실패해도 무시
+    }
+    if (linkUrl) {
+      close();
+      router.push(linkUrl);
+    }
+  };
+
+  const onReadAllNotifs = async () => {
+    const now = new Date().toISOString();
+    setNotifList((prev) => prev.map((n) => ({ ...n, read: true, readAt: now })));
+    try {
+      await markAllNotificationsAsRead();
+    } catch {
+      // ignore
     }
   };
 
@@ -523,8 +584,18 @@ export default function Header() {
         onClick={() => toggle('notif')}
       />
       {menu === 'notif' && (
-        <Pop onClose={close} width={300}>
-          <div style={{ padding: '8px 12px 10px', fontWeight: 700, fontSize: 14 }}>알림</div>
+        <Pop onClose={close} width={320}>
+          <div style={{ padding: '8px 12px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: 700, fontSize: 14 }}>알림</span>
+            {unreadCount > 0 && (
+              <button
+                onClick={onReadAllNotifs}
+                style={{ background: 'none', border: 'none', color: 'var(--ph-primary)', fontSize: 12, cursor: 'pointer' }}
+              >
+                모두 읽음
+              </button>
+            )}
+          </div>
           {notifList.length === 0 ? (
             <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 13, color: 'var(--ph-text-muted)' }}>
               새 알림이 없어요
@@ -532,8 +603,8 @@ export default function Header() {
           ) : (
             notifList.map((n) => (
               <button
-                key={n.id}
-                onClick={() => onNotifRead(n.id)}
+                key={n.notificationId}
+                onClick={() => onNotifRead(n.notificationId, n.linkUrl)}
                 style={{
                   display: 'flex', gap: 10, padding: '10px 12px', width: '100%',
                   background: n.read ? 'none' : 'var(--ph-secondary)',
@@ -541,12 +612,12 @@ export default function Header() {
                   borderRadius: 'var(--ph-radius-sm)',
                 }}
               >
-                <span style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>
-                  {n.icon}
-                </span>
-                <div>
-                  <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--ph-text)', fontWeight: n.read ? 400 : 600 }}>{n.text}</div>
-                  <div style={{ fontSize: 12, color: 'var(--ph-text-muted)', marginTop: 2 }}>{relativeTime(n.timestamp)}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--ph-text)', fontWeight: n.read ? 400 : 600 }}>{n.title}</div>
+                  {n.content && (
+                    <div style={{ fontSize: 12, color: 'var(--ph-text-muted)', marginTop: 2, lineHeight: 1.3 }}>{n.content}</div>
+                  )}
+                  <div style={{ fontSize: 11, color: 'var(--ph-text-muted)', marginTop: 4 }}>{relativeTime(n.createdAt || n.occurredAt)}</div>
                 </div>
               </button>
             ))
