@@ -217,7 +217,7 @@ function CircleBtn({
 
 /* ── DetailScreen ───────────────────────────────────────────────────── */
 
-function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
+function DetailScreen({ p, recommended }: { p: Prompt; recommended: Prompt[] }) {
   const router = useRouter();
   const { isLoggedIn, user, openLoginModal } = useAuthStore();
   const { items: wishItems, toggle } = useWishStore();
@@ -483,12 +483,12 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
         </div>
       </div>
 
-      {/* Related prompts */}
-      {related.length > 0 && (
+      {/* Recommended products */}
+      {recommended.length > 0 && (
         <section style={{ marginTop: 72 }}>
-          <h2 style={{ fontSize: 27, fontWeight: 700, margin: '0 0 24px' }}>비슷한 프롬프트</h2>
+          <h2 style={{ fontSize: 27, fontWeight: 700, margin: '0 0 24px' }}>비슷한 상품</h2>
           <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
-            {related.map((r) => (
+            {recommended.map((r) => (
               <PromptCard key={r.id} p={r} detailBadge onOpen={(rp) => router.push(`/detail/${rp.id}`)} />
             ))}
           </div>
@@ -508,7 +508,7 @@ export default function DetailPage() {
   const router = useRouter();
   const id = params?.id;
   const [product, setProduct] = useState<Prompt | null>(null);
-  const [related, setRelated] = useState<Prompt[]>([]);
+  const [recommended, setRecommended] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -526,7 +526,7 @@ export default function DetailPage() {
           p.sellerProfileImageUrl = profile?.profileImageUrl ?? null;
         }
         setProduct(p);
-        setRelated(rResult.status === 'fulfilled' ? (rResult.value.data.data ?? []) : []);
+        setRecommended(rResult.status === 'fulfilled' ? (rResult.value.data.data ?? []) : []);
       })
       .finally(() => setLoading(false));
   }, [id]);
@@ -547,5 +547,5 @@ export default function DetailPage() {
     );
   }
 
-  return <DetailScreen p={product} related={related} />;
+  return <DetailScreen p={product} recommended={recommended} />;
 }
