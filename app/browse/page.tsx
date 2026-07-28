@@ -46,6 +46,9 @@ function BrowseScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
+  // 화면에 실제로 그려진 개수(list.length)가 아니라 조건에 맞는 전체 개수다.
+  // 더보기를 눌러도 이 숫자는 그대로여야 한다.
+  const [total, setTotal] = useState(0);
 
   const sortParam = sort === '평점순' ? 'rating' : sort === '가격순' ? 'price-asc' : 'popular';
 
@@ -70,6 +73,7 @@ function BrowseScreen() {
     setList([]);
     setPage(0);
     setHasNext(false);
+    setTotal(0);
     api.get(`${API_BASE}/products`, {
       params: {
         q: query || undefined,
@@ -83,6 +87,7 @@ function BrowseScreen() {
         const products: Prompt[] = res.data.data ?? [];
         setList(await enrichWithSellerNames(products));
         setHasNext(Boolean(res.data.meta?.hasNext));
+        setTotal(res.data.meta?.total ?? products.length);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -134,7 +139,7 @@ function BrowseScreen() {
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '44px 32px 0' }}>
       <h1 style={{ fontSize: 33, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.01em' }}>{currentTypeLabel}</h1>
       <p style={{ color: 'var(--ph-text-secondary)', fontSize: 16, margin: '0 0 28px' }}>
-        {query ? <span>'{query}' 검색 결과 · </span> : <span>{currentTypeDesc} · </span>}{list.length}개의 {countLabel}
+        {query ? <span>'{query}' 검색 결과 · </span> : <span>{currentTypeDesc} · </span>}{total}개의 {countLabel}
       </p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
