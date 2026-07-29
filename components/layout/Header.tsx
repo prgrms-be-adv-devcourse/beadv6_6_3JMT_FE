@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishStore } from '@/store/useWishStore';
@@ -116,9 +116,6 @@ function SearchBar({
   const [recent, setRecent] = React.useState<string[]>([]);
   const [open, setOpen] = React.useState(false);
   const [active, setActive] = React.useState(-1);
-  // 한글 IME 조합 중에는 조회하지 않는다. ref가 아니라 state여야 조합이 끝나는 순간
-  // 조회 effect가 다시 돌아 완성된 글자로 요청이 나간다.
-  const [composing, setComposing] = React.useState(false);
   // 사용자가 제안을 고르거나 Esc로 닫은 뒤, 같은 입력값으로 드롭다운이 다시 열리지 않게 한다.
   const suppressed = React.useRef('');
   const boxRef = React.useRef<HTMLDivElement>(null);
@@ -168,10 +165,6 @@ function SearchBar({
       return;
     }
 
-    // 조합 중에는 요청하지 않는다. 한글은 ㅅ→시→실처럼 자모 단계마다 input 이벤트가 나는데,
-    // 그때마다 요청하면 대부분이 취소되고 서버에도 의미 없는 조각이 쌓인다.
-    if (composing) return;
-
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       const result = await getProductSuggestions(keyword, controller.signal);
@@ -193,7 +186,7 @@ function SearchBar({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [keyword, composing]);
+  }, [keyword]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -260,10 +253,9 @@ function SearchBar({
     }
   };
 
-  // 조합이 끝나면 완성된 값으로 상태를 맞춘다. composing이 false로 바뀌면서 조회 effect가
-  // 다시 돌아 그 시점 검색어로 요청이 나간다.
+  // 조합이 끝나는 순간 브라우저가 최종 완성 글자로 input 이벤트를 안 주는 경우가 있어
+  // 여기서 한 번 더 맞춰준다.
   const onCompositionEnd = (e: React.CompositionEvent<HTMLInputElement>) => {
-    setComposing(false);
     onChange(e.currentTarget.value);
   };
 
@@ -290,7 +282,6 @@ function SearchBar({
         <input
           value={value}
           onChange={(e) => { suppressed.current = ''; onChange(e.target.value); }}
-          onCompositionStart={() => setComposing(true)}
           onCompositionEnd={onCompositionEnd}
           onFocus={() => { setFocus(true); if (items.length > 0) setOpen(true); }}
           onBlur={() => setFocus(false)}
@@ -538,6 +529,7 @@ function Avatar({ name, size = 34, imageUrl }: { name: string; size?: number; im
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const { user, logout, openLoginModal } = useAuthStore();
   const { items: cart, setItems: setCartItems, removeItem: removeCartItem, clearCart } = useCartStore();
@@ -547,6 +539,13 @@ export default function Header() {
   const [menu, setMenu] = React.useState<string | null>(null);
   const [notifList, setNotifList] = React.useState<Notif[]>([]);
   const [ordering, setOrdering] = React.useState(false);
+
+  // Header는 레이아웃이라 페이지를 옮겨도 언마운트되지 않는다. 검색창 값을 URL과
+  // 별개인 상태로 두면 다른 페이지로 이동해도 입력값이 그대로 남는다 — 여기서
+  // /browse의 q를 그대로 반영하고, 그 외 페이지에서는 비운다.
+  React.useEffect(() => {
+    setQuery(pathname === '/browse' ? (searchParams.get('q') ?? '') : '');
+  }, [pathname, searchParams]);
 
   React.useEffect(() => {
     if (!user) {
