@@ -74,6 +74,11 @@ const STATUS: Record<string, { label: string; tone: Tone; soft: boolean; dot: st
   // 레거시 정산 상태 코드 (호환용)
   PENDING_APPROVAL: { label: '대기', tone: 'neutral', soft: true, dot: '#8b95a1' },
   SETTLEMENT_ON_HOLD: { label: '승인 보류', tone: 'error', soft: true, dot: '#d92d20' },
+  // 정산 전달·대사 상태
+  CALCULATED: { label: '전달 대기', tone: 'neutral', soft: true, dot: '#8b95a1' },
+  RECONCILED: { label: '정상 대사', tone: 'blue', soft: true, dot: '#1b64da' },
+  DELIVERY_FAILED: { label: '전달 실패', tone: 'error', soft: true, dot: '#d92d20' },
+  MISMATCH: { label: '데이터 불일치', tone: 'error', soft: true, dot: '#d92d20' },
 }
 
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
