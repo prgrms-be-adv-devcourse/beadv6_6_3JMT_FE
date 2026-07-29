@@ -82,6 +82,8 @@ const PAGE_ROUTES: Record<string, string> = {
 /* ── SearchBar ─────────────────────────────────────────── */
 
 const SUGGEST_DEBOUNCE_MS = 200;
+// 자모 1글자(예: "ㅂ")는 아직 조합 중인 애매한 상태라 조회해도 의미가 없다.
+const SUGGEST_MIN_LENGTH = 2;
 
 /** 입력한 문자열이 나타나는 부분을 강조한다. BE가 중간 단어도 매칭하므로 앞부분에 한정하지 않는다. */
 function highlightMatch(text: string, keyword: string) {
@@ -161,6 +163,13 @@ function SearchBar({
       // 입력을 지워서 비웠을 때 그냥 닫아버리면 최근 검색어를 보려고 다시 클릭해야 한다.
       // 포커스가 남아 있으면 최근 검색어로 이어서 연다.
       setOpen(focusRef.current && recentCountRef.current > 0);
+      setActive(-1);
+      return;
+    }
+
+    if (keyword.length < SUGGEST_MIN_LENGTH) {
+      setSuggestions([]);
+      setOpen(focusRef.current && recentMatchCountRef.current > 0);
       setActive(-1);
       return;
     }
