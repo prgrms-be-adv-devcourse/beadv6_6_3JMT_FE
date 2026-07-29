@@ -60,12 +60,6 @@ function shortId(value: string) {
   return value.length > 16 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value
 }
 
-function isConflict(error: unknown) {
-  if (!error || typeof error !== 'object' || !('response' in error)) return false
-  const response = (error as { response?: { status?: number } }).response
-  return response?.status === 409
-}
-
 export default function AdminSettlementDeliveriesView() {
   const { token } = useAuthStore()
   const [items, setItems] = useState<AdminSettlementDelivery[]>([])
@@ -180,9 +174,7 @@ export default function AdminSettlementDeliveriesView() {
     } catch (retryError) {
       setRetryTarget(null)
       setActionError(
-        isConflict(retryError)
-          ? '이미 상태가 변경되었어요. 최신 목록을 다시 불러왔습니다.'
-          : apiErrorMessage(retryError, '정산 전달 재시도를 요청하지 못했어요.'),
+        apiErrorMessage(retryError, '정산 전달 재시도를 요청하지 못했어요.'),
       )
       await Promise.all([loadList(filter, identifier, page), loadSummary()])
     } finally {

@@ -114,9 +114,12 @@ interface AdminSettlementDeliverySummary {
 `POST /api/v2/admin/settlements/deliveries/{settlementDeliveryId}/retry`
 
 - 성공: `202 Accepted`
-- 이미 재전송 중이거나 현재 상태에서 허용되지 않음: `409 Conflict`
-- 응답 본문은 갱신된 `AdminSettlementDelivery`를 반환한다.
+- 성공 응답 본문: `ApiResult<Void>`
+- 정산 전달 건 없음: `404 Not Found` (`A-011`)
+- 현재 상태에서 재전송 불가: `409 Conflict` (`A-012`)
+- 이미 재전송 실행 중: `409 Conflict` (`A-013`)
 - 기존 `deliveryRequestId`를 그대로 사용한다.
+- 요청 성공·실패 후 목록과 요약을 다시 조회해 최신 상태를 반영한다.
 
 ## 5. 컴포넌트와 파일 경계
 
