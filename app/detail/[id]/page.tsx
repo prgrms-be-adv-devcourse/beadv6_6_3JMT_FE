@@ -360,7 +360,7 @@ function DetailScreen({ p, recommended }: { p: Prompt; recommended: Prompt[] }) 
           </div>
 
           <h3 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 12px' }}>프롬프트 소개</h3>
-          <p style={{ fontSize: 17, lineHeight: 1.7, color: 'var(--ph-text-secondary)', margin: 0, maxWidth: 620 }}>{p.desc}</p>
+          <p style={{ fontSize: 17, lineHeight: 1.7, color: 'var(--ph-text-secondary)', margin: 0, maxWidth: 620, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{p.desc}</p>
 
           {p.checklistRecorded && (
             <>

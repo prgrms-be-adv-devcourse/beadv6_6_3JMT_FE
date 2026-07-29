@@ -350,7 +350,7 @@ export default function AdminProductsPage() {
 
             {/* description */}
             <Field label="상품 설명">
-              <p className="m-0 text-[14.5px] leading-[1.65] text-ph-text-secondary">
+              <p className="m-0 whitespace-pre-wrap break-words text-[14.5px] leading-[1.65] text-ph-text-secondary">
                 {sel.desc ?? '등록된 설명이 없습니다.'}
               </p>
             </Field>
