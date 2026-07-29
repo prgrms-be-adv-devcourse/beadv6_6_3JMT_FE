@@ -6,7 +6,7 @@ import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
 import {
   ArrowLeft, Pencil, ArrowRight, History,
-  AlertCircle, Eye, Images, X, Store,
+  AlertCircle, Eye, Images, X, Store, Search,
 } from 'lucide-react';
 import FormField from '@/components/ui/FormField';
 import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
@@ -17,11 +17,11 @@ import { apiErrorMessage, isValidProductPrice } from '@/lib/utils';
 import Label from '@/components/ui/Label';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import Tag from '@/components/ui/Tag';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
 import {
-  PRODUCT_TYPES, PRODUCT_TYPE_LABEL, PRODUCT_TYPE_TITLE_PLACEHOLDER, PRODUCT_TYPE_DESC_PLACEHOLDER,
-  PRODUCT_TYPE_CHANGE_PLACEHOLDER, type ProductType,
+  PRODUCT_TYPE_LABEL, PRODUCT_TYPE_TITLE_PLACEHOLDER, PRODUCT_TYPE_DESC_PLACEHOLDER,
+  PRODUCT_TYPE_CHANGE_PLACEHOLDER, PRODUCT_TYPE_TAG_PLACEHOLDER, PRODUCT_TYPE_TAG_HINT,
+  type ProductType,
 } from '@/lib/productTypes';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
@@ -112,7 +112,9 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   const isDraft = prompt.status === 'DRAFT';
 
   const [title, setTitle] = useState(prompt.title);
-  const [productType, setProductType] = useState<ProductType>(prompt.productType as ProductType);
+  // 상품 유형은 등록 시 한 번 정하고 수정 화면에서는 바꾸지 않는다. state가 아니라 상수로
+  // 두어 setter 자체가 없게 한다.
+  const productType = prompt.productType as ProductType;
   const [model, setModel] = useState(prompt.model);
   const [price, setPrice] = useState(prompt.amount === 0 ? '0' : String(prompt.amount));
   const [desc, setDesc] = useState(prompt.desc);
@@ -267,13 +269,13 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
           <Card padding="28px">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
               <FormField label={`${typeLabel} 제목`} hint={`${title.length}/60`} value={title} maxLength={60} onChange={(v) => setTitle(v)} placeholder={PRODUCT_TYPE_TITLE_PLACEHOLDER[productType]} />
+              {/* 유형에 따라 입력 필드(본문/파일/링크)와 전송 페이로드가 달라지므로 수정 화면에서는
+                  선택하지 않고 현재 유형만 읽기 전용으로 보여준다. */}
               <div>
-                <Label>상품 유형</Label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {PRODUCT_TYPES.map((t) => (
-                    <Tag key={t.id} selected={productType === t.id} onClick={() => setProductType(t.id)}>{t.label}</Tag>
-                  ))}
-                </div>
+                <Label hint="등록 후 변경할 수 없어요">상품 유형</Label>
+                <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 14, fontWeight: 600, lineHeight: 1, padding: '9px 14px', borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-secondary)', color: 'var(--ph-primary)' }}>
+                  {typeLabel}
+                </span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: productType === 'PROMPT' ? '1fr 1fr' : '1fr', gap: 16 }}>
                 {productType === 'PROMPT' && (
@@ -288,10 +290,10 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
           <Card padding="28px">
             <FormField
               label="상품 소개"
-              hint={`${desc.length}/200`}
+              hint={`${desc.length}/1000`}
               type="textarea"
               value={desc}
-              onChange={(v) => setDesc(v.slice(0, 200))}
+              onChange={(v) => setDesc(v.slice(0, 1000))}
               rows={3}
               placeholder={PRODUCT_TYPE_DESC_PLACEHOLDER[productType]}
             />
@@ -353,12 +355,16 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
                     <Input
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
-                      placeholder="태그를 입력하고 Enter (예: 카피라이팅)"
+                      placeholder={PRODUCT_TYPE_TAG_PLACEHOLDER[productType]}
                       leading={<span style={{ fontWeight: 700, color: 'var(--ph-text-muted)' }}>#</span>}
                     />
                   </div>
                   <Button variant="secondary" size="sm" type="submit">추가</Button>
                 </form>
+                <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'flex-start', gap: 6, lineHeight: 1.55 }}>
+                  <Search style={{ width: 14, height: 14, flexShrink: 0, marginTop: 2 }} />
+                  <span>{PRODUCT_TYPE_TAG_HINT[productType]}</span>
+                </p>
                 {tags.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
                     {tags.map((t) => (
@@ -380,8 +386,8 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
 
               {/* 대표 썸네일 */}
               <div>
-                <Label hint="권장 4:3 · 최대 5MB">대표 썸네일</Label>
-                <ImageUpload value={thumbUrl} onChange={setThumbUrl} height={220} placeholder="썸네일을 클릭하거나 드래그해 업로드" purpose="thumbnail" />
+                <Label hint="상품리스트 기준 16:9 · 최대 5MB">대표 썸네일</Label>
+                <ImageUpload value={thumbUrl} onChange={setThumbUrl} aspectRatio="16 / 9" placeholder="썸네일을 클릭하거나 드래그해 업로드" purpose="thumbnail" />
               </div>
 
               {/* 소개 이미지 */}

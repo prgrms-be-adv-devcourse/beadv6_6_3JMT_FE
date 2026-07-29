@@ -11,6 +11,7 @@ interface Props {
   value?: string | null;
   onChange: (url: string | null) => void;
   height?: number;
+  aspectRatio?: string;
   placeholder?: string;
   purpose?: UploadPurpose;
 }
@@ -19,6 +20,7 @@ export default function ImageUpload({
   value,
   onChange,
   height = 220,
+  aspectRatio,
   placeholder = '이미지를 클릭하거나 드래그해 업로드',
   purpose = 'image',
 }: Props) {
@@ -28,7 +30,11 @@ export default function ImageUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const showToast = useToast();
 
-  const compact = height < 140;
+  const compact = !aspectRatio && height < 140;
+  const boxStyle: React.CSSProperties = {
+    width: '100%',
+    ...(aspectRatio ? { aspectRatio } : { height }),
+  };
 
   const process = async (file: File) => {
     if (!['image/jpeg', 'image/png'].includes(file.type)) {
@@ -57,7 +63,7 @@ export default function ImageUpload({
 
   if (uploading) {
     return (
-      <div style={{ width: '100%', height, borderRadius: 12, border: '1.5px dashed var(--ph-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ph-gray-50)' }}>
+      <div style={{ ...boxStyle, borderRadius: 12, border: '1.5px dashed var(--ph-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ph-gray-50)' }}>
         <span style={{ fontSize: compact ? 11 : 13, color: 'var(--ph-text-muted)' }}>업로드 중...</span>
       </div>
     );
@@ -67,7 +73,7 @@ export default function ImageUpload({
 
   if (value) {
     return (
-      <div style={{ position: 'relative', width: '100%', height, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--ph-border)' }}>
+      <div style={{ ...boxStyle, position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--ph-border)' }}>
         <Image src={value} alt="업로드 이미지" fill style={{ objectFit: 'cover' }} unoptimized />
         <button
           type="button"
@@ -98,7 +104,7 @@ export default function ImageUpload({
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => { e.preventDefault(); setDragging(false); onFiles(e.dataTransfer.files); }}
         style={{
-          width: '100%', height, boxSizing: 'border-box',
+          ...boxStyle, boxSizing: 'border-box',
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', gap: compact ? 4 : 8,
           border: `1.5px dashed ${borderColor}`,
