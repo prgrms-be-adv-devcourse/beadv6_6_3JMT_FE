@@ -62,14 +62,14 @@ type Version = { ver: string; date: string; note: string };
 
 /* AI 검수 체크리스트 항목 라벨 — SellerProductVersionResponse와 필드명/순서 동일 */
 const CHECKLIST_ITEMS = [
-  { key: 'hasContext', label: '맥락 명시' },
-  { key: 'hasObjective', label: '목표 명시' },
-  { key: 'hasNuance', label: '뉘앙스 명시' },
-  { key: 'hasTone', label: '톤 명시' },
-  { key: 'hasExamples', label: '예시 포함' },
-  { key: 'hasExecution', label: '실행 지침 포함' },
-  { key: 'hasRoleAssignment', label: '역할 부여 포함' },
-] as const satisfies { key: keyof Prompt; label: string }[];
+  { key: 'hasContext', label: '맥락 명시', desc: '어떤 상황에서 쓰는 프롬프트인지 맥락을 명시했어요' },
+  { key: 'hasObjective', label: '목표 명시', desc: '프롬프트로 달성하려는 목표를 명시했어요' },
+  { key: 'hasNuance', label: '뉘앙스 명시', desc: '원하는 결과물의 뉘앙스를 명시했어요' },
+  { key: 'hasTone', label: '톤 명시', desc: '결과물의 어조·톤을 명시했어요' },
+  { key: 'hasExamples', label: '예시 포함', desc: '원하는 결과물의 예시를 포함했어요' },
+  { key: 'hasExecution', label: '실행 지침 포함', desc: 'AI가 따라야 할 구체적인 실행 지침을 포함했어요' },
+  { key: 'hasRoleAssignment', label: '역할 부여 포함', desc: 'AI에게 특정 역할을 부여했어요' },
+] as const satisfies { key: keyof Prompt; label: string; desc: string }[];
 
 /* ── Mock data ──────────────────────────────────────────────────────── */
 
@@ -364,13 +364,19 @@ function DetailScreen({ p, recommended }: { p: Prompt; recommended: Prompt[] }) 
 
           {p.checklistRecorded && (
             <>
-              <h3 className="text-[20px] font-bold mt-10 mb-4">AI 검수 체크리스트</h3>
+              <div className="flex items-center gap-ph-8 mt-10 mb-4">
+                <h3 className="text-[20px] font-bold">AI 검수 체크리스트</h3>
+                <Badge tone="blue">
+                  {CHECKLIST_ITEMS.filter(({ key }) => p[key]).length}/{CHECKLIST_ITEMS.length} 항목 충족
+                </Badge>
+              </div>
               <div className="grid grid-cols-2 gap-x-ph-16 gap-y-ph-xs max-w-[420px]">
-                {CHECKLIST_ITEMS.map(({ key, label }) => {
+                {CHECKLIST_ITEMS.map(({ key, label, desc }) => {
                   const passed = Boolean(p[key]);
                   return (
                     <div
                       key={key}
+                      title={desc}
                       className={`flex items-center gap-ph-2xs text-ph-body-sm ${passed ? 'text-ph-text-secondary' : 'text-ph-text-muted'}`}
                     >
                       {passed ? (
