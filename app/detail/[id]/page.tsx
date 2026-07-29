@@ -17,7 +17,7 @@ import { useToast } from '@/store/useToastStore';
 import {
   ArrowLeft, Star,
   CheckCircle2, ShoppingCart, Check, History,
-  ChevronDown, Info, Sparkles,
+  ChevronDown, Info, Sparkles, Circle,
 } from 'lucide-react';
 import { ICON_MAP } from '@/lib/iconMap';
 import ImageCarousel, { type CarouselSlide } from '@/components/ui/ImageCarousel';
@@ -48,9 +48,28 @@ type Prompt = {
   imageUrls?: string[];
   versions?: Version[];
   features?: string[];
+  hasContext?: boolean;
+  hasObjective?: boolean;
+  hasNuance?: boolean;
+  hasTone?: boolean;
+  hasExamples?: boolean;
+  hasExecution?: boolean;
+  hasRoleAssignment?: boolean;
+  checklistRecorded?: boolean;
 };
 
 type Version = { ver: string; date: string; note: string };
+
+/* AI 검수 체크리스트 항목 라벨 — SellerProductVersionResponse와 필드명/순서 동일 */
+const CHECKLIST_ITEMS = [
+  { key: 'hasContext', label: '맥락 명시' },
+  { key: 'hasObjective', label: '목표 명시' },
+  { key: 'hasNuance', label: '뉘앙스 명시' },
+  { key: 'hasTone', label: '톤 명시' },
+  { key: 'hasExamples', label: '예시 포함' },
+  { key: 'hasExecution', label: '실행 지침 포함' },
+  { key: 'hasRoleAssignment', label: '역할 부여 포함' },
+] as const satisfies { key: keyof Prompt; label: string }[];
 
 /* ── Mock data ──────────────────────────────────────────────────────── */
 
@@ -342,6 +361,30 @@ function DetailScreen({ p, recommended }: { p: Prompt; recommended: Prompt[] }) 
 
           <h3 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 12px' }}>프롬프트 소개</h3>
           <p style={{ fontSize: 17, lineHeight: 1.7, color: 'var(--ph-text-secondary)', margin: 0, maxWidth: 620 }}>{p.desc}</p>
+
+          {p.checklistRecorded && (
+            <>
+              <h3 className="text-[20px] font-bold mt-10 mb-4">AI 검수 체크리스트</h3>
+              <div className="grid grid-cols-2 gap-x-ph-16 gap-y-ph-xs max-w-[420px]">
+                {CHECKLIST_ITEMS.map(({ key, label }) => {
+                  const passed = Boolean(p[key]);
+                  return (
+                    <div
+                      key={key}
+                      className={`flex items-center gap-ph-2xs text-ph-body-sm ${passed ? 'text-ph-text-secondary' : 'text-ph-text-muted'}`}
+                    >
+                      {passed ? (
+                        <CheckCircle2 className="w-4 h-4 shrink-0 text-ph-primary" />
+                      ) : (
+                        <Circle className="w-4 h-4 shrink-0 text-ph-text-muted" />
+                      )}
+                      {label}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           <h3 style={{ fontSize: 20, fontWeight: 700, margin: '40px 0 16px' }}>판매자</h3>
           <Card padding="20px" style={{ maxWidth: 420, display: 'flex', alignItems: 'center', gap: 14 }}>
