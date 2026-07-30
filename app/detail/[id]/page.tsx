@@ -338,7 +338,7 @@ function DetailScreen({ p, recommended }: { p: Prompt; recommended: Prompt[] }) 
       </button>
 
       {/* Main grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 48, alignItems: 'start' }}>
+      <div className="ph-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 48, alignItems: 'start' }}>
         {/* Left column */}
         <div style={{ minWidth: 0 }}>
           <ImageCarousel slides={gallery} thumbnailUrl={p.thumbnail_url} />

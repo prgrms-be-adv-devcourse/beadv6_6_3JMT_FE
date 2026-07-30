@@ -19,7 +19,7 @@ export default function DetailLoading() {
         {/* 뒤로 버튼 스켈레톤 */}
         <div style={{ ...shimmer, width: 140, height: 20, marginBottom: 24 }} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 48, alignItems: 'start' }}>
+        <div className="ph-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 48, alignItems: 'start' }}>
           {/* 왼쪽: 이미지 + 메타 */}
           <div>
             <div style={{ ...shimmer, height: 360, borderRadius: 'var(--ph-radius-xl)' }} />

@@ -212,4 +212,6 @@ body {
   .ph-desktop-nav { display: none !important; }
   .ph-header-search { display: none !important; }
   .ph-hamburger { display: inline-flex !important; }
+  .ph-detail-grid { grid-template-columns: 1fr !important; }
+  .ph-detail-grid > *:last-child { position: static !important; }
 }
