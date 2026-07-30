@@ -3,6 +3,7 @@ import { buildDirectRoutingRewrites } from "./lib/directRouting";
 
 const nextConfig: NextConfig = {
   images: {
+    unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: '*.amazonaws.com' },
       { protocol: 'https', hostname: '*.kakaocdn.net' },
