@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useWishStore } from '@/store/useWishStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useToast } from '@/store/useToastStore';
-import { won } from '@/lib/utils';
+import { apiErrorMessage, won } from '@/lib/utils';
 import { addCartItem } from '@/lib/cart';
 import { addWishlist, removeWishlist, getWishlistIdForProduct } from '@/lib/wishlists';
 import { PRODUCT_TYPE_LABEL } from '@/lib/productTypes';
@@ -40,21 +40,27 @@ export interface PromptItem {
 function Thumb({ p }: { p: PromptItem }) {
   if (p.thumbnail_url) {
     return (
-      <div style={{ height: 150, borderRadius: 'var(--ph-radius-lg)', overflow: 'hidden', position: 'relative', border: '1px solid var(--ph-border)' }}>
-        <Image src={p.thumbnail_url} alt="" fill style={{ objectFit: 'cover' }} />
+      <div style={{ aspectRatio: '16 / 9', borderRadius: 'var(--ph-radius-lg)', overflow: 'hidden', position: 'relative', border: '1px solid var(--ph-border)' }}>
+        <Image
+          src={p.thumbnail_url}
+          alt=""
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+          style={{ objectFit: 'cover' }}
+        />
       </div>
     );
   }
   if (p.thumbnail_url === null) {
     return (
-      <div style={{ height: 150, borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--ph-border)' }}>
+      <div style={{ aspectRatio: '16 / 9', borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--ph-border)' }}>
         <Image src="/images/promy-character.png" alt="" width={60} height={60} style={{ objectFit: 'contain', opacity: 0.85 }} />
       </div>
     );
   }
   const Icon = ICON_MAP[p.icon] ?? Sparkles;
   return (
-    <div style={{ height: 150, borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--ph-border)' }}>
+    <div style={{ aspectRatio: '16 / 9', borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--ph-border)' }}>
       <Icon style={{ width: 40, height: 40, color: 'var(--ph-primary)', opacity: 0.85 } as React.CSSProperties} />
     </div>
   );
@@ -178,8 +184,7 @@ export default function PromptCard({
       }
     } catch (err: unknown) {
       toggle(item); // 실패 시 롤백
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      showToast(message ?? '찜 처리에 실패했어요. 다시 시도해주세요.');
+      showToast(apiErrorMessage(err, '찜 처리에 실패했어요. 다시 시도해주세요.'));
     }
   };
 
@@ -193,9 +198,9 @@ export default function PromptCard({
       .then((saved) => {
         if (saved) upsertItem(saved);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         removeItem(productId);
-        showToast('장바구니 담기에 실패했습니다.');
+        showToast(apiErrorMessage(err, '장바구니 담기에 실패했습니다.'));
       });
   };
 

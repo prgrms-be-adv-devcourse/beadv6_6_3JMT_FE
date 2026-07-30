@@ -143,10 +143,10 @@ export default function AdminSettlementsView() {
       setPage(result.page)
       setTotal(result.totalElements)
       setHasNext((result.page + 1) * result.size < result.totalElements)
-    } catch {
+    } catch (err: unknown) {
       if (requestId !== listRequestRef.current) return
       if (!append) setItems([])
-      setListError('정산 목록을 불러오지 못했어요.')
+      setListError(apiErrorMessage(err, '정산 목록을 불러오지 못했어요.'))
     } finally {
       if (requestId === listRequestRef.current) {
         setLoading(false)
@@ -182,9 +182,9 @@ export default function AdminSettlementsView() {
       const detail = await getAdminSettlementDetail(item.sellerId, item.settlementMonth)
       if (detailRequestRef.current[key] !== requestId) return
       setDetails((current) => ({ ...current, [key]: detail }))
-    } catch {
+    } catch (err: unknown) {
       if (detailRequestRef.current[key] !== requestId) return
-      setDetailErrors((current) => ({ ...current, [key]: '주간 정산을 불러오지 못했어요.' }))
+      setDetailErrors((current) => ({ ...current, [key]: apiErrorMessage(err, '주간 정산을 불러오지 못했어요.') }))
     } finally {
       if (detailRequestRef.current[key] === requestId) {
         setLoadingDetail((current) => (current === key ? null : current))

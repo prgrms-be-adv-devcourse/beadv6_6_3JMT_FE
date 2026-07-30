@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
-import { ArrowLeft, Store, Eye, Images, Check, CheckCircle2, X } from 'lucide-react';
+import { ArrowLeft, Store, Eye, Images, Check, CheckCircle2, X, Search } from 'lucide-react';
 import FormField from '@/components/ui/FormField';
 import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
 import ImageUpload from '@/components/ui/ImageUpload';
@@ -18,6 +18,7 @@ import Tag from '@/components/ui/Tag';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
 import {
   PRODUCT_TYPES, PRODUCT_TYPE_LABEL, PRODUCT_TYPE_TITLE_PLACEHOLDER, PRODUCT_TYPE_DESC_PLACEHOLDER,
+  PRODUCT_TYPE_TAG_PLACEHOLDER, PRODUCT_TYPE_TAG_HINT,
   type ProductType,
 } from '@/lib/productTypes';
 
@@ -94,6 +95,9 @@ export default function SellPage() {
   const [tagInput, setTagInput] = useState('');
   const [status, setStatus] = useState<null | 'saved' | 'submitted'>(null);
   const [loading, setLoading] = useState(false);
+  // loading(useState)은 리렌더 후에야 반영되므로 같은 tick 안의 두 번째 클릭을 막지 못한다.
+  // ref는 즉시 반영되므로 중복 제출 차단은 이걸로 한다(BE#681).
+  const submitting = useRef(false);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [galleryUrls, setGalleryUrls] = useState<(string | null)[]>(Array(5).fill(null));
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
@@ -112,7 +116,8 @@ export default function SellPage() {
     if (!title.trim()) { showToast(`${typeLabel} 제목을 입력해 주세요`); return; }
     if (!desc.trim()) { showToast('상품 소개를 입력해 주세요'); return; }
     if (!isValidProductPrice(Number(price))) { showToast('가격은 무료(0원) 또는 100원 이상으로 입력해 주세요'); return; }
-    if (loading) return;
+    if (submitting.current) return;
+    submitting.current = true;
     setLoading(true);
     try {
       await api.post(`${API_BASE}/products`, {
@@ -139,6 +144,7 @@ export default function SellPage() {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       showToast(msg ?? '저장에 실패했어요. 다시 시도해 주세요');
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };
@@ -236,10 +242,10 @@ export default function SellPage() {
           <Card padding="28px">
             <FormField
               label="상품 소개"
-              hint={`${desc.length}/200`}
+              hint={`${desc.length}/1000`}
               type="textarea"
               value={desc}
-              onChange={(v) => setDesc(v.slice(0, 200))}
+              onChange={(v) => setDesc(v.slice(0, 1000))}
               rows={3}
               placeholder={PRODUCT_TYPE_DESC_PLACEHOLDER[productType]}
             />
@@ -301,12 +307,16 @@ export default function SellPage() {
                     <Input
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
-                      placeholder="태그를 입력하고 Enter (예: 카피라이팅)"
+                      placeholder={PRODUCT_TYPE_TAG_PLACEHOLDER[productType]}
                       leading={<span style={{ fontWeight: 700, color: 'var(--ph-text-muted)' }}>#</span>}
                     />
                   </div>
                   <Button variant="secondary" size="sm" type="submit">추가</Button>
                 </form>
+                <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'flex-start', gap: 6, lineHeight: 1.55 }}>
+                  <Search style={{ width: 14, height: 14, flexShrink: 0, marginTop: 2 }} />
+                  <span>{PRODUCT_TYPE_TAG_HINT[productType]}</span>
+                </p>
                 {tags.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
                     {tags.map((t) => (
@@ -328,11 +338,11 @@ export default function SellPage() {
 
               {/* 대표 썸네일 */}
               <div>
-                <Label hint="권장 4:3 · 최대 5MB">대표 썸네일</Label>
+                <Label hint="상품리스트 기준 16:9 · 최대 5MB">대표 썸네일</Label>
                 <ImageUpload
                   value={thumbUrl}
                   onChange={setThumbUrl}
-                  height={220}
+                  aspectRatio="16 / 9"
                   placeholder="썸네일을 클릭하거나 드래그해 업로드"
                   purpose="thumbnail"
                 />

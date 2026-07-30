@@ -1,12 +1,10 @@
-export type NotificationCategory =
-  | 'ORDER'
-  | 'PAYMENT'
-  | 'REFUND'
-  | 'PRODUCT'
-  | 'SYSTEM'
-  | 'MARKETING'
+type ExtensibleString<T extends string> = T | (string & Record<never, never>)
 
-export type NotificationType =
+export type NotificationCategory = ExtensibleString<
+  'ORDER' | 'PAYMENT' | 'REFUND' | 'PRODUCT' | 'SYSTEM' | 'MARKETING'
+>
+
+export type NotificationType = ExtensibleString<
   | 'ORDER_CREATED'
   | 'ORDER_PAID'
   | 'ORDER_PAYMENT_FAILED'
@@ -15,6 +13,7 @@ export type NotificationType =
   | 'ORDER_PARTIALLY_REFUNDED'
   | 'ORDER_REFUNDED'
   | 'ORDER_REFUND_FAILED'
+>
 
 export interface NotificationReference {
   type: string | null
@@ -23,8 +22,8 @@ export interface NotificationReference {
 
 export interface NotificationItem {
   notificationId: string
-  type: NotificationType | string
-  category: NotificationCategory | string
+  type: NotificationType
+  category: NotificationCategory
   title: string
   content: string
   linkUrl: string | null
@@ -49,48 +48,36 @@ export interface NotificationListResponse {
   meta: NotificationPageMeta
 }
 
-export interface UnreadCountData {
-  unreadCount: number
-}
-
-export interface UnreadCountResponse {
+export interface ApiResult<T> {
   success: boolean
-  data: UnreadCountData
+  data: T
   message: string
 }
 
-export interface ReadSingleNotificationData {
+export interface UnreadNotificationCountResponse {
+  unreadCount: number
+}
+
+export interface NotificationReadResponse {
   notificationId: string
   read: boolean
   readAt: string
 }
 
-export interface ReadSingleNotificationResponse {
-  success: boolean
-  data: ReadSingleNotificationData
-  message: string
-}
-
-export interface ReadAllNotificationsData {
+export interface ReadAllNotificationsResponse {
   updatedCount: number
   readAt: string
 }
 
-export interface ReadAllNotificationsResponse {
-  success: boolean
-  data: ReadAllNotificationsData
-  message: string
-}
-
-export interface NotificationSseData {
+export interface NotificationSsePayload {
   notificationId: string
-  type: NotificationType | string
+  type: NotificationType
   title: string
   content: string
   unreadCount: number
 }
 
-export interface NotificationSyncRequiredData {
+export interface NotificationSyncRequiredPayload {
   code: string
   replayLimit: number
 }
@@ -99,16 +86,9 @@ export type NotificationSseEvent =
   | {
       type: 'notification'
       id: string
-      data: NotificationSseData
+      data: NotificationSsePayload
     }
   | {
       type: 'sync-required'
-      data: NotificationSyncRequiredData
+      data: NotificationSyncRequiredPayload
     }
-
-export interface NotificationApiErrorResponse {
-  success: false
-  data: null
-  message: string
-  code: 'V001' | 'N001' | 'N002' | 'SYS001' | string
-}

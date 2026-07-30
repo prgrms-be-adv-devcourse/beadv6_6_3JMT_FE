@@ -57,10 +57,10 @@ export default function SellerSettlementsPanel({
       if (requestId !== listRequestRef.current) return
       setItems((current) => (append ? [...current, ...result.items] : result.items))
       setHasNext((result.page + 1) * result.size < result.totalElements)
-    } catch {
+    } catch (err: unknown) {
       if (requestId !== listRequestRef.current) return
       if (!append) setItems([])
-      setListError('정산 내역을 불러오지 못했어요.')
+      setListError(apiErrorMessage(err, '정산 내역을 불러오지 못했어요.'))
     } finally {
       if (requestId === listRequestRef.current) {
         setLoading(false)
@@ -92,9 +92,9 @@ export default function SellerSettlementsPanel({
       const detail = await getSellerSettlementDetail(month)
       if (detailRequestRef.current[month] !== requestId) return
       setDetails((current) => ({ ...current, [month]: detail }))
-    } catch {
+    } catch (err: unknown) {
       if (detailRequestRef.current[month] !== requestId) return
-      setDetailError((current) => ({ ...current, [month]: '주간 정산을 불러오지 못했어요.' }))
+      setDetailError((current) => ({ ...current, [month]: apiErrorMessage(err, '주간 정산을 불러오지 못했어요.') }))
     } finally {
       if (detailRequestRef.current[month] === requestId) {
         setLoadingDetail((current) => (current === month ? null : current))

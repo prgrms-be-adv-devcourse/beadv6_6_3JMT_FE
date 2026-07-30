@@ -17,12 +17,12 @@ import { useToast } from '@/store/useToastStore';
 import {
   ArrowLeft, Star,
   CheckCircle2, ShoppingCart, Check, History,
-  ChevronDown, Info, Sparkles,
+  ChevronDown, Info, Sparkles, Circle,
 } from 'lucide-react';
 import { ICON_MAP } from '@/lib/iconMap';
 import ImageCarousel, { type CarouselSlide } from '@/components/ui/ImageCarousel';
 import PromptCard from '@/components/ui/PromptCard';
-import { won } from '@/lib/utils';
+import { apiErrorMessage, won } from '@/lib/utils';
 import { isSelfPurchase, SELF_PURCHASE_MESSAGE } from '@/lib/purchasePolicy';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -48,9 +48,28 @@ type Prompt = {
   imageUrls?: string[];
   versions?: Version[];
   features?: string[];
+  hasContext?: boolean;
+  hasObjective?: boolean;
+  hasNuance?: boolean;
+  hasTone?: boolean;
+  hasExamples?: boolean;
+  hasExecution?: boolean;
+  hasRoleAssignment?: boolean;
+  checklistRecorded?: boolean;
 };
 
 type Version = { ver: string; date: string; note: string };
+
+/* AI 검수 체크리스트 항목 라벨 — SellerProductVersionResponse와 필드명/순서 동일 */
+const CHECKLIST_ITEMS = [
+  { key: 'hasContext', label: '맥락 명시', desc: '어떤 상황에서 쓰는 프롬프트인지 맥락을 명시했어요' },
+  { key: 'hasObjective', label: '목표 명시', desc: '프롬프트로 달성하려는 목표를 명시했어요' },
+  { key: 'hasNuance', label: '뉘앙스 명시', desc: '원하는 결과물의 뉘앙스를 명시했어요' },
+  { key: 'hasTone', label: '톤 명시', desc: '결과물의 어조·톤을 명시했어요' },
+  { key: 'hasExamples', label: '예시 포함', desc: '원하는 결과물의 예시를 포함했어요' },
+  { key: 'hasExecution', label: '실행 지침 포함', desc: 'AI가 따라야 할 구체적인 실행 지침을 포함했어요' },
+  { key: 'hasRoleAssignment', label: '역할 부여 포함', desc: 'AI에게 특정 역할을 부여했어요' },
+] as const satisfies { key: keyof Prompt; label: string; desc: string }[];
 
 /* ── Mock data ──────────────────────────────────────────────────────── */
 
@@ -217,7 +236,7 @@ function CircleBtn({
 
 /* ── DetailScreen ───────────────────────────────────────────────────── */
 
-function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
+function DetailScreen({ p, recommended }: { p: Prompt; recommended: Prompt[] }) {
   const router = useRouter();
   const { isLoggedIn, user, openLoginModal } = useAuthStore();
   const { items: wishItems, toggle } = useWishStore();
@@ -253,8 +272,8 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
     try {
       await createOrder([{ productId: String(p.id), productTitle: p.title }]);
       router.push('/mypage?tab=payments');
-    } catch {
-      showToast('주문 생성에 실패했어요. 다시 시도해주세요.');
+    } catch (err: unknown) {
+      showToast(apiErrorMessage(err, '주문 생성에 실패했어요. 다시 시도해주세요.'));
       setBuying(false);
     }
   };
@@ -269,9 +288,9 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
       .then((saved) => {
         if (saved) upsertItem(saved);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         removeItem(productId);
-        showToast('장바구니 담기에 실패했습니다.');
+        showToast(apiErrorMessage(err, '장바구니 담기에 실패했습니다.'));
       });
   };
 
@@ -290,8 +309,7 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
       }
     } catch (err: unknown) {
       toggle(item); // 실패 시 롤백
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      showToast(message ?? '찜 처리에 실패했어요. 다시 시도해주세요.');
+      showToast(apiErrorMessage(err, '찜 처리에 실패했어요. 다시 시도해주세요.'));
     }
   };
 
@@ -342,7 +360,37 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
           </div>
 
           <h3 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 12px' }}>프롬프트 소개</h3>
-          <p style={{ fontSize: 17, lineHeight: 1.7, color: 'var(--ph-text-secondary)', margin: 0, maxWidth: 620 }}>{p.desc}</p>
+          <p style={{ fontSize: 17, lineHeight: 1.7, color: 'var(--ph-text-secondary)', margin: 0, maxWidth: 620, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{p.desc}</p>
+
+          {p.checklistRecorded && (
+            <>
+              <div className="flex items-center gap-ph-8 mt-10 mb-4">
+                <h3 className="text-[20px] font-bold">AI 검수 체크리스트</h3>
+                <Badge tone="blue">
+                  {CHECKLIST_ITEMS.filter(({ key }) => p[key]).length}/{CHECKLIST_ITEMS.length} 항목 충족
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-x-ph-16 gap-y-ph-xs max-w-[420px]">
+                {CHECKLIST_ITEMS.map(({ key, label, desc }) => {
+                  const passed = Boolean(p[key]);
+                  return (
+                    <div
+                      key={key}
+                      title={desc}
+                      className={`flex items-center gap-ph-2xs text-ph-body-sm ${passed ? 'text-ph-text-secondary' : 'text-ph-text-muted'}`}
+                    >
+                      {passed ? (
+                        <CheckCircle2 className="w-4 h-4 shrink-0 text-ph-primary" />
+                      ) : (
+                        <Circle className="w-4 h-4 shrink-0 text-ph-text-muted" />
+                      )}
+                      {label}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           <h3 style={{ fontSize: 20, fontWeight: 700, margin: '40px 0 16px' }}>판매자</h3>
           <Card padding="20px" style={{ maxWidth: 420, display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -484,12 +532,12 @@ function DetailScreen({ p, related }: { p: Prompt; related: Prompt[] }) {
         </div>
       </div>
 
-      {/* Related prompts */}
-      {related.length > 0 && (
+      {/* Recommended products */}
+      {recommended.length > 0 && (
         <section style={{ marginTop: 72 }}>
-          <h2 style={{ fontSize: 27, fontWeight: 700, margin: '0 0 24px' }}>비슷한 프롬프트</h2>
+          <h2 style={{ fontSize: 27, fontWeight: 700, margin: '0 0 24px' }}>비슷한 상품</h2>
           <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
-            {related.map((r) => (
+            {recommended.map((r) => (
               <PromptCard key={r.id} p={r} detailBadge onOpen={(rp) => router.push(`/detail/${rp.id}`)} />
             ))}
           </div>
@@ -509,7 +557,7 @@ export default function DetailPage() {
   const router = useRouter();
   const id = params?.id;
   const [product, setProduct] = useState<Prompt | null>(null);
-  const [related, setRelated] = useState<Prompt[]>([]);
+  const [recommended, setRecommended] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -527,7 +575,7 @@ export default function DetailPage() {
           p.sellerProfileImageUrl = profile?.profileImageUrl ?? null;
         }
         setProduct(p);
-        setRelated(rResult.status === 'fulfilled' ? (rResult.value.data.data ?? []) : []);
+        setRecommended(rResult.status === 'fulfilled' ? (rResult.value.data.data ?? []) : []);
       })
       .finally(() => setLoading(false));
   }, [id]);
@@ -548,5 +596,5 @@ export default function DetailPage() {
     );
   }
 
-  return <DetailScreen p={product} related={related} />;
+  return <DetailScreen p={product} recommended={recommended} />;
 }

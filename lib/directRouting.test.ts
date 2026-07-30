@@ -74,7 +74,7 @@ test('isDirectRoutedUrl is true for configured paths, exact and nested', () => {
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_PATHS = '/api/v2/products,/api/v2/admin/products'
   mutableEnv.NEXT_PUBLIC_LOCAL_PROXY_TARGET = 'http://localhost:8082'
   assert.equal(isDirectRoutedUrl('/api/v2/products'), true)
-  assert.equal(isDirectRoutedUrl('/api/v2/products/123/related?limit=4'), true)
+  assert.equal(isDirectRoutedUrl('/api/v2/products/123/recommends?limit=4'), true)
   assert.equal(isDirectRoutedUrl('/api/v2/admin/products/123/approve'), true)
   resetEnv()
 })

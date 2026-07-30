@@ -38,6 +38,24 @@ export const PRODUCT_TYPE_DESC_PLACEHOLDER: Record<ProductType, string> = {
   EXCEL: '상품 목록에 표시되는 짧은 소개 문구를 입력하세요. 예: 매달 지출을 자동으로 정리해 주는 엑셀이에요.',
 };
 
+export const PRODUCT_TYPE_TAG_PLACEHOLDER: Record<ProductType, string> = {
+  PROMPT: '예: 카피라이팅, 마케팅, 이메일작성',
+  NOTION: '예: 온보딩, 업무관리, 회의록',
+  PPT: '예: IR, 피치덱, 사업계획서',
+  EXCEL: '예: 가계부, 지출관리, 재고관리',
+};
+
+// 태그는 검색과 추천 두 곳에서 실제로 쓰인다 — ES 검색 필드 가중치가 tags.text^2(상품명 3
+// 다음, 소개글 1.5보다 높음)이고, 추천용 임베딩 원문에도 태그가 들어간다.
+// 노션·PPT·엑셀은 본문(content)이 null로 색인돼 제목·태그·소개글이 검색 가능한 전부라,
+// 프롬프트보다 태그 비중이 크다는 점을 유형별로 다르게 안내한다.
+export const PRODUCT_TYPE_TAG_HINT: Record<ProductType, string> = {
+  PROMPT: '태그는 검색과 ‘비슷한 상품’ 추천에 쓰여요. 프롬프트의 주제·용도를 짧게 적고 Enter로 추가하세요.',
+  NOTION: '태그는 검색과 ‘비슷한 상품’ 추천에 쓰여요. 노션은 페이지 내용이 검색되지 않으니 주제·용도를 태그로 꼭 적어주세요.',
+  PPT: '태그는 검색과 ‘비슷한 상품’ 추천에 쓰여요. PPT는 파일 내용이 검색되지 않으니 주제·용도를 태그로 꼭 적어주세요.',
+  EXCEL: '태그는 검색과 ‘비슷한 상품’ 추천에 쓰여요. 엑셀은 파일 내용이 검색되지 않으니 주제·용도를 태그로 꼭 적어주세요.',
+};
+
 export const PRODUCT_TYPE_CHANGE_PLACEHOLDER: Record<ProductType, string> = {
   PROMPT: '예: 프롬프트 지시문 개선, 예시 3개 추가',
   NOTION: '예: 노션 페이지 구성 개선, 섹션 추가',

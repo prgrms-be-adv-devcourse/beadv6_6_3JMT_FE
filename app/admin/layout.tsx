@@ -23,6 +23,9 @@ import api from '@/lib/auth'
 import { API_BASE } from '@/lib/apiBase'
 import { ADMIN_SELLER_REGISTERS_CHANGED_EVENT } from '@/lib/adminSellerEvents'
 import { getPendingSellerRegisterCount } from '@/lib/adminSellers'
+import { getAdminProducts } from '@/lib/adminProducts'
+import { ADMIN_SETTLEMENT_DELIVERIES_CHANGED_EVENT } from '@/lib/adminSettlementDeliveryEvents'
+import { getAdminSettlementDeliverySummary } from '@/lib/settlementDeliveries'
 
 type BadgeKey = 'sellers' | 'products' | 'settlements'
 
@@ -41,20 +44,48 @@ const NAV: NavEntry[] = [
   { type: 'item', href: '/admin', label: '대시보드 홈', Icon: LayoutDashboard },
   { type: 'group', label: '운영 관리' },
   { type: 'item', href: '/admin/users', label: '사용자 관리', Icon: Users },
-  { type: 'item', href: '/admin/sellers', label: '판매자 신청 관리', Icon: Store, badgeKey: 'sellers' },
-  { type: 'item', href: '/admin/products', label: '상품 검수', Icon: ClipboardCheck, badgeKey: 'products' },
+  {
+    type: 'item',
+    href: '/admin/sellers',
+    label: '판매자 신청 관리',
+    Icon: Store,
+    badgeKey: 'sellers',
+  },
+  {
+    type: 'item',
+    href: '/admin/products',
+    label: '상품 검수',
+    Icon: ClipboardCheck,
+    badgeKey: 'products',
+  },
   { type: 'item', href: '/admin/orders', label: '주문 관리', Icon: ShoppingCart },
-  { type: 'item', href: '/admin/settlements', label: '정산 관리', Icon: Wallet, badgeKey: 'settlements' },
+  {
+    type: 'item',
+    href: '/admin/settlements',
+    label: '정산 관리',
+    Icon: Wallet,
+    badgeKey: 'settlements',
+  },
 ]
 
 // 원본 admin-app.js PAGES 메타 (title + subtitle)
 const PAGE_META: Record<string, { title: string; sub: string }> = {
   '/admin': { title: '대시보드 홈', sub: 'PromptHub 마켓플레이스 운영 현황을 한눈에 확인하세요.' },
   '/admin/users': { title: '사용자 관리', sub: '회원 계정을 조회하고 상태를 관리합니다.' },
-  '/admin/sellers': { title: '판매자 신청 관리', sub: '판매자 전환 신청을 검토하고 승인·반려합니다.' },
-  '/admin/products': { title: '상품 검수', sub: '등록된 프롬프트를 검수하고 게시 여부를 결정합니다.' },
+  '/admin/sellers': {
+    title: '판매자 신청 관리',
+    sub: '판매자 전환 신청을 검토하고 승인·반려합니다.',
+  },
+  '/admin/products': {
+    title: '상품 검수',
+    sub: '등록된 프롬프트를 검수하고 게시 여부를 결정합니다.',
+  },
   '/admin/orders': { title: '주문 관리', sub: '주문 내역을 조회하고 환불을 처리합니다.' },
   '/admin/settlements': { title: '정산 관리', sub: '판매 수익 정산을 승인하고 지급을 처리합니다.' },
+  '/admin/settlements/deliveries': {
+    title: '정산 전달 관리',
+    sub: '서비스 간 정산 전달과 대사 상태를 확인하고 실패 건을 재시도합니다.',
+  },
 }
 
 function isActive(href: string, pathname: string) {
@@ -65,16 +96,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const router = useRouter()
   const { user, token, logout } = useAuthStore()
-  const [badges, setBadges] = useState<Record<BadgeKey, number>>({ sellers: 0, products: 0, settlements: 0 })
+  const [badges, setBadges] = useState<Record<BadgeKey, number>>({
+    sellers: 0,
+    products: 0,
+    settlements: 0,
+  })
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // 사이드바 pending 건수 뱃지 집계
   useEffect(() => {
     if (!token || pathname === '/admin/login') return
     const load = async () => {
-      const [sellersResult, productsResult] = await Promise.allSettled([
+      const [sellersResult, productsResult, settlementsResult] = await Promise.allSettled([
         getPendingSellerRegisterCount(),
-        api.get(`${API_BASE}/admin/products`, { params: { status: 'review' } }),
+        // 개수만 필요하므로 size: 1로 받고 meta.total을 쓴다.
+        getAdminProducts({ status: 'pending_review', page: 0, size: 1 }),
+        getAdminSettlementDeliverySummary(),
       ])
 
       setBadges((prev) => {
@@ -85,21 +122,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
 
         if (productsResult.status === 'fulfilled') {
-          const products = productsResult.value.data.data ?? []
-          next.products = products.filter((product: { status: string }) => product.status === 'review').length
+          next.products = productsResult.value.meta.total
+        } else {
+          // allSettled가 실패를 삼켜 배지가 조용히 0이 된다. 이번 버그(status=review로
+          // 400)를 찾는 데 오래 걸린 이유라 흔적은 남긴다.
+          console.warn('검수 대기 상품 수 조회에 실패했습니다.', productsResult.reason)
+        }
+
+        if (settlementsResult.status === 'fulfilled') {
+          next.settlements =
+            settlementsResult.value.deliveryFailedCount + settlementsResult.value.mismatchCount
         }
 
         return next
       })
     }
 
-    const refreshSellerBadges = () => void load()
+    const refreshAdminBadges = () => void load()
 
     void load()
-    window.addEventListener(ADMIN_SELLER_REGISTERS_CHANGED_EVENT, refreshSellerBadges)
+    window.addEventListener(ADMIN_SELLER_REGISTERS_CHANGED_EVENT, refreshAdminBadges)
+    window.addEventListener(ADMIN_SETTLEMENT_DELIVERIES_CHANGED_EVENT, refreshAdminBadges)
 
     return () => {
-      window.removeEventListener(ADMIN_SELLER_REGISTERS_CHANGED_EVENT, refreshSellerBadges)
+      window.removeEventListener(ADMIN_SELLER_REGISTERS_CHANGED_EVENT, refreshAdminBadges)
+      window.removeEventListener(ADMIN_SETTLEMENT_DELIVERIES_CHANGED_EVENT, refreshAdminBadges)
     }
   }, [token, pathname])
 
@@ -146,7 +193,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="text-[18px] font-bold tracking-[-0.02em] text-ph-text">
                 Prompt<span className="text-ph-primary">Hub</span>
               </span>
-              <span className="text-[11.5px] font-semibold tracking-[0.04em] text-ph-text-muted">ADMIN CONSOLE</span>
+              <span className="text-[11.5px] font-semibold tracking-[0.04em] text-ph-text-muted">
+                ADMIN CONSOLE
+              </span>
             </span>
           </div>
           {/* 모바일 닫기 */}
@@ -240,7 +289,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <h1 className="m-0 truncate text-[19px] font-bold tracking-[-0.02em] text-ph-text sm:text-[22px]">
                 {meta.title}
               </h1>
-              {meta.sub && <p className="mt-[3px] hidden truncate text-[13.5px] text-ph-text-muted sm:block">{meta.sub}</p>}
+              {meta.sub && (
+                <p className="mt-[3px] hidden truncate text-[13.5px] text-ph-text-muted sm:block">
+                  {meta.sub}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-[8px]">
               <button

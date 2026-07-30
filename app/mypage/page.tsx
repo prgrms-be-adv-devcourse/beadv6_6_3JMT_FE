@@ -18,6 +18,7 @@ import { getOrders } from '@/lib/orders';
 import { composePurchasedPrompts, mapOrderToPrompt } from '@/lib/orderAdapters';
 import { groupOrders, markRefundRequested, type GroupedOrder } from '@/lib/orderGrouping';
 import { CheckoutStageError, normalizeCheckoutFailure } from '@/lib/checkoutContracts';
+import { apiErrorMessage } from '@/lib/utils';
 import { OrderListItem } from '@/types/api/orders';
 import EmailChangeModal from '@/components/modals/EmailChangeModal';
 import Image from 'next/image';
@@ -261,20 +262,20 @@ function MyPageContent() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [loadingPurchased, setLoadingPurchased] = useState(true);
   const [loadingWishlist, setLoadingWishlist] = useState(true);
-  const [wishlistLoadError, setWishlistLoadError] = useState(false);
+  const [wishlistLoadError, setWishlistLoadError] = useState<string | null>(null);
   const [loadingPayments, setLoadingPayments] = useState(true);
-  const [orderLoadError, setOrderLoadError] = useState(false);
-  const [userLoadError, setUserLoadError] = useState(false);
+  const [orderLoadError, setOrderLoadError] = useState<string | null>(null);
+  const [userLoadError, setUserLoadError] = useState<string | null>(null);
 
   const fetchUser = useCallback(async () => {
-    setUserLoadError(false);
+    setUserLoadError(null);
     try {
       const res = await api.get(`${API_BASE}/users/me`);
       const u: UserInfo = { provider: authUser?.provider ?? 'local', ...res.data.data };
       setUser(u);
       setNick(u.name);
-    } catch {
-      setUserLoadError(true);
+    } catch (err: unknown) {
+      setUserLoadError(apiErrorMessage(err, '정보를 불러오지 못했어요. 다시 시도해 주세요.'));
     }
   }, []);
 
@@ -298,8 +299,7 @@ function MyPageContent() {
       showToast('회원 탈퇴가 완료됐어요.');
       router.push('/');
     } catch (ex: unknown) {
-      const msg = (ex as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      showToast(msg ?? '탈퇴 처리 중 오류가 발생했어요. 다시 시도해 주세요.');
+      showToast(apiErrorMessage(ex, '탈퇴 처리 중 오류가 발생했어요. 다시 시도해 주세요.'));
       setWithdrawing(false);
       setWithdrawModal(false);
     }
@@ -308,7 +308,7 @@ function MyPageContent() {
   const fetchOrders = useCallback(async () => {
     setLoadingPurchased(true);
     setLoadingPayments(true);
-    setOrderLoadError(false);
+    setOrderLoadError(null);
 
     try {
       const orders = await getOrders();
@@ -331,10 +331,10 @@ function MyPageContent() {
       }
 
       setPurchased(composePurchasedPrompts(prompts, products, sellerNames));
-    } catch {
+    } catch (err: unknown) {
       setOrderItems([]);
       setPurchased([]);
-      setOrderLoadError(true);
+      setOrderLoadError(apiErrorMessage(err, '주문 내역을 불러오지 못했어요. 다시 시도해 주세요.'));
     } finally {
       setLoadingPurchased(false);
       setLoadingPayments(false);
@@ -346,7 +346,7 @@ function MyPageContent() {
     if (!isLoggedIn) { openLoginModal(); return; }
     fetchUser();
     fetchOrders();
-    setWishlistLoadError(false);
+    setWishlistLoadError(null);
     getWishlists()
       .then(async (items) => {
         const products = await getProductsByIds(items.map((item) => item.productId));
@@ -360,8 +360,8 @@ function MyPageContent() {
 
         setWishlist(composeWishlistCards(items, products, sellerNames));
       })
-      .catch(() => {
-        setWishlistLoadError(true);
+      .catch((err: unknown) => {
+        setWishlistLoadError(apiErrorMessage(err, '찜한 프롬프트를 불러오지 못했어요.'));
       })
       .finally(() => setLoadingWishlist(false));
   }, [isLoggedIn, _hasHydrated, openLoginModal, fetchUser, fetchOrders]);
@@ -398,14 +398,10 @@ function MyPageContent() {
     }
   };
   const updateEmail = async (e: string) => {
-    try {
-      const updated = await updateUserMe({ email: e });
-      setUser((u) => u ? { ...u, email: updated.email ?? u.email } : u);
-      if (authToken && authUser) authLogin({ ...authUser, ...updated }, authToken);
-      showToast('이메일이 변경됐어요');
-    } catch {
-      setUser((u) => u ? { ...u, email: e } : u);
-    }
+    const updated = await updateUserMe({ email: e });
+    setUser((u) => u ? { ...u, email: updated.email ?? u.email } : u);
+    if (authToken && authUser) authLogin({ ...authUser, ...updated }, authToken);
+    showToast('이메일이 변경됐어요');
   };
   const handleRefund = async () => {
     if (!refundTarget || refundingOrderId) return;
@@ -427,14 +423,14 @@ function MyPageContent() {
         return next;
       });
     } catch (ex: unknown) {
-      const response = (ex as { response?: { status?: number } })?.response;
-      const messages: Record<number, string> = {
+      const status = (ex as { response?: { status?: number } })?.response?.status;
+      const statusFallback: Record<number, string> = {
         400: '환불할 상품을 다시 확인해 주세요.',
         403: '본인이 구매한 상품만 환불할 수 있어요.',
         404: '주문 상품을 찾을 수 없어요.',
         409: '이미 다운로드했거나 환불할 수 없는 상품이에요.',
       };
-      showToast(messages[response?.status ?? 0] ?? '환불 신청에 실패했어요. 다시 시도해주세요');
+      showToast(apiErrorMessage(ex, statusFallback[status ?? 0] ?? '환불 신청에 실패했어요. 다시 시도해주세요'));
     } finally {
       setRefundingOrderId(null);
       setRefundTarget(null);
@@ -525,7 +521,7 @@ function MyPageContent() {
           {userLoadError ? (
             <div style={{ padding: '60px 0', textAlign: 'center' }}>
               <p style={{ fontSize: 15, color: 'var(--ph-text-secondary)', marginBottom: 20 }}>
-                정보를 불러오지 못했어요. 다시 시도해 주세요.
+                {userLoadError}
               </p>
               <Button variant="secondary" size="md" onClick={fetchUser}>다시 시도</Button>
             </div>
@@ -653,7 +649,7 @@ function MyPageContent() {
               ) : orderLoadError ? (
                 <EmptyState
                   icon={AlertTriangle}
-                  text="구매 내역을 불러오지 못했어요. 다시 시도해 주세요."
+                  text={orderLoadError ?? ''}
                   cta="다시 시도"
                   onCta={fetchOrders}
                 />
@@ -719,7 +715,7 @@ function MyPageContent() {
               ) : wishlistLoadError ? (
                 <EmptyState
                   icon={Heart}
-                  text="찜한 프롬프트를 불러오지 못했어요."
+                  text={wishlistLoadError ?? ''}
                   cta="다시 시도"
                   onCta={() => window.location.reload()}
                 />
@@ -749,7 +745,7 @@ function MyPageContent() {
               ) : orderLoadError ? (
                 <EmptyState
                   icon={AlertTriangle}
-                  text="주문 내역을 불러오지 못했어요. 다시 시도해 주세요."
+                  text={orderLoadError ?? ''}
                   cta="다시 시도"
                   onCta={fetchOrders}
                 />
@@ -819,19 +815,9 @@ function MyPageContent() {
                       <Check style={{ width: 12, height: 12 }} />인증됨
                     </span>
                   </div>
-                  {user.provider !== 'local' ? (
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
-                      padding: '3px 10px', borderRadius: 'var(--ph-radius-full)',
-                      background: 'var(--ph-secondary)', color: 'var(--ph-primary)', fontSize: 12, fontWeight: 600,
-                    }}>
-                      소셜 계정
-                    </span>
-                  ) : (
-                    <Button variant="secondary" onClick={() => setEmailModal(true)} style={{ whiteSpace: 'nowrap' }}>
-                      이메일 변경
-                    </Button>
-                  )}
+                  <Button variant="secondary" onClick={() => setEmailModal(true)} style={{ whiteSpace: 'nowrap' }}>
+                    이메일 변경
+                  </Button>
                 </Row>
               </Card>
 
@@ -889,7 +875,7 @@ function MyPageContent() {
         <EmailChangeModal
           currentEmail={user.email}
           onClose={() => setEmailModal(false)}
-          onVerified={(newEmail) => { updateEmail(newEmail); setEmailModal(false); }}
+          onSubmit={updateEmail}
         />
       )}
 

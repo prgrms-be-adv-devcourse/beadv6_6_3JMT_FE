@@ -24,6 +24,7 @@ interface AdminProduct {
   content?: string
   status?: string
   createdAt: string
+  rejectionReason?: string | null
 }
 
 // 상품 status → StatusBadge 키 매핑
@@ -78,6 +79,12 @@ export default function AdminProductsPage() {
   const [page, setPage] = useState(0)
   const [total, setTotal] = useState(0)
   const [hasNext, setHasNext] = useState(false)
+  const [counts, setCounts] = useState<Record<FilterId, number>>({
+    review: 0,
+    active: 0,
+    rejected: 0,
+    all: 0,
+  })
 
   // 검색어 300ms debounce — 확정 시 첫 페이지부터 다시 조회
   useEffect(() => {
@@ -92,6 +99,23 @@ export default function AdminProductsPage() {
     fetchProducts(page)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, page, filter, keyword])
+
+  useEffect(() => {
+    fetchCounts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token])
+
+  // 탭별 건수 — size:1로 목록 없이 meta.total만 취득
+  async function fetchCounts() {
+    if (!token) return
+    const ids: FilterId[] = ['review', 'active', 'rejected', 'all']
+    const results = await Promise.all(
+      ids.map((id) => getAdminProducts({ status: STATUS_PARAM[id], page: 0, size: 1 })),
+    )
+    setCounts(
+      Object.fromEntries(ids.map((id, i) => [id, results[i].meta.total])) as Record<FilterId, number>,
+    )
+  }
 
   async function fetchProducts(nextPage: number) {
     if (!token) return
@@ -116,6 +140,7 @@ export default function AdminProductsPage() {
           amount: p.amount,
           status: toLocalStatus(p.status),
           createdAt: p.createdAt,
+          rejectionReason: p.rejectionReason ?? null,
         })),
       )
     } finally {
@@ -146,7 +171,7 @@ export default function AdminProductsPage() {
     setActing(true)
     try {
       await revertAdminProduct(sel.id)
-      await fetchProducts(page)
+      await Promise.all([fetchProducts(page), fetchCounts()])
     } finally {
       setActing(false)
     }
@@ -196,11 +221,9 @@ export default function AdminProductsPage() {
                   }`}
                 >
                   {t.label}
-                  {on && (
-                    <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-ph-full bg-ph-secondary px-[5px] text-[11px] font-bold text-ph-primary">
-                      {total}
-                    </span>
-                  )}
+                  <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-ph-full bg-ph-secondary px-[5px] text-[11px] font-bold text-ph-primary">
+                    {counts[t.id]}
+                  </span>
                 </button>
               )
             })}
@@ -327,7 +350,7 @@ export default function AdminProductsPage() {
 
             {/* description */}
             <Field label="상품 설명">
-              <p className="m-0 text-[14.5px] leading-[1.65] text-ph-text-secondary">
+              <p className="m-0 whitespace-pre-wrap break-words text-[14.5px] leading-[1.65] text-ph-text-secondary">
                 {sel.desc ?? '등록된 설명이 없습니다.'}
               </p>
             </Field>
@@ -352,16 +375,15 @@ export default function AdminProductsPage() {
           {(sel.status ?? 'active') !== 'review' && (
             <div className="rounded-b-ph-lg border-t border-ph-border bg-ph-gray-50 px-[26px] py-[16px]">
               <div className="flex items-center gap-[10px]">
-                <span className="flex flex-1 items-center gap-[8px] text-[13.5px] text-ph-text-secondary">
-                  <StatusBadge
-                    status={STATUS_KEY[sel.status ?? 'active'] ?? sel.status ?? 'active'}
-                  />{' '}
-                  처리된 상품입니다.
-                </span>
+                {sel.status === 'rejected' && sel.rejectionReason && (
+                  <span className="flex-1 text-[13.5px] font-medium text-ph-error">
+                    {sel.rejectionReason}
+                  </span>
+                )}
                 <button
                   onClick={revert}
                   disabled={acting}
-                  className="inline-flex h-[40px] items-center gap-[6px] rounded-ph-md border border-ph-border bg-ph-white px-[16px] text-[14px] font-semibold text-ph-text-secondary transition-colors hover:bg-ph-gray-50 disabled:opacity-50"
+                  className="ml-auto inline-flex h-[40px] items-center gap-[6px] rounded-ph-md border border-ph-border bg-ph-white px-[16px] text-[14px] font-semibold text-ph-text-secondary transition-colors hover:bg-ph-gray-50 disabled:opacity-50"
                 >
                   <RotateCcw size={15} /> 검수 대기로 되돌리기
                 </button>

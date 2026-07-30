@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishStore } from '@/store/useWishStore';
@@ -10,15 +10,21 @@ import { useToast } from '@/store/useToastStore';
 import Logo from '@/components/ui/Logo';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
-import { won } from '@/lib/utils';
+import { apiErrorMessage, won } from '@/lib/utils';
 import { getCartItems, removeCartItem as deleteCartItem } from '@/lib/cart';
 import { createOrder } from '@/lib/orders';
 import {
   getNotifications,
-  markNotificationAsRead,
+  getUnreadNotificationCount,
   markAllNotificationsAsRead,
+  markNotificationAsRead,
 } from '@/lib/notifications';
 import { streamNotifications } from '@/lib/notificationSse';
+import {
+  initialNotificationState,
+  notificationStateReducer,
+} from '@/lib/notificationState';
+import { getProductSuggestions } from '@/lib/products';
 import type { NotificationItem } from '@/types/api/notifications';
 import {
   getRecentSearches,
@@ -72,9 +78,13 @@ function relativeTime(iso: string): string {
   return `${days}일 전`;
 }
 
-/* ── 타입: 알림 ───────────────────────────────────────── */
-
-type Notif = { id: string; icon: string; text: string; timestamp: string; read: boolean };
+async function loadNotificationSnapshot() {
+  const [items, unreadCount] = await Promise.all([
+    getNotifications(),
+    getUnreadNotificationCount(),
+  ]);
+  return { items, unreadCount };
+}
 
 /* ── 라우트 맵 ─────────────────────────────────────────── */
 
@@ -87,7 +97,11 @@ const PAGE_ROUTES: Record<string, string> = {
 
 /* ── SearchBar ─────────────────────────────────────────── */
 
-/** 최근 검색어에서 입력한 문자열이 나타나는 부분을 강조한다. 포함 매칭이라 앞부분에 한정하지 않는다. */
+const SUGGEST_DEBOUNCE_MS = 200;
+// 자모 1글자(예: "ㅂ")는 아직 조합 중인 애매한 상태라 조회해도 의미가 없다.
+const SUGGEST_MIN_LENGTH = 2;
+
+/** 입력한 문자열이 나타나는 부분을 강조한다. BE가 중간 단어도 매칭하므로 앞부분에 한정하지 않는다. */
 function highlightMatch(text: string, keyword: string) {
   const at = text.toLowerCase().indexOf(keyword.toLowerCase());
   if (!keyword || at < 0) return text;
@@ -116,10 +130,19 @@ function SearchBar({
 }) {
   const pathname = usePathname();
   const [focus, setFocus] = React.useState(false);
+  const [suggestions, setSuggestions] = React.useState<string[]>([]);
   const [recent, setRecent] = React.useState<string[]>([]);
   const [open, setOpen] = React.useState(false);
   const [active, setActive] = React.useState(-1);
+  // 사용자가 제안을 고르거나 Esc로 닫은 뒤, 같은 입력값으로 드롭다운이 다시 열리지 않게 한다.
+  const suppressed = React.useRef('');
   const boxRef = React.useRef<HTMLDivElement>(null);
+  // 조회 effect는 keyword에만 반응해야 한다(포커스나 최근 목록이 바뀔 때마다 재조회하면 안 됨).
+  // 그래서 effect 안에서 필요한 최신 값은 ref로 읽는다.
+  const focusRef = React.useRef(false);
+  focusRef.current = focus;
+  const recentCountRef = React.useRef(0);
+  const recentMatchCountRef = React.useRef(0);
 
   const hero = size === 'hero';
   const pad = hero ? '0 8px 0 22px' : '0 6px 0 16px';
@@ -127,14 +150,68 @@ function SearchBar({
 
   const keyword = value.trim();
 
-  // 입력 중이면 입력값을 포함하는 최근 검색어만 남긴다.
-  const items = React.useMemo(() => {
+  // 최근 검색어와 상품명 제안을 한 목록에 함께 보여준다. 입력 중에는 입력값을 포함하는
+  // 최근 검색어만 남기고, 제안과 겹치는 것은 최근 쪽으로 합친다(중복 노출 방지).
+  const recentMatches = React.useMemo(() => {
     const lower = keyword.toLowerCase();
     return keyword ? recent.filter((v) => v.toLowerCase().includes(lower)) : recent;
   }, [recent, keyword]);
 
+  const items = React.useMemo<Array<{ value: string; kind: 'recent' | 'suggestion' }>>(() => {
+    const rows: Array<{ value: string; kind: 'recent' | 'suggestion' }> =
+      recentMatches.map((value) => ({ value, kind: 'recent' }));
+    const seen = new Set(recentMatches);
+    for (const value of suggestions) {
+      if (!seen.has(value)) rows.push({ value, kind: 'suggestion' });
+    }
+    return rows;
+  }, [recentMatches, suggestions]);
+
+  recentCountRef.current = recent.length;
+  recentMatchCountRef.current = recentMatches.length;
+
   // localStorage는 서버 렌더링 시 없으므로 마운트 후에 읽는다.
   React.useEffect(() => setRecent(getRecentSearches()), []);
+
+  React.useEffect(() => {
+    if (!keyword) {
+      setSuggestions([]);
+      // 입력을 지워서 비웠을 때 그냥 닫아버리면 최근 검색어를 보려고 다시 클릭해야 한다.
+      // 포커스가 남아 있으면 최근 검색어로 이어서 연다.
+      setOpen(focusRef.current && recentCountRef.current > 0);
+      setActive(-1);
+      return;
+    }
+
+    if (keyword.length < SUGGEST_MIN_LENGTH) {
+      setSuggestions([]);
+      setOpen(focusRef.current && recentMatchCountRef.current > 0);
+      setActive(-1);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      const result = await getProductSuggestions(keyword, controller.signal);
+      if (controller.signal.aborted) return;
+      setSuggestions(result);
+      setActive(-1);
+      // suppressed는 "자동으로 열지 않는다"까지만이다. 조회는 항상 한다 —
+      // 검색 직후 입력칸에 그 검색어가 남아 있는데 조회까지 막으면, 다시 눌렀을 때
+      // 최근 검색어만 뜨고 제안이 영영 안 나온다.
+      if (keyword !== suppressed.current) {
+        // 제안이 0건이어도 일치하는 최근 검색어가 있으면 열어둔다.
+        setOpen(result.length > 0 || recentMatchCountRef.current > 0);
+      }
+    }, SUGGEST_DEBOUNCE_MS);
+
+    // 입력이 바뀌면 대기 중인 타이머와 진행 중인 요청을 모두 버린다.
+    // 이렇게 하지 않으면 느린 이전 요청이 나중에 도착해 최신 제안을 덮어쓴다.
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [keyword]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -147,23 +224,35 @@ function SearchBar({
 
   // Header는 레이아웃 컴포넌트라 페이지를 옮겨도 언마운트되지 않는다. 닫아주지 않으면
   // 검색 후 이동한 화면에도 드롭다운이 그대로 떠 있는다.
+  //
+  // 닫기만 하고 suggestions는 비우지 않는다. 조회 effect는 keyword에만 반응하는데
+  // 이동해도 검색어는 그대로라 다시 조회되지 않는다. 여기서 비우면 사용자가 검색창을
+  // 다시 눌렀을 때 최근 검색어만 뜨고 제안이 사라진다.
   React.useEffect(() => {
     setOpen(false);
     setActive(-1);
   }, [pathname]);
 
-  const choose = (picked: string) => {
-    setRecent(addRecentSearch(picked));
+  const choose = (picked: { value: string; kind: 'recent' | 'suggestion' }) => {
+    suppressed.current = picked.value;
+    // 최근 검색어에는 "사용자가 친 말"만 남긴다. 제안은 상품명이라 그대로 저장하면
+    // 다음 입력에서 최근 검색어와 제안이 같은 값이 되어 제안 구역이 통째로 비어 보인다.
+    if (picked.kind === 'recent') setRecent(addRecentSearch(picked.value));
     setOpen(false);
     setActive(-1);
-    onChange(picked);
-    onSubmit && onSubmit(picked);
+    onChange(picked.value);
+    onSubmit && onSubmit(picked.value);
   };
 
   const dropRecent = (target: string) => setRecent(removeRecentSearch(target));
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // 조합 중 Enter는 글자를 확정하는 동작이고, 방향키는 IME 후보를 고르는 동작이다.
+    // 여기서 가로채면 "회"를 확정하려는 Enter가 검색으로 나가버린다.
+    if (e.nativeEvent.isComposing) return;
+
     if (e.key === 'Escape') {
+      suppressed.current = keyword;
       setOpen(false);
       setActive(-1);
       return;
@@ -189,6 +278,12 @@ function SearchBar({
     }
   };
 
+  // 조합이 끝나는 순간 브라우저가 최종 완성 글자로 input 이벤트를 안 주는 경우가 있어
+  // 여기서 한 번 더 맞춰준다.
+  const onCompositionEnd = (e: React.CompositionEvent<HTMLInputElement>) => {
+    onChange(e.currentTarget.value);
+  };
+
   const listboxId = React.useId();
 
   return (
@@ -211,7 +306,8 @@ function SearchBar({
         <Search style={{ width: hero ? 22 : 18, height: hero ? 22 : 18, color: 'var(--ph-text-muted)', flexShrink: 0 }} />
         <input
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => { suppressed.current = ''; onChange(e.target.value); }}
+          onCompositionEnd={onCompositionEnd}
           onFocus={() => { setFocus(true); if (items.length > 0) setOpen(true); }}
           onBlur={() => setFocus(false)}
           onKeyDown={onKeyDown}
@@ -246,68 +342,88 @@ function SearchBar({
             borderRadius: 'var(--ph-radius-lg)',
           }}
         >
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '4px 12px 8px',
-            fontFamily: 'var(--ph-font-family)', fontSize: 13, color: 'var(--ph-text-muted)',
-          }}>
-            <span>최근 검색어</span>
-            <button
-              type="button"
-              onClick={() => setRecent(clearRecentSearches())}
-              style={{
-                border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-                fontFamily: 'var(--ph-font-family)', fontSize: 13, color: 'var(--ph-text-muted)',
-              }}
-            >전체 삭제</button>
-          </div>
-
           <ul id={listboxId} role="listbox" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-            {items.map((item, i) => (
-              <li
-                key={item}
-                id={`${listboxId}-${i}`}
-                role="option"
-                aria-selected={i === active}
-                onMouseEnter={() => setActive(i)}
-                style={{
-                  display: 'flex', alignItems: 'center',
-                  borderRadius: 'var(--ph-radius-sm)',
-                  background: i === active ? 'var(--ph-bg-soft, #f5f5f5)' : 'transparent',
-                }}
-              >
-                <Clock style={{
-                  width: 15, height: 15, flexShrink: 0, marginLeft: 12,
-                  color: 'var(--ph-text-muted)',
-                }} />
-                <button
-                  type="button"
-                  onClick={() => choose(item)}
-                  style={{
-                    flex: 1, minWidth: 0, textAlign: 'left', cursor: 'pointer',
-                    border: 'none', background: 'none',
-                    fontFamily: 'var(--ph-font-family)', fontSize: 15, color: 'var(--ph-text)',
-                    padding: '10px 12px 10px 8px',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}
-                >
-                  {highlightMatch(item, keyword)}
-                </button>
+            {items.map((item, i) => {
+              const isRecent = item.kind === 'recent';
+              // 각 구역의 첫 항목 위에만 제목을 단다.
+              const startsSection = i === 0 || items[i - 1].kind !== item.kind;
 
-                <button
-                  type="button"
-                  aria-label={`${item} 삭제`}
-                  onClick={() => dropRecent(item)}
-                  style={{
-                    flexShrink: 0, border: 'none', background: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', padding: '10px 12px',
-                    color: 'var(--ph-text-muted)',
-                  }}
-                >
-                  <X style={{ width: 15, height: 15 }} />
-                </button>
-              </li>
-            ))}
+              return (
+                <React.Fragment key={`${item.kind}:${item.value}`}>
+                  {startsSection && (
+                    <li
+                      aria-hidden
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: i === 0 ? '4px 12px 8px' : '12px 12px 8px',
+                        fontFamily: 'var(--ph-font-family)', fontSize: 13,
+                        color: 'var(--ph-text-muted)',
+                      }}
+                    >
+                      <span>{isRecent ? '최근 검색어' : '상품 제안'}</span>
+                      {isRecent && (
+                        <button
+                          type="button"
+                          onClick={() => setRecent(clearRecentSearches())}
+                          style={{
+                            border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+                            fontFamily: 'var(--ph-font-family)', fontSize: 13,
+                            color: 'var(--ph-text-muted)',
+                          }}
+                        >전체 삭제</button>
+                      )}
+                    </li>
+                  )}
+
+                  <li
+                    id={`${listboxId}-${i}`}
+                    role="option"
+                    aria-selected={i === active}
+                    onMouseEnter={() => setActive(i)}
+                    style={{
+                      display: 'flex', alignItems: 'center',
+                      borderRadius: 'var(--ph-radius-sm)',
+                      background: i === active ? 'var(--ph-bg-soft, #f5f5f5)' : 'transparent',
+                    }}
+                  >
+                    {isRecent && (
+                      <Clock style={{
+                        width: 15, height: 15, flexShrink: 0, marginLeft: 12,
+                        color: 'var(--ph-text-muted)',
+                      }} />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => choose(item)}
+                      style={{
+                        flex: 1, minWidth: 0, textAlign: 'left', cursor: 'pointer',
+                        border: 'none', background: 'none',
+                        fontFamily: 'var(--ph-font-family)', fontSize: 15, color: 'var(--ph-text)',
+                        padding: isRecent ? '10px 12px 10px 8px' : '10px 12px',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {highlightMatch(item.value, keyword)}
+                    </button>
+
+                    {isRecent && (
+                      <button
+                        type="button"
+                        aria-label={`${item.value} 삭제`}
+                        onClick={() => dropRecent(item.value)}
+                        style={{
+                          flexShrink: 0, border: 'none', background: 'none', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', padding: '10px 12px',
+                          color: 'var(--ph-text-muted)',
+                        }}
+                      >
+                        <X style={{ width: 15, height: 15 }} />
+                      </button>
+                    )}
+                  </li>
+                </React.Fragment>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -438,6 +554,7 @@ function Avatar({ name, size = 34, imageUrl }: { name: string; size?: number; im
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const { user, token, logout, openLoginModal } = useAuthStore();
   const { items: cart, setItems: setCartItems, removeItem: removeCartItem, clearCart } = useCartStore();
@@ -445,58 +562,96 @@ export default function Header() {
   const showToast = useToast();
   const [query, setQuery] = React.useState('');
   const [menu, setMenu] = React.useState<string | null>(null);
-  const [notifList, setNotifList] = React.useState<NotificationItem[]>([]);
+  const [notificationState, dispatchNotification] = React.useReducer(
+    notificationStateReducer,
+    initialNotificationState,
+  );
+  const notifList = notificationState.items;
+  const unreadCount = notificationState.unreadCount;
+  const userId = user?.id;
   const [ordering, setOrdering] = React.useState(false);
 
+  // Header는 레이아웃이라 페이지를 옮겨도 언마운트되지 않는다. 검색창 값을 URL과
+  // 별개인 상태로 두면 다른 페이지로 이동해도 입력값이 그대로 남는다 — 여기서
+  // /browse의 q를 그대로 반영하고, 그 외 페이지에서는 비운다.
   React.useEffect(() => {
-    if (!user) {
-      Promise.resolve().then(() => setNotifList([]));
-      return;
+    setQuery(pathname === '/browse' ? (searchParams.get('q') ?? '') : '');
+  }, [pathname, searchParams]);
+
+  React.useEffect(() => {
+    let active = true;
+
+    if (!userId) {
+      Promise.resolve().then(() => {
+        if (active) dispatchNotification({ type: 'reset' });
+      });
+      return () => {
+        active = false;
+      };
     }
-    getNotifications()
-      .then((res) => setNotifList(res.data ?? []))
-      .catch(() => {});
+
+    loadNotificationSnapshot()
+      .then((snapshot) => {
+        if (active) dispatchNotification({ type: 'hydrate', ...snapshot });
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          showToast(apiErrorMessage(error, '알림을 불러오지 못했어요. 잠시 후 다시 시도해주세요.'));
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [showToast, userId]);
+
+  React.useEffect(() => {
+    if (!userId || !token) return;
 
     const controller = new AbortController();
-    let lastEventId: string | undefined;
+    const replaceNotificationItems = () => {
+      void getNotifications()
+        .then((items) => {
+          if (!controller.signal.aborted) {
+            dispatchNotification({ type: 'replace-items', items });
+          }
+        })
+        .catch(() => {
+          // 일시적인 동기화 실패는 다음 SSE 이벤트나 재연결 시 다시 시도합니다.
+        });
+    };
+    const replaceNotificationSnapshot = () => {
+      void loadNotificationSnapshot()
+        .then((snapshot) => {
+          if (!controller.signal.aborted) {
+            dispatchNotification({ type: 'hydrate', ...snapshot });
+          }
+        })
+        .catch(() => {
+          // SSE 재동기화 실패는 연결 재시도 중 반복 안내하지 않습니다.
+        });
+    };
 
-    streamNotifications({
-      token: token ?? undefined,
-      userId: user.id,
-      lastEventId,
+    void streamNotifications({
+      token,
       signal: controller.signal,
       onEvent: (event) => {
         if (event.type === 'notification') {
-          lastEventId = event.id;
-          const newItem: NotificationItem = {
-            notificationId: event.data.notificationId,
-            type: event.data.type,
-            category: 'SYSTEM',
-            title: event.data.title,
-            content: event.data.content,
-            linkUrl: null,
-            reference: { type: null, id: null },
-            read: false,
-            readAt: null,
-            occurredAt: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-          };
-          setNotifList((prev) => [newItem, ...prev.filter((n) => n.notificationId !== newItem.notificationId)]);
-          showToast(`🔔 ${event.data.title}`);
-        } else if (event.type === 'sync-required') {
-          getNotifications()
-            .then((res) => setNotifList(res.data ?? []))
-            .catch(() => {});
+          dispatchNotification({
+            type: 'set-unread-count',
+            unreadCount: event.data.unreadCount,
+          });
+          replaceNotificationItems();
+          return;
         }
+        replaceNotificationSnapshot();
       },
     }).catch(() => {
-      // SSE disconnection / abort is handled silently
+      // 인증 오류나 비재시도 응답은 token 변경 또는 다음 로그인에서 새로 연결합니다.
     });
 
-    return () => {
-      controller.abort();
-    };
-  }, [user, token, showToast]);
+    return () => controller.abort();
+  }, [token, userId]);
 
   React.useEffect(() => {
     if (!user) {
@@ -508,28 +663,60 @@ export default function Header() {
       .catch(() => {});
   }, [setCartItems, user]);
 
-  const unreadCount = notifList.filter((n) => !n.read).length;
-
-  const onNotifRead = async (id: string, linkUrl?: string | null) => {
-    setNotifList((prev) => prev.map((n) => n.notificationId === id ? { ...n, read: true, readAt: new Date().toISOString() } : n));
+  const restoreNotificationsAfterFailure = async (
+    previousState: typeof notificationState,
+  ) => {
+    dispatchNotification({
+      type: 'hydrate',
+      items: previousState.items,
+      unreadCount: previousState.unreadCount,
+    });
     try {
-      await markNotificationAsRead(id);
+      const snapshot = await loadNotificationSnapshot();
+      dispatchNotification({ type: 'hydrate', ...snapshot });
     } catch {
-      // 로컬 상태는 이미 업데이트됨, 실패해도 무시
-    }
-    if (linkUrl) {
-      close();
-      router.push(linkUrl);
+      // 즉시 복원한 상태를 유지하고 다음 조회나 SSE 동기화를 기다립니다.
     }
   };
 
-  const onReadAllNotifs = async () => {
-    const now = new Date().toISOString();
-    setNotifList((prev) => prev.map((n) => ({ ...n, read: true, readAt: now })));
+  const onNotifRead = async (notification: NotificationItem) => {
+    close();
+
+    if (!notification.read) {
+      const previousState = notificationState;
+      dispatchNotification({
+        type: 'read-one',
+        notificationId: notification.notificationId,
+        readAt: new Date().toISOString(),
+      });
+
+      try {
+        await markNotificationAsRead(notification.notificationId);
+      } catch (error: unknown) {
+        await restoreNotificationsAfterFailure(previousState);
+        showToast(apiErrorMessage(error, '알림 읽음 처리에 실패했어요.'));
+      }
+    }
+
+    if (notification.linkUrl) {
+      router.push(notification.linkUrl);
+    }
+  };
+
+  const onReadAllNotifications = async () => {
+    if (unreadCount === 0) return;
+
+    const previousState = notificationState;
+    dispatchNotification({
+      type: 'read-all',
+      readAt: new Date().toISOString(),
+    });
+
     try {
       await markAllNotificationsAsRead();
-    } catch {
-      // ignore
+    } catch (error: unknown) {
+      await restoreNotificationsAfterFailure(previousState);
+      showToast(apiErrorMessage(error, '알림 전체 읽음 처리에 실패했어요.'));
     }
   };
 
@@ -560,8 +747,8 @@ export default function Header() {
       await createOrder(cart.map((it) => ({ productId: it.productId, productTitle: it.title })));
       clearCart();
       router.push('/mypage?tab=payments');
-    } catch {
-      showToast('주문 생성에 실패했어요. 다시 시도해주세요.');
+    } catch (err: unknown) {
+      showToast(apiErrorMessage(err, '주문 생성에 실패했어요. 다시 시도해주세요.'));
     } finally {
       setOrdering(false);
     }
@@ -584,13 +771,26 @@ export default function Header() {
         onClick={() => toggle('notif')}
       />
       {menu === 'notif' && (
-        <Pop onClose={close} width={320}>
-          <div style={{ padding: '8px 12px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: 700, fontSize: 14 }}>알림</span>
+        <Pop onClose={close} width={300}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px 10px' }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>
+              알림
+              {unreadCount > 0 && (
+                <span style={{ color: 'var(--ph-primary)', marginLeft: 5 }}>{unreadCount}</span>
+              )}
+            </div>
             {unreadCount > 0 && (
               <button
-                onClick={onReadAllNotifs}
-                style={{ background: 'none', border: 'none', color: 'var(--ph-primary)', fontSize: 12, cursor: 'pointer' }}
+                onClick={() => void onReadAllNotifications()}
+                style={{
+                  border: 'none',
+                  background: 'none',
+                  color: 'var(--ph-primary)',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: 0,
+                }}
               >
                 모두 읽음
               </button>
@@ -598,29 +798,38 @@ export default function Header() {
           </div>
           {notifList.length === 0 ? (
             <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 13, color: 'var(--ph-text-muted)' }}>
-              새 알림이 없어요
+              알림이 없어요
             </div>
           ) : (
-            notifList.map((n) => (
-              <button
-                key={n.notificationId}
-                onClick={() => onNotifRead(n.notificationId, n.linkUrl)}
-                style={{
-                  display: 'flex', gap: 10, padding: '10px 12px', width: '100%',
-                  background: n.read ? 'none' : 'var(--ph-secondary)',
-                  border: 'none', cursor: 'pointer', textAlign: 'left',
-                  borderRadius: 'var(--ph-radius-sm)',
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--ph-text)', fontWeight: n.read ? 400 : 600 }}>{n.title}</div>
-                  {n.content && (
-                    <div style={{ fontSize: 12, color: 'var(--ph-text-muted)', marginTop: 2, lineHeight: 1.3 }}>{n.content}</div>
-                  )}
-                  <div style={{ fontSize: 11, color: 'var(--ph-text-muted)', marginTop: 4 }}>{relativeTime(n.createdAt || n.occurredAt)}</div>
-                </div>
-              </button>
-            ))
+            <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+              {notifList.map((notification) => (
+                <button
+                  key={notification.notificationId}
+                  onClick={() => void onNotifRead(notification)}
+                  style={{
+                    display: 'flex', gap: 10, padding: '10px 12px', width: '100%',
+                    background: notification.read ? 'none' : 'var(--ph-secondary)',
+                    border: 'none', cursor: 'pointer', textAlign: 'left',
+                    borderRadius: 'var(--ph-radius-sm)',
+                  }}
+                >
+                  <span style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Bell style={{ width: 16, height: 16 }} />
+                  </span>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 13, lineHeight: 1.45, color: 'var(--ph-text)', fontWeight: notification.read ? 400 : 700 }}>
+                      {notification.title}
+                    </span>
+                    <span style={{ display: 'block', fontSize: 12, lineHeight: 1.45, color: 'var(--ph-text-secondary)', marginTop: 2 }}>
+                      {notification.content}
+                    </span>
+                    <span style={{ display: 'block', fontSize: 12, color: 'var(--ph-text-muted)', marginTop: 3 }}>
+                      {relativeTime(notification.occurredAt || notification.createdAt)}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
           )}
         </Pop>
       )}

@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
 import Header from './Header'
@@ -19,7 +20,9 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
         children
       ) : (
         <>
-          <Header />
+          <Suspense fallback={null}>
+            <Header />
+          </Suspense>
           <main style={{ flex: 1 }}>
             {children}
           </main>

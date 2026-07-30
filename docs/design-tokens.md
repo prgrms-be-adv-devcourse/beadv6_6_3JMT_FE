@@ -170,6 +170,10 @@
 | **CANCELLED** | 취소 | neutral | ✓ | `#8b95a1` |
 | PENDING_APPROVAL | 대기 | neutral | ✓ | `#8b95a1` | (레거시) |
 | SETTLEMENT_ON_HOLD | 승인 보류 | error | ✓ | `#d92d20` | (레거시) |
+| **CALCULATED** | 전달 대기 | neutral | ✓ | `#8b95a1` |
+| **RECONCILED** | 정상 대사 | blue | ✓ | `#1b64da` |
+| **DELIVERY_FAILED** | 전달 실패 | error | ✓ | `#d92d20` |
+| **MISMATCH** | 데이터 불일치 | error | ✓ | `#d92d20` |
 
 > 정산 표시 상태(`SettlementDisplayStatus`) 뱃지. seller(`/shop` 정산 내역)·admin(`/admin/settlements`)가 동일 매핑을 공유한다.
 > 실제 정산 서비스 스펙(`WAITING`/`APPROVAL_ON_HOLD` 등)에 맞춘 코드이며, `PENDING_APPROVAL`/`SETTLEMENT_ON_HOLD`는 레거시 호환용으로 남겨둔다.

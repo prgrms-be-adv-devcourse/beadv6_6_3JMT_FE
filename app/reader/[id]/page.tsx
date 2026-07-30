@@ -16,6 +16,7 @@ import {
 import { ICON_MAP } from '@/lib/iconMap';
 import { PRODUCT_TYPE_LABEL } from '@/lib/productTypes';
 import { useToast } from '@/store/useToastStore';
+import { apiErrorMessage } from '@/lib/utils';
 import StarRate from '@/components/ui/StarRate';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -141,8 +142,8 @@ export default function ReaderPage() {
       await api.post(`${API_BASE}/products/${id}/reviews`, { rating: n });
       setMyRating(n);
       showToast(`${n}점 별점을 남겼어요`);
-    } catch {
-      showToast('별점 저장에 실패했어요. 다시 시도해 주세요');
+    } catch (err: unknown) {
+      showToast(apiErrorMessage(err, '별점 저장에 실패했어요. 다시 시도해 주세요'));
     }
   };
 
@@ -226,8 +227,8 @@ export default function ReaderPage() {
       setP((prev) => prev ? { ...prev, downloaded: true, isRefundable: false } : prev);
       if (deliverable?.kind === 'file') openFile(deliverable.value);
       else if (deliverable?.kind === 'link') openLink(deliverable.value);
-    } catch {
-      showToast('콘텐츠를 불러오지 못했어요. 다시 시도해 주세요');
+    } catch (err: unknown) {
+      showToast(apiErrorMessage(err, '콘텐츠를 불러오지 못했어요. 다시 시도해 주세요'));
     }
   };
 
