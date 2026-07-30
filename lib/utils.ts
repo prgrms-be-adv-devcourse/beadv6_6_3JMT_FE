@@ -21,6 +21,11 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
   )
 }
 
+/** 반려 사유 등 노출 문구에 섞인 UUID(원본 상품 ID 등)를 가려서 반환 */
+export function maskUuidsInText(text: string): string {
+  return text.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '****')
+}
+
 /** 토스페이먼츠 최소 결제금액 제약 — 상품 가격 하한 */
 export const MIN_PRODUCT_PRICE = 100
 

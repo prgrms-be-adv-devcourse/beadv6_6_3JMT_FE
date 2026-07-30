@@ -12,6 +12,7 @@ import { SectionCard } from '@/components/admin/SectionCard'
 import { DataPagination } from '@/components/admin/DataTable'
 import { Badge, StatusBadge } from '@/components/admin/Badge'
 import { PRODUCT_TYPE_LABEL, PRODUCT_TYPE_ICON } from '@/lib/productTypes'
+import { maskUuidsInText } from '@/lib/utils'
 
 interface AdminProduct {
   id: string
@@ -377,7 +378,7 @@ export default function AdminProductsPage() {
               <div className="flex items-center gap-[10px]">
                 {sel.status === 'rejected' && sel.rejectionReason && (
                   <span className="flex-1 text-[13.5px] font-medium text-ph-error">
-                    {sel.rejectionReason}
+                    {maskUuidsInText(sel.rejectionReason)}
                   </span>
                 )}
                 <button

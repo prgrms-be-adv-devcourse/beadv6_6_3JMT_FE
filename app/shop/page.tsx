@@ -11,7 +11,7 @@ import {
   AlertTriangle, Receipt, Banknote, Send,
 } from 'lucide-react';
 import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
-import { won } from '@/lib/utils';
+import { won, maskUuidsInText } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import {
   getSellerSettlementSummary,
@@ -266,7 +266,7 @@ export default function ShopPage() {
                               display: expandedReason[p.id] ? 'block' : '-webkit-box',
                               WebkitLineClamp: expandedReason[p.id] ? undefined : 2,
                               WebkitBoxOrient: 'vertical' as const,
-                            }}>{p.rejectionReason}</span>
+                            }}>{maskUuidsInText(p.rejectionReason)}</span>
                           </div>
                           <button
                             onClick={() => setExpandedReason((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
