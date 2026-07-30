@@ -8,7 +8,6 @@ import { X, Check, SearchX } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
 import Tag from '@/components/ui/Tag';
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABEL, PRODUCT_TYPE_BROWSE_DESC } from '@/lib/productTypes';
-import { getSellerNames } from '@/lib/sellers';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -55,22 +54,6 @@ function BrowseScreen() {
 
   const sortParam = sort === '평점순' ? 'rating' : sort === '가격순' ? 'price-asc' : 'popular';
 
-  const enrichWithSellerNames = async (products: Prompt[]): Promise<Prompt[]> => {
-    const sellerIds = products.map((p) => p.sellerId).filter((id): id is string => !!id);
-    if (sellerIds.length === 0) return products;
-
-    try {
-      const sellerNames = await getSellerNames(sellerIds);
-      return products.map((p) => (
-        p.sellerId ? { ...p, seller: sellerNames[p.sellerId] ?? p.seller ?? '탈퇴한 판매자' } : p
-      ));
-    } catch (e) {
-      // If the batch seller API fails (e.g. 404), fallback to the original products list
-      // which might already contain the 'seller' field.
-      return products;
-    }
-  };
-
   useEffect(() => {
     cancelledRef.current = false;
     setLoading(true);
@@ -87,12 +70,10 @@ function BrowseScreen() {
         size: PAGE_SIZE,
       },
     })
-      .then(async (res) => {
+      .then((res) => {
         if (cancelledRef.current) return;
         const products: Prompt[] = res.data.data ?? [];
-        const enriched = await enrichWithSellerNames(products);
-        if (cancelledRef.current) return;
-        setList(enriched);
+        setList(products);
         setHasNext(Boolean(res.data.meta?.hasNext));
         setTotal(res.data.meta?.total ?? products.length);
       })
@@ -115,12 +96,10 @@ function BrowseScreen() {
         size: PAGE_SIZE,
       },
     })
-      .then(async (res) => {
+      .then((res) => {
         if (cancelledRef.current) return;
         const products: Prompt[] = res.data.data ?? [];
-        const enriched = await enrichWithSellerNames(products);
-        if (cancelledRef.current) return;
-        setList((prev) => [...prev, ...enriched]);
+        setList((prev) => [...prev, ...products]);
         setPage(nextPage);
         setHasNext(Boolean(res.data.meta?.hasNext));
       })
