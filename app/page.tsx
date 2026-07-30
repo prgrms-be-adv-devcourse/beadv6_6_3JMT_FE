@@ -23,7 +23,7 @@ const PRODUCT_TYPE_DESC: Record<string, string> = {
 };
 
 const TAGS = [
-  { label: 'ChatGPT',     q: 'GPT-4o' },
+  { label: 'ChatGPT',     q: 'ChatGPT' },
   { label: 'Midjourney',  q: 'Midjourney' },
   { label: 'Claude',      q: 'Claude' },
   { label: '블로그 글쓰기', q: '글쓰기' },
