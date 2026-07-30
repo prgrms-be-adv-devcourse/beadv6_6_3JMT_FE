@@ -8,6 +8,10 @@ import { X, Check, SearchX } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
 import Tag from '@/components/ui/Tag';
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABEL, PRODUCT_TYPE_BROWSE_DESC } from '@/lib/productTypes';
+import { getRecommendations } from '@/lib/recommendations';
+import { getOrders } from '@/lib/orders';
+import { useCartStore } from '@/store/useCartStore';
+import { useAuthStore } from '@/store/useAuthStore';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -33,6 +37,71 @@ function CardGridSkeleton() {
 }
 
 /* ── BrowseScreen (원본 BrowseScreen 그대로 이식) ─────────────────── */
+
+/* ── RecommendationRow ────────────────────────────────────────────
+   AI 추천은 곁들여 뜨는 섹션이다. 실패하거나 추천할 게 없으면 아무것도 그리지 않고,
+   아래 상품 목록·구매 흐름은 그대로 둔다. */
+
+function RecommendationRow() {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  // Header가 모든 페이지에서 채워두므로 추가 호출 없이 읽기만 한다.
+  const cartItems = useCartStore((s) => s.items);
+  const [items, setItems] = useState<Prompt[]>([]);
+
+  useEffect(() => {
+    if (!user) {
+      setItems([]);
+      return;
+    }
+    let cancelled = false;
+
+    (async () => {
+      const cartProductIds = cartItems.map((i) => i.productId);
+      const orders = await getOrders().catch(() => []);
+      const purchasedProductIds = Array.from(new Set(
+        orders.filter((o) => o.orderProductStatus === 'PAID').map((o) => o.productId),
+      ));
+
+      const recommended = await getRecommendations(cartProductIds, purchasedProductIds, 4);
+      if (cancelled) return;
+
+      setItems(recommended.map((r) => ({
+        id: r.id,
+        title: r.title,
+        icon: '',
+        model: r.model ?? '',
+        amount: r.amount,
+        rating: r.rating,
+        salesCount: r.salesCount,
+        seller: '',
+        sellerId: r.sellerId ?? undefined,
+        desc: r.desc ?? '',
+      })));
+    })();
+
+    return () => { cancelled = true; };
+  }, [user, cartItems]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <section style={{ marginBottom: 36 }}>
+      <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.01em' }}>
+        회원님을 위한 추천
+      </h2>
+      <p style={{ color: 'var(--ph-text-secondary)', fontSize: 14, margin: '0 0 16px' }}>
+        장바구니와 구매하신 상품을 바탕으로 골랐어요
+      </p>
+      <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+        {items.map((p) => (
+          <PromptCard key={p.id} p={p} showActions onOpen={(item) => router.push(`/detail/${item.id}`)} />
+        ))}
+      </div>
+      <div style={{ height: 1, background: 'var(--ph-border)', margin: '36px 0 0' }} />
+    </section>
+  );
+}
 
 function BrowseScreen() {
   const searchParams = useSearchParams();
@@ -130,6 +199,8 @@ function BrowseScreen() {
       <p style={{ color: 'var(--ph-text-secondary)', fontSize: 16, margin: '0 0 28px' }}>
         {query ? <span>'{query}' 검색 결과 · </span> : <span>{currentTypeDesc} · </span>}{total}개의 {countLabel}
       </p>
+
+      <RecommendationRow />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
         {PRODUCT_TYPE_FILTERS.map((c) => (
