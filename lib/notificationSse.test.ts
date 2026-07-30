@@ -152,24 +152,49 @@ test('stream does not retry an authentication failure', async () => {
   assert.equal(calls, 1)
 })
 
-test('stream retries a transient server failure', async () => {
-  const controller = new AbortController()
+test('stream does not retry an internal server error', async () => {
   let calls = 0
   const fetcher: NotificationFetch = async () => {
     calls += 1
-    if (calls === 1) return new Response('', { status: 503 })
-
-    controller.abort()
-    return new Response('')
+    return new Response('', { status: calls === 1 ? 500 : 401 })
   }
 
-  await streamNotifications({
-    token: 'access-token',
-    signal: controller.signal,
-    reconnectDelayMs: 0,
-    onEvent: () => {},
-    fetcher,
-  })
-
-  assert.equal(calls, 2)
+  await assert.rejects(
+    streamNotifications({
+      token: 'access-token',
+      signal: new AbortController().signal,
+      reconnectDelayMs: 0,
+      onEvent: () => {},
+      fetcher,
+    }),
+    (error: unknown) => (
+      error instanceof NotificationStreamHttpError
+      && error.status === 500
+    ),
+  )
+  assert.equal(calls, 1)
 })
+
+for (const status of [408, 429, 502, 503, 504]) {
+  test(`stream retries transient HTTP ${status}`, async () => {
+    const controller = new AbortController()
+    let calls = 0
+    const fetcher: NotificationFetch = async () => {
+      calls += 1
+      if (calls === 1) return new Response('', { status })
+
+      controller.abort()
+      return new Response('')
+    }
+
+    await streamNotifications({
+      token: 'access-token',
+      signal: controller.signal,
+      reconnectDelayMs: 0,
+      onEvent: () => {},
+      fetcher,
+    })
+
+    assert.equal(calls, 2)
+  })
+}

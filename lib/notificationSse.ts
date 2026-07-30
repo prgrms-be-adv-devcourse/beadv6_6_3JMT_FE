@@ -168,9 +168,17 @@ export async function consumeNotificationStreamOnce({
   return latestEventId
 }
 
+const RETRYABLE_STREAM_HTTP_STATUSES: ReadonlySet<number> = new Set([
+  408,
+  429,
+  502,
+  503,
+  504,
+])
+
 function shouldRetryStream(error: unknown) {
   if (!(error instanceof NotificationStreamHttpError)) return true
-  return error.status === 408 || error.status === 429 || error.status >= 500
+  return RETRYABLE_STREAM_HTTP_STATUSES.has(error.status)
 }
 
 function waitForReconnect(delayMs: number, signal: AbortSignal) {
