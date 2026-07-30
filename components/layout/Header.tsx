@@ -13,7 +13,19 @@ import { API_BASE } from '@/lib/apiBase';
 import { apiErrorMessage, won } from '@/lib/utils';
 import { getCartItems, removeCartItem as deleteCartItem } from '@/lib/cart';
 import { createOrder } from '@/lib/orders';
+import {
+  getNotifications,
+  getUnreadNotificationCount,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
+} from '@/lib/notifications';
+import { streamNotifications } from '@/lib/notificationSse';
+import {
+  initialNotificationState,
+  notificationStateReducer,
+} from '@/lib/notificationState';
 import { getProductSuggestions } from '@/lib/products';
+import type { NotificationItem } from '@/types/api/notifications';
 import {
   getRecentSearches,
   addRecentSearch,
@@ -66,9 +78,13 @@ function relativeTime(iso: string): string {
   return `${days}일 전`;
 }
 
-/* ── 타입: 알림 ───────────────────────────────────────── */
-
-type Notif = { id: string; icon: string; text: string; timestamp: string; read: boolean };
+async function loadNotificationSnapshot() {
+  const [items, unreadCount] = await Promise.all([
+    getNotifications(),
+    getUnreadNotificationCount(),
+  ]);
+  return { items, unreadCount };
+}
 
 /* ── 라우트 맵 ─────────────────────────────────────────── */
 
@@ -540,13 +556,19 @@ export default function Header() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const { user, logout, openLoginModal } = useAuthStore();
+  const { user, token, logout, openLoginModal } = useAuthStore();
   const { items: cart, setItems: setCartItems, removeItem: removeCartItem, clearCart } = useCartStore();
   const { items: wishItems } = useWishStore();
   const showToast = useToast();
   const [query, setQuery] = React.useState('');
   const [menu, setMenu] = React.useState<string | null>(null);
-  const [notifList, setNotifList] = React.useState<Notif[]>([]);
+  const [notificationState, dispatchNotification] = React.useReducer(
+    notificationStateReducer,
+    initialNotificationState,
+  );
+  const notifList = notificationState.items;
+  const unreadCount = notificationState.unreadCount;
+  const userId = user?.id;
   const [ordering, setOrdering] = React.useState(false);
 
   // Header는 레이아웃이라 페이지를 옮겨도 언마운트되지 않는다. 검색창 값을 URL과
@@ -557,14 +579,79 @@ export default function Header() {
   }, [pathname, searchParams]);
 
   React.useEffect(() => {
-    if (!user) {
-      Promise.resolve().then(() => setNotifList([]));
-      return;
+    let active = true;
+
+    if (!userId) {
+      Promise.resolve().then(() => {
+        if (active) dispatchNotification({ type: 'reset' });
+      });
+      return () => {
+        active = false;
+      };
     }
-    api.get(`${API_BASE}/notifications`)
-      .then((res) => setNotifList(res.data.data ?? []))
-      .catch(() => {});
-  }, [user]);
+
+    loadNotificationSnapshot()
+      .then((snapshot) => {
+        if (active) dispatchNotification({ type: 'hydrate', ...snapshot });
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          showToast(apiErrorMessage(error, '알림을 불러오지 못했어요. 잠시 후 다시 시도해주세요.'));
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [showToast, userId]);
+
+  React.useEffect(() => {
+    if (!userId || !token) return;
+
+    const controller = new AbortController();
+    const replaceNotificationItems = () => {
+      void getNotifications()
+        .then((items) => {
+          if (!controller.signal.aborted) {
+            dispatchNotification({ type: 'replace-items', items });
+          }
+        })
+        .catch(() => {
+          // 일시적인 동기화 실패는 다음 SSE 이벤트나 재연결 시 다시 시도합니다.
+        });
+    };
+    const replaceNotificationSnapshot = () => {
+      void loadNotificationSnapshot()
+        .then((snapshot) => {
+          if (!controller.signal.aborted) {
+            dispatchNotification({ type: 'hydrate', ...snapshot });
+          }
+        })
+        .catch(() => {
+          // SSE 재동기화 실패는 연결 재시도 중 반복 안내하지 않습니다.
+        });
+    };
+
+    void streamNotifications({
+      token,
+      signal: controller.signal,
+      onEvent: (event) => {
+        if (event.type === 'notification') {
+          dispatchNotification({
+            type: 'set-unread-count',
+            unreadCount: event.data.unreadCount,
+          });
+          replaceNotificationItems();
+          return;
+        }
+        replaceNotificationSnapshot();
+      },
+    }).catch(() => {
+      // 인증 오류나 비재시도 응답은 token 변경 또는 다음 로그인에서 새로 연결합니다.
+    });
+
+    return () => controller.abort();
+  }, [token, userId]);
 
   React.useEffect(() => {
     if (!user) {
@@ -576,14 +663,60 @@ export default function Header() {
       .catch(() => {});
   }, [setCartItems, user]);
 
-  const unreadCount = notifList.filter((n) => !n.read).length;
-
-  const onNotifRead = async (id: string) => {
-    setNotifList((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+  const restoreNotificationsAfterFailure = async (
+    previousState: typeof notificationState,
+  ) => {
+    dispatchNotification({
+      type: 'hydrate',
+      items: previousState.items,
+      unreadCount: previousState.unreadCount,
+    });
     try {
-      await api.post(`${API_BASE}/notifications/${id}/read`);
+      const snapshot = await loadNotificationSnapshot();
+      dispatchNotification({ type: 'hydrate', ...snapshot });
     } catch {
-      // 로컬 상태는 이미 업데이트됨, 실패해도 무시
+      // 즉시 복원한 상태를 유지하고 다음 조회나 SSE 동기화를 기다립니다.
+    }
+  };
+
+  const onNotifRead = async (notification: NotificationItem) => {
+    close();
+
+    if (!notification.read) {
+      const previousState = notificationState;
+      dispatchNotification({
+        type: 'read-one',
+        notificationId: notification.notificationId,
+        readAt: new Date().toISOString(),
+      });
+
+      try {
+        await markNotificationAsRead(notification.notificationId);
+      } catch (error: unknown) {
+        await restoreNotificationsAfterFailure(previousState);
+        showToast(apiErrorMessage(error, '알림 읽음 처리에 실패했어요.'));
+      }
+    }
+
+    if (notification.linkUrl) {
+      router.push(notification.linkUrl);
+    }
+  };
+
+  const onReadAllNotifications = async () => {
+    if (unreadCount === 0) return;
+
+    const previousState = notificationState;
+    dispatchNotification({
+      type: 'read-all',
+      readAt: new Date().toISOString(),
+    });
+
+    try {
+      await markAllNotificationsAsRead();
+    } catch (error: unknown) {
+      await restoreNotificationsAfterFailure(previousState);
+      showToast(apiErrorMessage(error, '알림 전체 읽음 처리에 실패했어요.'));
     }
   };
 
@@ -639,32 +772,64 @@ export default function Header() {
       />
       {menu === 'notif' && (
         <Pop onClose={close} width={300}>
-          <div style={{ padding: '8px 12px 10px', fontWeight: 700, fontSize: 14 }}>알림</div>
-          {notifList.length === 0 ? (
-            <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 13, color: 'var(--ph-text-muted)' }}>
-              새 알림이 없어요
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px 10px' }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>
+              알림
+              {unreadCount > 0 && (
+                <span style={{ color: 'var(--ph-primary)', marginLeft: 5 }}>{unreadCount}</span>
+              )}
             </div>
-          ) : (
-            notifList.map((n) => (
+            {unreadCount > 0 && (
               <button
-                key={n.id}
-                onClick={() => onNotifRead(n.id)}
+                onClick={() => void onReadAllNotifications()}
                 style={{
-                  display: 'flex', gap: 10, padding: '10px 12px', width: '100%',
-                  background: n.read ? 'none' : 'var(--ph-secondary)',
-                  border: 'none', cursor: 'pointer', textAlign: 'left',
-                  borderRadius: 'var(--ph-radius-sm)',
+                  border: 'none',
+                  background: 'none',
+                  color: 'var(--ph-primary)',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: 0,
                 }}
               >
-                <span style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>
-                  {n.icon}
-                </span>
-                <div>
-                  <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--ph-text)', fontWeight: n.read ? 400 : 600 }}>{n.text}</div>
-                  <div style={{ fontSize: 12, color: 'var(--ph-text-muted)', marginTop: 2 }}>{relativeTime(n.timestamp)}</div>
-                </div>
+                모두 읽음
               </button>
-            ))
+            )}
+          </div>
+          {notifList.length === 0 ? (
+            <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 13, color: 'var(--ph-text-muted)' }}>
+              알림이 없어요
+            </div>
+          ) : (
+            <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+              {notifList.map((notification) => (
+                <button
+                  key={notification.notificationId}
+                  onClick={() => void onNotifRead(notification)}
+                  style={{
+                    display: 'flex', gap: 10, padding: '10px 12px', width: '100%',
+                    background: notification.read ? 'none' : 'var(--ph-secondary)',
+                    border: 'none', cursor: 'pointer', textAlign: 'left',
+                    borderRadius: 'var(--ph-radius-sm)',
+                  }}
+                >
+                  <span style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 'var(--ph-radius-full)', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Bell style={{ width: 16, height: 16 }} />
+                  </span>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 13, lineHeight: 1.45, color: 'var(--ph-text)', fontWeight: notification.read ? 400 : 700 }}>
+                      {notification.title}
+                    </span>
+                    <span style={{ display: 'block', fontSize: 12, lineHeight: 1.45, color: 'var(--ph-text-secondary)', marginTop: 2 }}>
+                      {notification.content}
+                    </span>
+                    <span style={{ display: 'block', fontSize: 12, color: 'var(--ph-text-muted)', marginTop: 3 }}>
+                      {relativeTime(notification.occurredAt || notification.createdAt)}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
           )}
         </Pop>
       )}
