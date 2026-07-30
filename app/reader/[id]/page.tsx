@@ -417,7 +417,8 @@ export default function ReaderPage() {
         {/* Prompt thumbnail */}
         {p.thumbnail_url && (
           <Card padding="0" style={{ marginTop: 20, overflow: 'hidden' }}>
-            <div style={{ position: 'relative', height: 240 }}>
+            {/* 판매자 업로드 미리보기(ImageUpload)와 동일한 16:9 박스 — 고정 높이면 위아래가 잘린다 */}
+            <div style={{ position: 'relative', aspectRatio: '16 / 9' }}>
               <Image src={p.thumbnail_url} alt="썸네일" fill style={{ objectFit: 'cover' }} />
             </div>
           </Card>
