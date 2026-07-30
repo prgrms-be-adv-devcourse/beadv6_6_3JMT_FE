@@ -18,9 +18,10 @@ import { useAuthStore } from '@/store/useAuthStore';
 /* ── Types ────────────────────────────────────────────────────────── */
 
 type Prompt = {
-  id: string; title: string; icon: string; model: string;
+  id: string; title: string; icon: string; productType?: string; model: string;
   amount: number; originalAmount?: number; rating: number; salesCount: number;
   seller?: string; sellerId?: string; badge?: string; desc: string;
+  thumbnail_url?: string | null;
 };
 
 type BrowseCard = Prompt & { seller: string };
@@ -71,17 +72,18 @@ function RecommendationRow() {
       if (cancelled) return;
 
       // 목록과 같은 헬퍼로 판매자명을 채운다 — 추천 응답에는 sellerId만 있다.
+      // 목록은 서버 응답을 통째로 넘기므로, 여기서도 필드를 골라 담지 말고 펼친다.
+      // 골라 담으면 썸네일·유형처럼 카드가 그리는 값이 조용히 빠진다.
+      // 추천 API만 thumbnailUrl(camelCase)이라 이름을 맞춰준다.
       const enriched = await enrichBrowseProducts(
         recommended.map((r) => ({
-          id: r.id,
-          title: r.title,
+          ...r,
           icon: '',
+          productType: r.productType ?? undefined,
           model: r.model ?? '',
-          amount: r.amount,
-          rating: r.rating,
-          salesCount: r.salesCount,
           sellerId: r.sellerId ?? undefined,
           desc: r.desc ?? '',
+          thumbnail_url: r.thumbnailUrl,
         })),
         getSellerNames,
       );
