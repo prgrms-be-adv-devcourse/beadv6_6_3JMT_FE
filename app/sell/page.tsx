@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
@@ -95,6 +95,9 @@ export default function SellPage() {
   const [tagInput, setTagInput] = useState('');
   const [status, setStatus] = useState<null | 'saved' | 'submitted'>(null);
   const [loading, setLoading] = useState(false);
+  // loading(useState)은 리렌더 후에야 반영되므로 같은 tick 안의 두 번째 클릭을 막지 못한다.
+  // ref는 즉시 반영되므로 중복 제출 차단은 이걸로 한다(BE#681).
+  const submitting = useRef(false);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [galleryUrls, setGalleryUrls] = useState<(string | null)[]>(Array(5).fill(null));
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
@@ -113,7 +116,8 @@ export default function SellPage() {
     if (!title.trim()) { showToast(`${typeLabel} 제목을 입력해 주세요`); return; }
     if (!desc.trim()) { showToast('상품 소개를 입력해 주세요'); return; }
     if (!isValidProductPrice(Number(price))) { showToast('가격은 무료(0원) 또는 100원 이상으로 입력해 주세요'); return; }
-    if (loading) return;
+    if (submitting.current) return;
+    submitting.current = true;
     setLoading(true);
     try {
       await api.post(`${API_BASE}/products`, {
@@ -140,6 +144,7 @@ export default function SellPage() {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       showToast(msg ?? '저장에 실패했어요. 다시 시도해 주세요');
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };

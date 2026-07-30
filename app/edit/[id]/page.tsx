@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
@@ -134,6 +134,9 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   const [changeReason, setChangeReason] = useState('');
   const [noteErr, setNoteErr] = useState(false);
   const [saving, setSaving] = useState(false);
+  // saving(useState)은 리렌더 후에야 반영되므로 같은 tick 안의 두 번째 클릭을 막지 못한다.
+  // MAJOR 수정이 두 번 나가면 버전이 두 개 생기므로 ref로 차단한다(BE#681).
+  const submitting = useRef(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const showToast = useToast();
   const typeLabel = PRODUCT_TYPE_LABEL[productType];
@@ -156,7 +159,8 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
       return;
     }
     if (!isValidProductPrice(Number(price))) { showToast('가격은 무료(0원) 또는 100원 이상으로 입력해 주세요'); return; }
-    if (saving) return;
+    if (submitting.current) return;
+    submitting.current = true;
     setSaving(true);
     try {
       await api.patch(`${API_BASE}/products/${id}`, {
@@ -190,6 +194,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
         showToast(msg ?? '저장에 실패했어요. 다시 시도해 주세요');
       }
     } finally {
+      submitting.current = false;
       setSaving(false);
     }
   };
