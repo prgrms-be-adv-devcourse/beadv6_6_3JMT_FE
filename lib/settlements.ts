@@ -2,10 +2,12 @@ import api from '@/lib/auth'
 import { API_BASE } from '@/lib/apiBase'
 import {
   adminActionPath,
+  mapAdminSettlementStatusCounts,
   mapAdminSettlementDetail,
   mapAdminSettlementList,
   mapSellerSettlementDetail,
   mapSellerSettlementList,
+  settlementStatusCount,
   type AdminMonthlySettlement,
   type AdminSettlementDetail,
   type SellerMonthlySettlement,
@@ -18,6 +20,8 @@ import {
   type SettlementStatusCount,
   type WeeklySettlement,
 } from '@/lib/settlementContracts'
+
+export { mapAdminSettlementStatusCounts, settlementStatusCount }
 
 export type {
   AdminMonthlySettlement,
@@ -61,6 +65,19 @@ export async function getAdminSettlementSummary(
     totalAmount: Number(card.totalAmount ?? 0),
     count: Number(card.count ?? 0),
   }))
+}
+
+export async function getAdminSettlementStatusCounts(
+  settlementMonth?: string,
+): Promise<SettlementStatusCount[]> {
+  const res = await api.get(`${API_BASE}/admin/settlements/weeks`, {
+    params: {
+      page: 0,
+      size: 1,
+      ...(settlementMonth ? { settlementMonth } : {}),
+    },
+  })
+  return mapAdminSettlementStatusCounts(res.data?.data)
 }
 
 export async function getAdminSettlements(

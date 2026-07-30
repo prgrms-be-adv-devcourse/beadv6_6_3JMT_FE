@@ -3,10 +3,12 @@ import test from 'node:test'
 
 import {
   adminActionPath,
+  mapAdminSettlementStatusCounts,
   mapAdminSettlementDetail,
   mapAdminSettlementList,
   mapSellerSettlementDetail,
   mapSellerSettlementList,
+  settlementStatusCount,
 } from './settlementContracts.ts'
 
 const monthly = {
@@ -94,4 +96,23 @@ test('adminActionPath maps backend action types to existing patch routes', () =>
   assert.equal(adminActionPath('APPROVE'), 'approve')
   assert.equal(adminActionPath('RELEASE_HOLD'), 'release-hold')
   assert.equal(adminActionPath('RELEASE_PAYOUT_HOLD'), 'payout-hold/release')
+})
+
+test('admin weekly status counts keep all filter statuses independent', () => {
+  const counts = mapAdminSettlementStatusCounts({
+    statusCounts: [
+      { status: 'WAITING', statusLabel: '대기', count: '60' },
+      { status: 'APPROVAL_ON_HOLD', statusLabel: '승인 보류', count: '8' },
+      { status: 'APPROVED', statusLabel: '승인', count: 0 },
+      { status: 'PAYOUT_REQUESTED', statusLabel: '지급 신청', count: 4 },
+      { status: 'PAYOUT_ON_HOLD', statusLabel: '지급 보류', count: 0 },
+      { status: 'PAID', statusLabel: '지급 완료', count: 9 },
+      { status: 'CANCELLED', statusLabel: '취소', count: 1 },
+    ],
+  })
+
+  assert.equal(settlementStatusCount(counts, 'APPROVAL_ON_HOLD'), 8)
+  assert.equal(settlementStatusCount(counts, 'PAYOUT_REQUESTED'), 4)
+  assert.equal(settlementStatusCount(counts, 'CANCELLED'), 1)
+  assert.equal(settlementStatusCount(counts), 82)
 })
