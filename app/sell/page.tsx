@@ -120,7 +120,7 @@ export default function SellPage() {
     submitting.current = true;
     setLoading(true);
     try {
-      await api.post(`${API_BASE}/products`, {
+      const res = await api.post(`${API_BASE}/products`, {
         title,
         productType,
         model: productType === 'PROMPT' ? (model.trim() || null) : null,
@@ -139,6 +139,10 @@ export default function SellPage() {
       } else {
         setStatus('saved');
         showToast('임시저장됐어요');
+        // 저장된 초안의 수정 화면으로 넘긴다. 이 화면에 머물면 다음 저장이 또 POST가 되어
+        // 상품이 중복 생성되고, 낡은 temp 키를 다시 보내 S3 복사가 실패한다(BE#681).
+        const productId = res.data?.data?.productId;
+        if (productId) router.push(`/edit/${productId}`);
       }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
