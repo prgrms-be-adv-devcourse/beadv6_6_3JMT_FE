@@ -139,6 +139,7 @@ export default function AdminProductsPage() {
           seller: p.sellerNickname ?? '탈퇴한 판매자',
           model: p.model,
           amount: p.amount,
+          desc: p.description ?? undefined,
           status: toLocalStatus(p.status),
           createdAt: p.createdAt,
           rejectionReason: p.rejectionReason ?? null,
