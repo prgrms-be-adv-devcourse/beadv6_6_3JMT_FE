@@ -110,6 +110,19 @@ function mapStatusCounts(value: unknown): SettlementStatusCount[] {
   }))
 }
 
+export function mapAdminSettlementStatusCounts(value: unknown): SettlementStatusCount[] {
+  return mapStatusCounts(record(value).statusCounts)
+}
+
+export function settlementStatusCount(
+  counts: SettlementStatusCount[],
+  status?: SettlementDisplayStatus,
+): number {
+  return counts
+    .filter((count) => status == null || count.status === status)
+    .reduce((sum, count) => sum + count.count, 0)
+}
+
 function mapActions(value: unknown): SettlementAction[] {
   return records(value).map((item) => ({
     type: item.type as SettlementActionType,

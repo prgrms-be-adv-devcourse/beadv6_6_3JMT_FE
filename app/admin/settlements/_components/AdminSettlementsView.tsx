@@ -21,13 +21,16 @@ import { SETTLEMENT_STATUS_FILTERS, type SettlementFilter } from '@/lib/constant
 import {
   getAdminSettlementDetail,
   getAdminSettlements,
+  getAdminSettlementStatusCounts,
   getAdminSettlementSummary,
   runAdminSettlementAction,
+  settlementStatusCount,
   type AdminMonthlySettlement,
   type AdminSettlementAction,
   type AdminSettlementDetail,
   type SettlementAction,
   type SettlementDisplayStatus,
+  type SettlementStatusCount,
   type SettlementSummaryCard,
   type WeeklySettlement,
 } from '@/lib/settlements'
@@ -97,6 +100,7 @@ export default function AdminSettlementsView() {
   const { token } = useAuthStore()
   const [items, setItems] = useState<AdminMonthlySettlement[]>([])
   const [summary, setSummary] = useState<SettlementSummaryCard[]>([])
+  const [statusCounts, setStatusCounts] = useState<SettlementStatusCount[]>([])
   const [details, setDetails] = useState<Record<string, AdminSettlementDetail>>({})
   const [filter, setFilter] = useState<SettlementFilter>('all')
   const [settlementMonth, setSettlementMonth] = useState('')
@@ -119,6 +123,14 @@ export default function AdminSettlementsView() {
       setSummary(await getAdminSettlementSummary(month || undefined))
     } catch {
       setSummary([])
+    }
+  }
+
+  const loadStatusCounts = async (month: string) => {
+    try {
+      setStatusCounts(await getAdminSettlementStatusCounts(month || undefined))
+    } catch {
+      setStatusCounts([])
     }
   }
 
@@ -157,6 +169,7 @@ export default function AdminSettlementsView() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void loadSummary('')
+      void loadStatusCounts('')
       void loadList('all', '', 0, false)
     }, 0)
     return () => window.clearTimeout(timer)
@@ -168,6 +181,7 @@ export default function AdminSettlementsView() {
     setExpandedKey(null)
     setDetailErrors({})
     void loadSummary(month)
+    void loadStatusCounts(month)
     void loadList(nextFilter, month, 0, false)
   }
 
@@ -207,6 +221,7 @@ export default function AdminSettlementsView() {
       loadDetail(item, true),
       loadList(filter, settlementMonth, 0, false),
       loadSummary(settlementMonth),
+      loadStatusCounts(settlementMonth),
     ])
   }
 
@@ -283,9 +298,8 @@ export default function AdminSettlementsView() {
     },
     { label: '지급 완료', Icon: Banknote, value: sumBy(['PAID']), count: countBy(['PAID']) },
   ]
-  const totalCount = summary.reduce((sum, card) => sum + card.count, 0)
   const tabCount = (status: SettlementFilter) =>
-    status === 'all' ? totalCount : (summary.find((card) => card.status === status)?.count ?? 0)
+    settlementStatusCount(statusCounts, status === 'all' ? undefined : status)
 
   const filterBar = (
     <div className="flex flex-wrap gap-ph-2xs">
