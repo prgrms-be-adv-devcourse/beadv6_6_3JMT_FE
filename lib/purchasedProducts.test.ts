@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { resolveDeliverable } from './purchasedProducts'
+import { resolveDeliverable } from './purchasedProducts.ts'
 
 test('resolveDeliverable returns text for PROMPT', () => {
   const result = resolveDeliverable({
