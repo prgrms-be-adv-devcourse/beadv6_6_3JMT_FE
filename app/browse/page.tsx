@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/auth';
 import { API_BASE } from '@/lib/apiBase';
@@ -49,6 +49,9 @@ function BrowseScreen() {
   // 화면에 실제로 그려진 개수(list.length)가 아니라 조건에 맞는 전체 개수다.
   // 더보기를 눌러도 이 숫자는 그대로여야 한다.
   const [total, setTotal] = useState(0);
+  // query/productType/sort가 바뀌면 true가 되어, 그 이전에 나간 요청(느린 검색·더보기 포함)의
+  // 응답이 나중에 와도 최신 결과를 덮어쓰지 못하게 막는다.
+  const cancelledRef = useRef(false);
 
   const sortParam = sort === '평점순' ? 'rating' : sort === '가격순' ? 'price-asc' : 'popular';
 
@@ -69,6 +72,7 @@ function BrowseScreen() {
   };
 
   useEffect(() => {
+    cancelledRef.current = false;
     setLoading(true);
     setList([]);
     setPage(0);
@@ -84,13 +88,17 @@ function BrowseScreen() {
       },
     })
       .then(async (res) => {
+        if (cancelledRef.current) return;
         const products: Prompt[] = res.data.data ?? [];
-        setList(await enrichWithSellerNames(products));
+        const enriched = await enrichWithSellerNames(products);
+        if (cancelledRef.current) return;
+        setList(enriched);
         setHasNext(Boolean(res.data.meta?.hasNext));
         setTotal(res.data.meta?.total ?? products.length);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => { if (!cancelledRef.current) setLoading(false); });
+    return () => { cancelledRef.current = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, productType, sort]);
 
@@ -108,8 +116,10 @@ function BrowseScreen() {
       },
     })
       .then(async (res) => {
+        if (cancelledRef.current) return;
         const products: Prompt[] = res.data.data ?? [];
         const enriched = await enrichWithSellerNames(products);
+        if (cancelledRef.current) return;
         setList((prev) => [...prev, ...enriched]);
         setPage(nextPage);
         setHasNext(Boolean(res.data.meta?.hasNext));
