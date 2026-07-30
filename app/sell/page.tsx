@@ -116,6 +116,13 @@ export default function SellPage() {
     if (!title.trim()) { showToast(`${typeLabel} 제목을 입력해 주세요`); return; }
     if (!desc.trim()) { showToast('상품 소개를 입력해 주세요'); return; }
     if (!isValidProductPrice(Number(price))) { showToast('가격은 무료(0원) 또는 100원 이상으로 입력해 주세요'); return; }
+    // 산출물은 등록할 때만 필수다. 임시저장은 미완성 상태를 담아두는 기능이라
+    // 파일 업로드 전에도 저장할 수 있어야 한다.
+    if (navigate) {
+      if (productType === 'PROMPT' && !body.trim()) { showToast('판매할 프롬프트 본문을 입력해 주세요'); return; }
+      if (productType === 'NOTION' && !externalUrl.trim()) { showToast('공유할 노션 링크를 입력해 주세요'); return; }
+      if ((productType === 'PPT' || productType === 'EXCEL') && !fileUrl) { showToast('산출물 파일 업로드가 완료된 뒤 저장해 주세요'); return; }
+    }
     if (submitting.current) return;
     submitting.current = true;
     setLoading(true);

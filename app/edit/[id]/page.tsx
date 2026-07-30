@@ -153,12 +153,21 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
 
   const save = async () => {
+    if (!title.trim()) { showToast(`${typeLabel} 제목을 입력해 주세요`); return; }
+    if (!desc.trim()) { showToast('상품 소개를 입력해 주세요'); return; }
+    if (!isValidProductPrice(Number(price))) { showToast('가격은 무료(0원) 또는 100원 이상으로 입력해 주세요'); return; }
+    // 산출물 필수는 판매 중인 상품에만 적용한다. DRAFT 저장은 등록 화면의 임시저장과
+    // 같은 성격이라 미완성 상태로도 저장할 수 있어야 한다.
+    if (!isDraft) {
+      if (productType === 'PROMPT' && !body.trim()) { showToast('판매할 프롬프트 본문을 입력해 주세요'); return; }
+      if (productType === 'NOTION' && !externalUrl.trim()) { showToast('공유할 노션 링크를 입력해 주세요'); return; }
+      if ((productType === 'PPT' || productType === 'EXCEL') && !fileUrl) { showToast('산출물 파일 업로드가 완료된 뒤 저장해 주세요'); return; }
+    }
     if (!isDraft && !changeReason.trim()) {
       setNoteErr(true);
       showToast('변경 내용을 입력해 주세요');
       return;
     }
-    if (!isValidProductPrice(Number(price))) { showToast('가격은 무료(0원) 또는 100원 이상으로 입력해 주세요'); return; }
     if (submitting.current) return;
     submitting.current = true;
     setSaving(true);
