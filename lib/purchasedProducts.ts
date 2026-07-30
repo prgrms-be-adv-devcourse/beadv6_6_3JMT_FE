@@ -23,21 +23,7 @@ export async function getPurchasedProduct(productId: string): Promise<PurchasedP
   return res.data.data
 }
 
-export type Deliverable =
-  | { kind: 'text'; value: string }
-  | { kind: 'file'; value: string }
-  | { kind: 'link'; value: string }
-  | null
-
-// 유형별 산출물 해석: PROMPT=본문, PPT·EXCEL=presigned 파일 URL, NOTION=외부 링크
-export function resolveDeliverable(
-  detail: Pick<PurchasedProductDetail, 'productType' | 'content' | 'fileUrl' | 'externalUrl'>,
-): Deliverable {
-  if (detail.productType === 'PPT' || detail.productType === 'EXCEL') {
-    return detail.fileUrl ? { kind: 'file', value: detail.fileUrl } : null
-  }
-  if (detail.productType === 'NOTION') {
-    return detail.externalUrl ? { kind: 'link', value: detail.externalUrl } : null
-  }
-  return detail.content ? { kind: 'text', value: detail.content } : null
-}
+export {
+  resolveDeliverable,
+  type Deliverable,
+} from './purchasedProductDeliverable.ts'
