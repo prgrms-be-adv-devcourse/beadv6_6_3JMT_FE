@@ -7,15 +7,19 @@ import { API_BASE } from '@/lib/apiBase';
 import { X, Check, SearchX } from 'lucide-react';
 import PromptCard from '@/components/ui/PromptCard';
 import Tag from '@/components/ui/Tag';
+import { enrichBrowseProducts } from '@/lib/browseProducts';
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABEL, PRODUCT_TYPE_BROWSE_DESC } from '@/lib/productTypes';
+import { getSellerNames } from '@/lib/sellers';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
 type Prompt = {
   id: string; title: string; icon: string; model: string;
   amount: number; originalAmount?: number; rating: number; salesCount: number;
-  seller: string; sellerId?: string; badge?: string; desc: string;
+  seller?: string; sellerId?: string; badge?: string; desc: string;
 };
+
+type BrowseCard = Prompt & { seller: string };
 
 const PRODUCT_TYPE_FILTERS = [{ id: 'all', label: '전체' }, ...PRODUCT_TYPES];
 const PAGE_SIZE = 20;
@@ -40,7 +44,7 @@ function BrowseScreen() {
   const query = searchParams.get('q') ?? '';
   const productType = searchParams.get('productType') ?? 'all';
   const [sort, setSort] = useState('인기순');
-  const [list, setList] = useState<Prompt[]>([]);
+  const [list, setList] = useState<BrowseCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(0);
@@ -70,10 +74,12 @@ function BrowseScreen() {
         size: PAGE_SIZE,
       },
     })
-      .then((res) => {
+      .then(async (res) => {
         if (cancelledRef.current) return;
         const products: Prompt[] = res.data.data ?? [];
-        setList(products);
+        const enriched = await enrichBrowseProducts(products, getSellerNames);
+        if (cancelledRef.current) return;
+        setList(enriched);
         setHasNext(Boolean(res.data.meta?.hasNext));
         setTotal(res.data.meta?.total ?? products.length);
       })
@@ -96,10 +102,12 @@ function BrowseScreen() {
         size: PAGE_SIZE,
       },
     })
-      .then((res) => {
+      .then(async (res) => {
         if (cancelledRef.current) return;
         const products: Prompt[] = res.data.data ?? [];
-        setList((prev) => [...prev, ...products]);
+        const enriched = await enrichBrowseProducts(products, getSellerNames);
+        if (cancelledRef.current) return;
+        setList((prev) => [...prev, ...enriched]);
         setPage(nextPage);
         setHasNext(Boolean(res.data.meta?.hasNext));
       })
