@@ -9,6 +9,7 @@ import FormField from '@/components/ui/FormField';
 import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
 import ImageUpload from '@/components/ui/ImageUpload';
 import FileUpload from '@/components/ui/FileUpload';
+import type { UploadedObject } from '@/lib/upload';
 import { useToast } from '@/store/useToastStore';
 import { isValidProductPrice } from '@/lib/utils';
 import Label from '@/components/ui/Label';
@@ -89,7 +90,7 @@ export default function SellPage() {
   const [price, setPrice] = useState('');
   const [desc, setDesc] = useState('');
   const [body, setBody] = useState('');
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<UploadedObject | null>(null);
   const [externalUrl, setExternalUrl] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -98,8 +99,8 @@ export default function SellPage() {
   // loading(useState)은 리렌더 후에야 반영되므로 같은 tick 안의 두 번째 클릭을 막지 못한다.
   // ref는 즉시 반영되므로 중복 제출 차단은 이걸로 한다(BE#681).
   const submitting = useRef(false);
-  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
-  const [galleryUrls, setGalleryUrls] = useState<(string | null)[]>(Array(5).fill(null));
+  const [uploadedThumbnail, setUploadedThumbnail] = useState<UploadedObject | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<(UploadedObject | null)[]>(Array(5).fill(null));
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const showToast = useToast();
   const typeLabel = PRODUCT_TYPE_LABEL[productType];
@@ -121,7 +122,7 @@ export default function SellPage() {
     if (navigate) {
       if (productType === 'PROMPT' && !body.trim()) { showToast('판매할 프롬프트 본문을 입력해 주세요'); return; }
       if (productType === 'NOTION' && !externalUrl.trim()) { showToast('공유할 노션 링크를 입력해 주세요'); return; }
-      if ((productType === 'PPT' || productType === 'EXCEL') && !fileUrl) { showToast('산출물 파일 업로드가 완료된 뒤 저장해 주세요'); return; }
+      if ((productType === 'PPT' || productType === 'EXCEL') && !uploadedFile) { showToast('산출물 파일 업로드가 완료된 뒤 저장해 주세요'); return; }
     }
     if (submitting.current) return;
     submitting.current = true;
@@ -134,10 +135,11 @@ export default function SellPage() {
         amount: Number(price),
         desc,
         content: productType === 'PROMPT' ? body : null,
-        fileUrl: productType === 'PPT' || productType === 'EXCEL' ? fileUrl : null,
+        fileObjectKey: productType === 'PPT' || productType === 'EXCEL' ? (uploadedFile?.objectKey ?? null) : null,
         externalUrl: productType === 'NOTION' ? externalUrl : null,
-        thumbnailUrl: thumbUrl,
-        imageUrls: galleryUrls.filter((u): u is string => u !== null),
+        thumbnailObjectKey: uploadedThumbnail?.objectKey ?? null,
+        imageObjectKeys: uploadedImages.filter((image): image is UploadedObject => image !== null)
+          .map((image) => image.objectKey),
         tags,
       });
       if (navigate) {
@@ -163,16 +165,18 @@ export default function SellPage() {
   const submit = () => saveProduct(true);
 
   const cleanupAndLeave = async () => {
-    const uploadedUrls = [thumbUrl, fileUrl, ...galleryUrls].filter((u): u is string => u !== null);
-    if (uploadedUrls.length > 0) {
-      await api.delete(`${API_BASE}/products/images`, { data: uploadedUrls }).catch(() => {});
+    const objectKeys = [uploadedThumbnail, uploadedFile, ...uploadedImages]
+      .filter((u): u is UploadedObject => u !== null)
+      .map((u) => u.objectKey);
+    if (objectKeys.length > 0) {
+      await api.delete(`${API_BASE}/products/images`, { data: objectKeys }).catch(() => {});
     }
     router.push('/shop');
   };
 
   const handleBack = () => {
-    const uploadedUrls = [thumbUrl, fileUrl, ...galleryUrls].filter((u): u is string => u !== null);
-    const hasContent = title.trim() || uploadedUrls.length > 0;
+    const hasUploads = [uploadedThumbnail, uploadedFile, ...uploadedImages].some((upload) => upload !== null);
+    const hasContent = title.trim() || hasUploads;
     if (hasContent) {
       setLeaveDialogOpen(true);
       return;
@@ -191,11 +195,11 @@ export default function SellPage() {
     salesCount: 0,
     seller: '내 상점',
     desc: desc || '',
-    thumbnail_url: thumbUrl ?? undefined,
+    thumbnail_url: uploadedThumbnail?.previewUrl ?? undefined,
   };
 
   const outputLabel = productType === 'PROMPT' ? `${typeLabel} 내용` : productType === 'NOTION' ? `${typeLabel} 링크` : `${typeLabel} 파일`;
-  const outputText = productType === 'PROMPT' ? body : productType === 'NOTION' ? externalUrl : (fileUrl ? '파일이 업로드됐어요' : '');
+  const outputText = productType === 'PROMPT' ? body : productType === 'NOTION' ? externalUrl : (uploadedFile ? '파일이 업로드됐어요' : '');
   const outputPlaceholder = productType === 'PROMPT'
     ? '내용을 입력하면 이곳에서 실제 표시 형태를 확인할 수 있어요.'
     : productType === 'NOTION'
@@ -284,7 +288,7 @@ export default function SellPage() {
             {(productType === 'PPT' || productType === 'EXCEL') && (
               <div>
                 <Label>산출물 파일</Label>
-                <FileUpload value={fileUrl} onChange={setFileUrl} productType={productType} />
+                <FileUpload value={uploadedFile} onChange={setUploadedFile} productType={productType} />
                 <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Eye style={{ width: 14, height: 14 }} /> 구매 후 구매자가 다운로드하는 실제 파일이에요.
                 </p>
@@ -351,8 +355,8 @@ export default function SellPage() {
               <div>
                 <Label hint="상품리스트 기준 16:9 · 최대 5MB">대표 썸네일</Label>
                 <ImageUpload
-                  value={thumbUrl}
-                  onChange={setThumbUrl}
+                  value={uploadedThumbnail}
+                  onChange={setUploadedThumbnail}
                   aspectRatio="16 / 9"
                   placeholder="썸네일을 클릭하거나 드래그해 업로드"
                   purpose="thumbnail"
@@ -363,13 +367,13 @@ export default function SellPage() {
               <div>
                 <Label hint="최대 5장">소개 이미지</Label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
-                  {galleryUrls.map((url, i) => (
+                  {uploadedImages.map((image, i) => (
                     <ImageUpload
                       key={i}
-                      value={url}
-                      onChange={(v) => setGalleryUrls((prev) => {
-                        const next = [...prev];
-                        next[i] = v;
+                      value={image}
+                      onChange={(uploaded) => setUploadedImages((previousImages) => {
+                        const next = [...previousImages];
+                        next[i] = uploaded;
                         return next;
                       })}
                       height={96}

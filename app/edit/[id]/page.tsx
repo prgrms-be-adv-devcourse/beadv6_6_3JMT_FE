@@ -12,6 +12,7 @@ import FormField from '@/components/ui/FormField';
 import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
 import ImageUpload from '@/components/ui/ImageUpload';
 import FileUpload from '@/components/ui/FileUpload';
+import { isTempObjectKey, type UploadedObject } from '@/lib/upload';
 import { useToast } from '@/store/useToastStore';
 import { apiErrorMessage, isValidProductPrice } from '@/lib/utils';
 import Label from '@/components/ui/Label';
@@ -37,10 +38,13 @@ type Prompt = {
   desc: string;
   content: string;
   fileUrl?: string | null;
+  fileObjectKey?: string | null;
   externalUrl?: string | null;
   status?: string;
   thumbnailUrl?: string | null;
+  thumbnailObjectKey?: string | null;
   imageUrls?: string[];
+  imageObjectKeys?: string[];
   tags?: string[];
   versions?: Version[];
 };
@@ -119,17 +123,26 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   const [price, setPrice] = useState(prompt.amount === 0 ? '0' : String(prompt.amount));
   const [desc, setDesc] = useState(prompt.desc);
   const [body, setBody] = useState(prompt.content);
-  const [fileUrl, setFileUrl] = useState<string | null>(prompt.fileUrl ?? null);
+  const [uploadedFile, setUploadedFile] = useState<UploadedObject | null>(
+    prompt.fileObjectKey ? { objectKey: prompt.fileObjectKey, previewUrl: prompt.fileUrl ?? '' } : null
+  );
   const [externalUrl, setExternalUrl] = useState(prompt.externalUrl ?? '');
   const [tags, setTags] = useState<string[]>(prompt.tags ?? []);
   const [tagInput, setTagInput] = useState('');
-  const [thumbUrl, setThumbUrl] = useState<string | null>(prompt.thumbnailUrl ?? null);
-  const initGallery = (urls?: string[]) => {
-    const base: (string | null)[] = Array(5).fill(null);
-    urls?.forEach((u, i) => { if (i < 5) base[i] = u; });
+  const [uploadedThumbnail, setUploadedThumbnail] = useState<UploadedObject | null>(
+    prompt.thumbnailObjectKey ? { objectKey: prompt.thumbnailObjectKey, previewUrl: prompt.thumbnailUrl ?? '' } : null
+  );
+  // 미리보기 URL(previewUrl)과 수정 요청용 key(objectKey)는 같은 인덱스로 정렬돼 내려온다.
+  const initGallery = (urls?: string[], keys?: string[]): (UploadedObject | null)[] => {
+    const base: (UploadedObject | null)[] = Array(5).fill(null);
+    keys?.forEach((objectKey, i) => {
+      if (i < 5 && objectKey) base[i] = { objectKey, previewUrl: urls?.[i] ?? '' };
+    });
     return base;
   };
-  const [galleryUrls, setGalleryUrls] = useState<(string | null)[]>(() => initGallery(prompt.imageUrls));
+  const [uploadedImages, setUploadedImages] = useState<(UploadedObject | null)[]>(
+    () => initGallery(prompt.imageUrls, prompt.imageObjectKeys)
+  );
   const [versionType, setVersionType] = useState<'PATCH' | 'MAJOR'>('PATCH');
   const [changeReason, setChangeReason] = useState('');
   const [noteErr, setNoteErr] = useState(false);
@@ -161,7 +174,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     if (!isDraft) {
       if (productType === 'PROMPT' && !body.trim()) { showToast('판매할 프롬프트 본문을 입력해 주세요'); return; }
       if (productType === 'NOTION' && !externalUrl.trim()) { showToast('공유할 노션 링크를 입력해 주세요'); return; }
-      if ((productType === 'PPT' || productType === 'EXCEL') && !fileUrl) { showToast('산출물 파일 업로드가 완료된 뒤 저장해 주세요'); return; }
+      if ((productType === 'PPT' || productType === 'EXCEL') && !uploadedFile) { showToast('산출물 파일 업로드가 완료된 뒤 저장해 주세요'); return; }
     }
     if (!isDraft && !changeReason.trim()) {
       setNoteErr(true);
@@ -178,10 +191,11 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
         amount: Number(price),
         desc,
         content: productType === 'PROMPT' ? body : null,
-        fileUrl: productType === 'PPT' || productType === 'EXCEL' ? fileUrl : null,
+        fileObjectKey: productType === 'PPT' || productType === 'EXCEL' ? (uploadedFile?.objectKey ?? null) : null,
         externalUrl: productType === 'NOTION' ? externalUrl : null,
-        thumbnailUrl: thumbUrl,
-        imageUrls: galleryUrls.filter((u): u is string => u !== null),
+        thumbnailObjectKey: uploadedThumbnail?.objectKey ?? null,
+        imageObjectKeys: uploadedImages.filter((image): image is UploadedObject => image !== null)
+          .map((image) => image.objectKey),
         tags,
         ...(isDraft ? {} : { versionType, changeReason }),
       });
@@ -209,9 +223,11 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
   };
 
   const cleanupAndCancel = async () => {
-    const tempUrls = [thumbUrl, fileUrl, ...galleryUrls].filter((u): u is string => !!u && u.includes('/temp/'));
-    if (tempUrls.length > 0) {
-      await api.delete(`${API_BASE}/products/images`, { data: tempUrls }).catch(() => {});
+    const tempObjectKeys = [uploadedThumbnail, uploadedFile, ...uploadedImages]
+      .filter((u): u is UploadedObject => !!u && isTempObjectKey(u.objectKey))
+      .map((u) => u.objectKey);
+    if (tempObjectKeys.length > 0) {
+      await api.delete(`${API_BASE}/products/images`, { data: tempObjectKeys }).catch(() => {});
     }
     router.push('/shop');
   };
@@ -231,11 +247,11 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     salesCount: 0,
     seller: '내 상점',
     desc: desc || '',
-    thumbnail_url: thumbUrl ?? undefined,
+    thumbnail_url: uploadedThumbnail?.previewUrl ?? undefined,
   };
 
   const outputLabel = productType === 'PROMPT' ? `${typeLabel} 내용` : productType === 'NOTION' ? `${typeLabel} 링크` : `${typeLabel} 파일`;
-  const outputText = productType === 'PROMPT' ? body : productType === 'NOTION' ? externalUrl : (fileUrl ? '파일이 업로드됐어요' : '');
+  const outputText = productType === 'PROMPT' ? body : productType === 'NOTION' ? externalUrl : (uploadedFile ? '파일이 업로드됐어요' : '');
   const outputPlaceholder = productType === 'PROMPT'
     ? '내용을 입력하면 이곳에서 실제 표시 형태를 확인할 수 있어요.'
     : productType === 'NOTION'
@@ -335,7 +351,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
             {(productType === 'PPT' || productType === 'EXCEL') && (
               <div>
                 <Label>산출물 파일</Label>
-                <FileUpload value={fileUrl} onChange={setFileUrl} productType={productType} />
+                <FileUpload value={uploadedFile} onChange={setUploadedFile} productType={productType} />
                 <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Eye style={{ width: 14, height: 14 }} /> 구매 후 구매자가 다운로드하는 실제 파일이에요.
                 </p>
@@ -401,18 +417,22 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
               {/* 대표 썸네일 */}
               <div>
                 <Label hint="상품리스트 기준 16:9 · 최대 5MB">대표 썸네일</Label>
-                <ImageUpload value={thumbUrl} onChange={setThumbUrl} aspectRatio="16 / 9" placeholder="썸네일을 클릭하거나 드래그해 업로드" purpose="thumbnail" />
+                <ImageUpload value={uploadedThumbnail} onChange={setUploadedThumbnail} aspectRatio="16 / 9" placeholder="썸네일을 클릭하거나 드래그해 업로드" purpose="thumbnail" />
               </div>
 
               {/* 소개 이미지 */}
               <div>
                 <Label hint="최대 5장">소개 이미지</Label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
-                  {galleryUrls.map((url, i) => (
+                  {uploadedImages.map((image, i) => (
                     <ImageUpload
                       key={i}
-                      value={url}
-                      onChange={(v) => setGalleryUrls((prev) => { const next = [...prev]; next[i] = v; return next; })}
+                      value={image}
+                      onChange={(uploaded) => setUploadedImages((previousImages) => {
+                        const next = [...previousImages];
+                        next[i] = uploaded;
+                        return next;
+                      })}
                       height={96}
                       placeholder="+ 추가"
                     />
@@ -563,10 +583,13 @@ export default function EditPage() {
           desc: d.desc ?? '',
           content: d.content ?? '',
           fileUrl: d.fileUrl ?? null,
+          fileObjectKey: d.fileObjectKey ?? null,
           externalUrl: d.externalUrl ?? null,
           status: d.status,
           thumbnailUrl: d.thumbnailUrl ?? null,
+          thumbnailObjectKey: d.thumbnailObjectKey ?? null,
           imageUrls: d.imageUrls ?? [],
+          imageObjectKeys: d.imageObjectKeys ?? [],
           tags: d.tags ?? [],
         });
         setVersions(d.version ? [{ ver: d.version, date: '', note: '' }] : []);

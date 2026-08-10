@@ -3,12 +3,12 @@
 import { useRef, useState } from 'react';
 import { Upload, FileCheck2, X } from 'lucide-react';
 import { useToast } from '@/store/useToastStore';
-import { uploadViaPresign } from '@/lib/upload';
+import { uploadViaPresign, type UploadedObject } from '@/lib/upload';
 import { apiErrorMessage } from '@/lib/utils';
 
 interface Props {
-  value?: string | null; // 업로드된 fileUrl
-  onChange: (url: string | null) => void;
+  value?: UploadedObject | null;
+  onChange: (uploaded: UploadedObject | null) => void;
   productType: 'PPT' | 'EXCEL';
 }
 
@@ -28,12 +28,12 @@ export default function FileUpload({ value, onChange, productType }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const showToast = useToast();
 
-  const process = async (file: File) => {
+  const uploadFile = async (file: File) => {
     setUploading(true);
     try {
-      const url = await uploadViaPresign(file, 'file', productType);
+      const uploaded = await uploadViaPresign(file, 'file', productType);
       setFileName(file.name);
-      onChange(url);
+      onChange(uploaded);
     } catch (err: unknown) {
       showToast(apiErrorMessage(err, '파일 업로드에 실패했어요. 허용된 형식인지 확인해 주세요'));
     } finally {
@@ -88,7 +88,7 @@ export default function FileUpload({ value, onChange, productType }: Props) {
         accept={ACCEPT[productType]}
         onChange={(e) => {
           const f = e.target.files?.[0];
-          if (f) process(f);
+          if (f) uploadFile(f);
           e.target.value = '';
         }}
         style={{ display: 'none' }}

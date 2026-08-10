@@ -4,12 +4,12 @@ import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { X, Upload } from 'lucide-react';
 import { useToast } from '@/store/useToastStore';
-import { uploadViaPresign, type UploadPurpose } from '@/lib/upload';
+import { uploadViaPresign, type UploadPurpose, type UploadedObject } from '@/lib/upload';
 import { apiErrorMessage } from '@/lib/utils';
 
 interface Props {
-  value?: string | null;
-  onChange: (url: string | null) => void;
+  value?: UploadedObject | null;
+  onChange: (uploaded: UploadedObject | null) => void;
   height?: number;
   aspectRatio?: string;
   placeholder?: string;
@@ -36,7 +36,7 @@ export default function ImageUpload({
     ...(aspectRatio ? { aspectRatio } : { height }),
   };
 
-  const process = async (file: File) => {
+  const uploadImage = async (file: File) => {
     if (!['image/jpeg', 'image/png'].includes(file.type)) {
       showToast('JPG 또는 PNG 이미지만 업로드할 수 있어요');
       return;
@@ -47,8 +47,8 @@ export default function ImageUpload({
     }
     setUploading(true);
     try {
-      const url = await uploadViaPresign(file, purpose);
-      onChange(url);
+      const uploaded = await uploadViaPresign(file, purpose);
+      onChange(uploaded);
     } catch (err: unknown) {
       showToast(apiErrorMessage(err, '이미지 업로드에 실패했어요. 다시 시도해 주세요'));
     } finally {
@@ -58,7 +58,7 @@ export default function ImageUpload({
 
   const onFiles = (files: FileList | null) => {
     const f = files?.[0];
-    if (f) process(f);
+    if (f) uploadImage(f);
   };
 
   if (uploading) {
@@ -74,7 +74,7 @@ export default function ImageUpload({
   if (value) {
     return (
       <div style={{ ...boxStyle, position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--ph-border)' }}>
-        <Image src={value} alt="업로드 이미지" fill style={{ objectFit: 'cover' }} unoptimized />
+        <Image src={value.previewUrl} alt="업로드 이미지" fill style={{ objectFit: 'cover' }} unoptimized />
         <button
           type="button"
           onClick={() => onChange(null)}
