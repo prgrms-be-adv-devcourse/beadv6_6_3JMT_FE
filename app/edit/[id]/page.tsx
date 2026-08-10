@@ -47,6 +47,7 @@ type Prompt = {
   imageObjectKeys?: string[];
   tags?: string[];
   versions?: Version[];
+  liveVersion?: string | null;
 };
 
 function nextVer(latest: string, type: 'MAJOR' | 'PATCH'): string {
@@ -114,6 +115,8 @@ function Input({ value, onChange, placeholder, leading }: {
 function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; versions: Version[] }) {
   const router = useRouter();
   const isDraft = prompt.status === 'DRAFT';
+  // 판매 후 반려된 row는 같은 version만 보정한다 — 새 버전 선택·변경 사유 입력은 여기서 숨긴다.
+  const isRejected = prompt.status === 'REJECTED';
 
   const [title, setTitle] = useState(prompt.title);
   // 상품 유형은 등록 시 한 번 정하고 수정 화면에서는 바꾸지 않는다. state가 아니라 상수로
@@ -176,7 +179,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
       if (productType === 'NOTION' && !externalUrl.trim()) { showToast('공유할 노션 링크를 입력해 주세요'); return; }
       if ((productType === 'PPT' || productType === 'EXCEL') && !uploadedFile) { showToast('산출물 파일 업로드가 완료된 뒤 저장해 주세요'); return; }
     }
-    if (!isDraft && !changeReason.trim()) {
+    if (!isDraft && !isRejected && !changeReason.trim()) {
       setNoteErr(true);
       showToast('변경 내용을 입력해 주세요');
       return;
@@ -197,13 +200,15 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
         imageObjectKeys: uploadedImages.filter((image): image is UploadedObject => image !== null)
           .map((image) => image.objectKey),
         tags,
-        ...(isDraft ? {} : { versionType, changeReason }),
+        ...(isDraft || isRejected ? {} : { versionType, changeReason }),
       });
       const successMsg = isDraft
         ? '저장됐어요'
-        : versionType === 'MAJOR'
-          ? '검수 대기 상태로 전환됐어요'
-          : '수정사항이 바로 적용됐어요';
+        : isRejected
+          ? '반려된 상품을 수정했어요 · 내 상점에서 다시 검수를 요청해 주세요'
+          : versionType === 'MAJOR'
+            ? '검수 대기 상태로 전환됐어요'
+            : '수정사항이 바로 적용됐어요';
       showToast(successMsg);
       setTimeout(() => router.push('/shop'), 1200);
     } catch (e: unknown) {
@@ -276,16 +281,27 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
           </div>
           <h1 style={{ fontSize: 33, fontWeight: 700, letterSpacing: '-0.015em', margin: 0 }}>{typeLabel} 수정</h1>
           {!isDraft && (
-            <p style={{ fontSize: 16, color: 'var(--ph-text-secondary)', margin: '8px 0 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              저장하면{' '}
-              <Badge tone="neutral">현재 v{curVer}</Badge>
-              <ArrowRight style={{ width: 15, height: 15, color: 'var(--ph-text-muted)' }} />
-              <Badge tone="blue" soft={false}>v{nxtVer}</Badge>
-              {' '}로 업데이트돼요.{' '}
-              <span style={{ color: versionType === 'PATCH' ? 'var(--ph-primary)' : '#f59e0b', fontWeight: 600 }}>
-                {versionType === 'PATCH' ? '✓ 바로 적용됩니다.' : '⏱ 검수 후 적용됩니다.'}
-              </span>
-            </p>
+            isRejected ? (
+              <p style={{ fontSize: 16, color: 'var(--ph-text-secondary)', margin: '8px 0 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <Badge tone="blue" soft={false}>v{curVer}</Badge>을 수정합니다. 저장 후 내 상점에서 다시 검수를 요청해 주세요.
+                {prompt.liveVersion && (
+                  <>
+                    현재 <Badge tone="neutral">v{prompt.liveVersion}</Badge>이 판매 중이에요.
+                  </>
+                )}
+              </p>
+            ) : (
+              <p style={{ fontSize: 16, color: 'var(--ph-text-secondary)', margin: '8px 0 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                저장하면{' '}
+                <Badge tone="neutral">현재 v{curVer}</Badge>
+                <ArrowRight style={{ width: 15, height: 15, color: 'var(--ph-text-muted)' }} />
+                <Badge tone="blue" soft={false}>v{nxtVer}</Badge>
+                {' '}로 업데이트돼요.{' '}
+                <span style={{ color: versionType === 'PATCH' ? 'var(--ph-primary)' : '#f59e0b', fontWeight: 600 }}>
+                  {versionType === 'PATCH' ? '✓ 바로 적용됩니다.' : '⏱ 검수 후 적용됩니다.'}
+                </span>
+              </p>
+            )
           )}
         </div>
       </div>
@@ -445,8 +461,8 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
             </div>
           </Card>
 
-          {/* 버전 유형 + 변경 내용 — DRAFT 제외 */}
-          {!isDraft && (
+          {/* 버전 유형 + 변경 내용 — DRAFT·REJECTED 제외(둘 다 같은 row·version을 그대로 쓴다) */}
+          {!isDraft && !isRejected && (
             <Card padding="28px" style={{ border: `1px solid ${noteErr ? 'var(--ph-error)' : 'var(--ph-border)'}` }}>
               <div style={{ marginBottom: 20 }}>
                 <Label>
@@ -509,7 +525,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
               <Button variant="secondary" size="lg" onClick={handleCancel}>취소</Button>
               <Button variant="solid" size="lg" disabled={saving || !title.trim() || !desc.trim()} onClick={save}>
-                {saving ? '저장 중...' : isDraft ? '저장' : '새 버전으로 저장'}
+                {saving ? '저장 중...' : isDraft ? '저장' : isRejected ? '수정 내용 저장' : '새 버전으로 저장'}
               </Button>
             </div>
           </div>
@@ -591,6 +607,7 @@ export default function EditPage() {
           imageUrls: d.imageUrls ?? [],
           imageObjectKeys: d.imageObjectKeys ?? [],
           tags: d.tags ?? [],
+          liveVersion: d.liveVersion ?? null,
         });
         setVersions(d.version ? [{ ver: d.version, date: '', note: '' }] : []);
       })
