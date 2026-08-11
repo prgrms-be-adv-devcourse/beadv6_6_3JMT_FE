@@ -22,6 +22,7 @@ import ConfirmDialog from '@/components/modals/ConfirmDialog';
 import {
   PRODUCT_TYPE_LABEL, PRODUCT_TYPE_TITLE_PLACEHOLDER, PRODUCT_TYPE_DESC_PLACEHOLDER,
   PRODUCT_TYPE_CHANGE_PLACEHOLDER, PRODUCT_TYPE_TAG_PLACEHOLDER, PRODUCT_TYPE_TAG_HINT,
+  PRODUCT_TYPE_PATCH_DESC, PRODUCT_TYPE_MAJOR_DESC,
   type ProductType,
 } from '@/lib/productTypes';
 
@@ -116,7 +117,7 @@ function previewNextVersion(current: string, isMajor: boolean): string {
 /** 저장 응답의 version·status로 안내 문구를 정한다. */
 function successMessage(data: { version: string; status: string }): string {
   if (data.status === 'REJECTED') return '반려된 상품을 수정했어요 · 내 상점에서 다시 검수를 요청해 주세요';
-  if (data.status === 'DRAFT') return `v${data.version} 임시저장이 수정됐어요.`;
+  if (data.status === 'DRAFT') return `v${data.version} 임시저장 내용이 저장됐어요.`;
   if (data.status === 'PENDING_REVIEW') return `v${data.version}으로 저장됐어요 · 검수 후 판매에 반영됩니다.`;
   return `v${data.version} 수정사항이 바로 반영됐어요.`;
 }
@@ -480,43 +481,41 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
           {/* 변경 내용 — DRAFT·REJECTED는 같은 row·version을 그대로 쓰므로 제외한다. */}
           {!isDraft && !isRejected && (
             <Card padding="28px" style={{ border: `1px solid ${noteErr ? 'var(--ph-error)' : 'var(--ph-border)'}` }}>
-              {/* 사용자가 고르진 않지만, 이 수정이 결과적으로 PATCH인지 MAJOR인지는 저장 전에
-                  미리 보여준다 — MAJOR인 줄 모르고 저장했다가 갑자기 검수 대기로 빠지면 당황하므로. */}
-              {isDirty && (
-                <div style={{ marginBottom: 20 }}>
-                  <Label>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                      <History style={{ width: 16, height: 16, color: 'var(--ph-primary)' }} /> 버전 유형
-                    </span>
-                  </Label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    {(['PATCH', 'MAJOR'] as const).map((type) => {
-                      const sel = isMajorChange === (type === 'MAJOR');
-                      const isPatch = type === 'PATCH';
-                      return (
-                        <div
-                          key={type}
-                          style={{ textAlign: 'left', padding: '14px 16px', border: `1.5px solid ${sel ? 'var(--ph-primary)' : 'var(--ph-border)'}`, borderRadius: 'var(--ph-radius-md)', background: sel ? 'var(--ph-secondary)' : 'var(--ph-surface)', opacity: sel ? 1 : 0.5 }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                            <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${sel ? 'var(--ph-primary)' : 'var(--ph-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              {sel && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ph-primary)' }} />}
-                            </div>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ph-text)' }}>{type}</span>
-                            <span style={{ fontSize: 12, color: 'var(--ph-text-muted)' }}>v{curVer} → v{previewNextVersion(curVer, type === 'MAJOR')}</span>
+              {/* 사용자가 고르진 않지만, 이 수정이 결과적으로 PATCH인지 MAJOR인지는 처음부터
+                  보여준다 — MAJOR인 줄 모르고 저장했다가 갑자기 검수 대기로 빠지면 당황하므로. */}
+              <div style={{ marginBottom: 20 }}>
+                <Label>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                    <History style={{ width: 16, height: 16, color: 'var(--ph-primary)' }} /> 버전 유형
+                  </span>
+                </Label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {(['PATCH', 'MAJOR'] as const).map((type) => {
+                    const sel = isMajorChange === (type === 'MAJOR');
+                    const isPatch = type === 'PATCH';
+                    return (
+                      <div
+                        key={type}
+                        style={{ textAlign: 'left', padding: '14px 16px', border: `1.5px solid ${sel ? 'var(--ph-primary)' : 'var(--ph-border)'}`, borderRadius: 'var(--ph-radius-md)', background: sel ? 'var(--ph-secondary)' : 'var(--ph-surface)', opacity: sel ? 1 : 0.5 }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${sel ? 'var(--ph-primary)' : 'var(--ph-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {sel && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ph-primary)' }} />}
                           </div>
-                          <div style={{ fontSize: 12, color: 'var(--ph-text-secondary)', lineHeight: 1.4, paddingLeft: 24 }}>
-                            {isPatch ? '교정·오타·내용 보강 등 작은 변경' : '프롬프트 구조·목적이 크게 바뀔 때'}
-                          </div>
-                          <div style={{ fontSize: 12, fontWeight: 600, paddingLeft: 24, marginTop: 5, color: isPatch ? 'var(--ph-primary)' : '#f59e0b' }}>
-                            {isPatch ? '✓ 바로 적용돼요' : '⏱ 검수 후 적용돼요'}
-                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ph-text)' }}>{type}</span>
+                          <span style={{ fontSize: 12, color: 'var(--ph-text-muted)' }}>v{curVer} → v{previewNextVersion(curVer, type === 'MAJOR')}</span>
                         </div>
-                      );
-                    })}
-                  </div>
+                        <div style={{ fontSize: 12, color: 'var(--ph-text-secondary)', lineHeight: 1.4, paddingLeft: 24 }}>
+                          {isPatch ? PRODUCT_TYPE_PATCH_DESC[productType] : PRODUCT_TYPE_MAJOR_DESC[productType]}
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 600, paddingLeft: 24, marginTop: 5, color: isPatch ? 'var(--ph-primary)' : '#f59e0b' }}>
+                          {isPatch ? '✓ 바로 적용돼요' : '⏱ 검수 후 적용돼요'}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
 
               <Label hint={`${changeReason.length}/500${isDirty ? ' · 필수' : ''}`}>변경 내용</Label>
               <p style={{ fontSize: 13, color: 'var(--ph-text-muted)', margin: '0 0 12px' }}>

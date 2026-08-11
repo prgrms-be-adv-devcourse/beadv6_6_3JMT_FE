@@ -63,6 +63,22 @@ export const PRODUCT_TYPE_CHANGE_PLACEHOLDER: Record<ProductType, string> = {
   EXCEL: '예: 수식 오류 수정, 시트 추가',
 };
 
+// PATCH는 유형과 무관하게 같은 필드(제목·소개·가격·태그·이미지)라 문구가 거의 같다 — 모델은
+// PROMPT에만 있는 필드라 그 유형에서만 언급한다. MAJOR는 유형별 핵심 산출물이 갈리므로 나눈다.
+export const PRODUCT_TYPE_PATCH_DESC: Record<ProductType, string> = {
+  PROMPT: '제목·소개·모델·가격·태그·이미지처럼 기본 정보를 고칠 때예요',
+  NOTION: '제목·소개·가격·태그·이미지처럼 기본 정보를 고칠 때예요',
+  PPT: '제목·소개·가격·태그·이미지처럼 기본 정보를 고칠 때예요',
+  EXCEL: '제목·소개·가격·태그·이미지처럼 기본 정보를 고칠 때예요',
+};
+
+export const PRODUCT_TYPE_MAJOR_DESC: Record<ProductType, string> = {
+  PROMPT: '프롬프트 본문을 바꾸거나 무료·유료를 전환할 때예요',
+  NOTION: '노션 링크를 바꾸거나 무료·유료를 전환할 때예요',
+  PPT: 'PPT 파일을 바꾸거나 무료·유료를 전환할 때예요',
+  EXCEL: '엑셀 파일을 바꾸거나 무료·유료를 전환할 때예요',
+};
+
 export const PRODUCT_TYPE_BROWSE_DESC: Record<string, string> = {
   all: '필요한 상품을 골라서 찾아보세요',
   PROMPT: '바로 쓰는 프롬프트를 찾아보세요',
