@@ -415,7 +415,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
               <div>
                 <Label hint={`${tags.length}/8`}>태그</Label>
                 <form onSubmit={addTag} style={{ display: 'flex', gap: 8 }}>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <Input
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}

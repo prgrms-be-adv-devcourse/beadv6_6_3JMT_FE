@@ -521,7 +521,11 @@ function Pop({ children, onClose, width = 280 }: { children: React.ReactNode; on
   return (
     <React.Fragment>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 50 }}></div>
-      <div style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, zIndex: 51, width, background: '#fff', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-lg)', padding: 8 }}>
+      {/* 모바일에서는 트리거 아이콘 위치와 무관하게 화면 우측에 고정해 화면 밖으로 잘리지 않게 한다 */}
+      <div
+        className="!fixed !top-[76px] !right-4 md:!absolute md:!top-[calc(100%_+_10px)] md:!right-0"
+        style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, zIndex: 51, width, background: '#fff', border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-lg)', padding: 8 }}
+      >
         {children}
       </div>
     </React.Fragment>
