@@ -5,6 +5,7 @@ import { Sparkles } from 'lucide-react';
 export default function Logo({ onClick }: { onClick: () => void }) {
   return (
     <button
+      className="min-h-11 md:min-h-0"
       onClick={onClick}
       style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
     >

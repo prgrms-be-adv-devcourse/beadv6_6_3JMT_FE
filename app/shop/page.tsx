@@ -144,7 +144,7 @@ export default function ShopPage() {
   ];
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '44px 32px 0' }}>
+    <div className="!px-4 md:!px-8" style={{ maxWidth: 1200, margin: '0 auto', padding: '44px 32px 0' }}>
 
       {/* ── 헤더 ── */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -158,7 +158,7 @@ export default function ShopPage() {
       </div>
 
       {/* ── 통계 카드 4개 ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, margin: '28px 0 8px' }}>
+      <div className="!grid-cols-2 md:!grid-cols-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, margin: '28px 0 8px' }}>
         {cards.map(({ label, value, icon: Icon }) => (
           <div
             key={label}
@@ -212,6 +212,7 @@ export default function ShopPage() {
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
             {statusFilterTabs.map(({ id, label }) => (
               <button
+                className="min-h-11 md:min-h-0"
                 key={id}
                 onClick={() => setStatusFilter(id)}
                 style={{

@@ -287,7 +287,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     : '파일을 업로드하면 이곳에서 확인할 수 있어요.';
 
   return (
-    <div style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 32px 0' }}>
+    <div className="!px-4 md:!px-8" style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 32px 0' }}>
       {/* 뒤로가기 */}
       <button
         onClick={handleCancel}
@@ -323,7 +323,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 40, alignItems: 'start' }}>
+      <div className="!grid-cols-1 md:!grid-cols-[1fr_380px]" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 40, alignItems: 'start' }}>
 
         {/* ── 폼 ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -340,7 +340,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
                   {typeLabel}
                 </span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: productType === 'PROMPT' ? '1fr 1fr' : '1fr', gap: 16 }}>
+              <div className={productType === 'PROMPT' ? '!grid-cols-1 md:!grid-cols-2' : '!grid-cols-1'} style={{ display: 'grid', gridTemplateColumns: productType === 'PROMPT' ? '1fr 1fr' : '1fr', gap: 16 }}>
                 {productType === 'PROMPT' && (
                   <FormField label="대상 모델" value={model} onChange={(v) => setModel(v)} placeholder="예: GPT-4o" />
                 )}

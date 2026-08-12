@@ -328,7 +328,7 @@ function DetailScreen({ p, recommended }: { p: Prompt; recommended: Prompt[] }) 
   ];
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 32px 0' }}>
+    <div className="!px-4 md:!px-8" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 32px 0' }}>
       {/* Back button */}
       <button
         onClick={() => router.push('/browse')}
@@ -370,7 +370,7 @@ function DetailScreen({ p, recommended }: { p: Prompt; recommended: Prompt[] }) 
                   {CHECKLIST_ITEMS.filter(({ key }) => p[key]).length}/{CHECKLIST_ITEMS.length} 항목 충족
                 </Badge>
               </div>
-              <div className="grid grid-cols-2 gap-x-ph-16 gap-y-ph-xs max-w-[420px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-ph-16 gap-y-ph-xs max-w-[420px]">
                 {CHECKLIST_ITEMS.map(({ key, label, desc }) => {
                   const passed = Boolean(p[key]);
                   return (

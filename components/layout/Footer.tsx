@@ -68,7 +68,7 @@ export default function Footer() {
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {c.links.map((l) => (
                 <li key={l}>
-                  <a href="#" onClick={(e) => e.preventDefault()} style={{ color: 'var(--ph-text-secondary)', textDecoration: 'none', fontSize: 14 }}>{l}</a>
+                  <a className="inline-flex min-h-11 min-w-11 items-center md:min-h-0 md:min-w-0" href="#" onClick={(e) => e.preventDefault()} style={{ color: 'var(--ph-text-secondary)', textDecoration: 'none', fontSize: 14 }}>{l}</a>
                 </li>
               ))}
             </ul>

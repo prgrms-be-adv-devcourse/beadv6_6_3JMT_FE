@@ -436,6 +436,7 @@ function SearchBar({
 function NavLink({ label, active, onClick }: { label: string; active?: boolean; onClick: () => void }) {
   return (
     <button
+      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
       onClick={onClick}
       style={{
         background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--ph-font-family)',
@@ -492,6 +493,7 @@ function IconBtn({
 }) {
   return (
     <button
+      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
       onClick={onClick}
       title={label ?? undefined}
       aria-label={label ?? undefined}
@@ -929,7 +931,7 @@ export default function Header() {
 
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid var(--ph-border)' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', height: 66, padding: '0 32px', display: 'flex', alignItems: 'center', gap: 20 }}>
+      <div className="!px-4 !gap-2 md:!px-8 md:!gap-5" style={{ maxWidth: 1200, margin: '0 auto', height: 66, padding: '0 32px', display: 'flex', alignItems: 'center', gap: 20 }}>
         <Logo onClick={() => go('home')} />
         <nav className="ph-desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <NavLink label="탐색" active={current === 'browse'} onClick={() => onSearch('')} />
@@ -941,6 +943,7 @@ export default function Header() {
           {Hamburger}
           {!user && (
             <button
+              className="min-h-11 md:min-h-0"
               onClick={openLogin}
               style={{ flexShrink: 0, border: 'none', cursor: 'pointer', fontFamily: 'var(--ph-font-family)', fontWeight: 600, color: '#fff', background: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-md)', height: 36, padding: '0 14px', fontSize: 14 }}
             >로그인</button>

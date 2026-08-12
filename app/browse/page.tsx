@@ -33,7 +33,7 @@ const PAGE_SIZE = 20;
 
 function CardGridSkeleton() {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+    <div className="!grid-cols-1 md:!grid-cols-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
       {Array.from({ length: 8 }).map((_, i) => (
         <div key={i} style={{ height: 280, borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-gray-100)' }} />
       ))}
@@ -209,7 +209,7 @@ function BrowseScreen() {
   const countLabel = productType === 'all' ? '상품' : (PRODUCT_TYPE_LABEL[productType] ?? '상품');
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '44px 32px 0' }}>
+    <div className="!px-4 md:!px-8" style={{ maxWidth: 1200, margin: '0 auto', padding: '44px 32px 0' }}>
       <h1 style={{ fontSize: 33, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.01em' }}>{currentTypeLabel}</h1>
       <p style={{ color: 'var(--ph-text-secondary)', fontSize: 16, margin: '0 0 28px' }}>
         {query ? <span>'{query}' 검색 결과 · </span> : <span>{currentTypeDesc} · </span>}{total}개의 {countLabel}
@@ -235,6 +235,7 @@ function BrowseScreen() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
           {(['인기순', '평점순', '가격순'] as const).map((s) => (
             <button
+              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
               key={s}
               onClick={() => setSort(s)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--ph-font-family)', fontSize: 14, fontWeight: sort === s ? 700 : 500, color: sort === s ? 'var(--ph-text)' : 'var(--ph-text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}

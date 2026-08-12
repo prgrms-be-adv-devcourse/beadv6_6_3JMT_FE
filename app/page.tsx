@@ -108,6 +108,7 @@ function PopularTags({ onPick, dark }: { onPick: (q: string) => void; dark?: boo
       <span style={{ fontSize: 14, fontWeight: 600, color: dark ? 'rgba(255,255,255,0.55)' : 'var(--ph-text-muted)', marginRight: 2 }}>인기 검색</span>
       {TAGS.map((t) => (
         <button
+          className="min-h-11 md:min-h-0"
           key={t.label}
           onClick={() => onPick(t.q)}
           style={{
@@ -144,11 +145,11 @@ function HeroToss({ query, onChange, onSearch }: {
   return (
     <section style={{ position: 'relative', overflow: 'hidden' }}>
       <ShaderBackground />
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 940, margin: '0 auto', padding: '96px 32px 88px', textAlign: 'center' }}>
+      <div className="!px-4 !py-16 md:!px-8 md:!pt-24 md:!pb-[88px]" style={{ position: 'relative', zIndex: 1, maxWidth: 940, margin: '0 auto', padding: '96px 32px 88px', textAlign: 'center' }}>
         <div className="rise">
           <Badge>12,000개 이상의 검증된 프롬프트</Badge>
         </div>
-        <h1 className="rise" style={{ animationDelay: '.05s', fontSize: 54, lineHeight: 1.2, fontWeight: 700, letterSpacing: '-0.025em', margin: '24px auto 0', maxWidth: 720 }}>
+        <h1 className="rise !text-[38px] md:!text-[54px]" style={{ animationDelay: '.05s', fontSize: 54, lineHeight: 1.2, fontWeight: 700, letterSpacing: '-0.025em', margin: '24px auto 0', maxWidth: 720 }}>
           더 좋은 결과를 만드는 AI 프롬프트, 여기 다 있어요
         </h1>
         <p className="rise" style={{ animationDelay: '.1s', fontSize: 19, lineHeight: 1.6, color: 'var(--ph-text-secondary)', maxWidth: 540, margin: '20px auto 0' }}>
@@ -188,6 +189,7 @@ function SectionHead({ title, sub, actionLabel, onAction }: {
       </div>
       {actionLabel && (
         <button
+          className="min-h-11 md:min-h-0"
           onClick={onAction}
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--ph-font-family)', fontSize: 15, fontWeight: 600, color: 'var(--ph-primary)', padding: 0 }}
         >{actionLabel}</button>
@@ -244,7 +246,7 @@ function ProductTypeSection({ onPick }: { onPick: (id: string) => void }) {
   return (
     <section style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 32px 0' }}>
       <SectionHead title="상품 유형별로 찾아보기" sub="필요한 형태에 맞는 상품을 골라보세요" />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <div className="!grid-cols-1 md:!grid-cols-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
         {PRODUCT_TYPES.map((t) => (
           <button
             key={t.id}
@@ -279,7 +281,7 @@ function WhySection() {
   return (
     <section style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 32px 0' }}>
       <SectionHead title="왜 PromptHub일까요?" sub="가장 쉽고 안전하게 프롬프트를 사고파는 방법" />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+      <div className="!grid-cols-1 md:!grid-cols-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
         {items.map((f) => (
           <Card key={f.title} padding="32px">
             <span style={{ width: 52, height: 52, borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-secondary)', color: 'var(--ph-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -307,7 +309,7 @@ function SellerCTA() {
 
   return (
     <section style={{ maxWidth: 1200, margin: '112px auto 0', padding: '0 32px' }}>
-      <div style={{ background: 'linear-gradient(135deg, #eaf2fe, #e0ebfb)', borderRadius: 'var(--ph-radius-xl)', padding: '56px 56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 32, flexWrap: 'wrap' }}>
+      <div className="!p-6 md:!p-14" style={{ background: 'linear-gradient(135deg, #eaf2fe, #e0ebfb)', borderRadius: 'var(--ph-radius-xl)', padding: '56px 56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 32, flexWrap: 'wrap' }}>
         <div style={{ maxWidth: 560 }}>
           <h2 style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.25 }}>내 프롬프트로<br />수익을 만들어 보세요</h2>
           <p style={{ fontSize: 17, color: 'var(--ph-text-secondary)', margin: '14px 0 28px', lineHeight: 1.6 }}>잘 만든 프롬프트 하나가 꾸준한 수입이 됩니다. 등록은 무료, 수수료는 단 15%.</p>

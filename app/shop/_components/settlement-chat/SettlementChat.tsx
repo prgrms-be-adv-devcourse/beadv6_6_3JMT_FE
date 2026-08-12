@@ -438,7 +438,7 @@ export default function SettlementChat() {
             type="button"
             onClick={close}
             aria-label="정산 도우미 닫기"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-ph-md text-ph-text-secondary hover:bg-ph-gray-50 hover:text-ph-text"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-ph-md text-ph-text-secondary md:h-10 md:w-10 hover:bg-ph-gray-50 hover:text-ph-text"
           >
             <X className="h-[18px] w-[18px]" aria-hidden="true" />
           </button>
@@ -578,7 +578,7 @@ export default function SettlementChat() {
               type="submit"
               disabled={composerDisabled || draft.trim().length === 0}
               aria-label="질문 보내기"
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-ph-sm bg-ph-primary text-ph-white disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-ph-sm bg-ph-primary md:h-9 md:w-9 text-ph-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Send className="h-[18px] w-[18px]" aria-hidden="true" />
             </button>

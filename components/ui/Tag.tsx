@@ -9,6 +9,7 @@ export default function Tag({
 }) {
   return (
     <button
+      className="min-h-11 md:min-h-0"
       type="button"
       onClick={onClick}
       style={{

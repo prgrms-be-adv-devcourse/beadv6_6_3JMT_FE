@@ -206,7 +206,7 @@ function ContentSkeleton() {
 
 function GridSkeleton() {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+    <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
       {[0, 1, 2].map((i) => (
         <div key={i} style={{ height: 240, borderRadius: 'var(--ph-radius-lg)', background: 'var(--ph-gray-100)' }} />
       ))}
@@ -476,10 +476,10 @@ function MyPageContent() {
   ];
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '44px 32px 0' }}>
+    <div className="!px-4 md:!px-8" style={{ maxWidth: 1100, margin: '0 auto', padding: '44px 32px 0' }}>
       <h1 style={{ fontSize: 33, fontWeight: 700, letterSpacing: '-0.015em', margin: '0 0 28px' }}>마이페이지</h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '224px 1fr', gap: 36, alignItems: 'start' }}>
+      <div className="!grid-cols-1 md:!grid-cols-[224px_1fr]" style={{ display: 'grid', gridTemplateColumns: '224px 1fr', gap: 36, alignItems: 'start' }}>
 
         {/* ── 사이드바 ── */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, position: 'sticky', top: 88 }}>
@@ -616,7 +616,7 @@ function MyPageContent() {
               )}
 
               {/* 통계 카드 3개 */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 16 }}>
+              <div className="!grid-cols-1 md:!grid-cols-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 16 }}>
                 {[
                   {
                     label: '구매한 프롬프트',
@@ -661,7 +661,7 @@ function MyPageContent() {
                   onCta={() => router.push('/browse')}
                 />
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+                <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
                   {purchased.map((p, index) => {
                     const rst = refunds[p.orderProductId ?? p.id];
                     if (rst) {
@@ -727,7 +727,7 @@ function MyPageContent() {
                   onCta={() => router.push('/browse')}
                 />
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+                <div className="ph-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
                   {wishlist.map((p) => (
                     <PromptCard key={p.id} p={p} onClick={() => router.push(`/detail/${p.id}`)} />
                   ))}
