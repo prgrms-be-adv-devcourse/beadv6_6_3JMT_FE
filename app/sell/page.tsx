@@ -367,7 +367,7 @@ export default function SellPage() {
               {/* 소개 이미지 */}
               <div>
                 <Label hint="최대 5장">소개 이미지</Label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+                <div className="!grid-cols-2 sm:!grid-cols-3 md:!grid-cols-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
                   {uploadedImages.map((image, i) => (
                     <ImageUpload
                       key={i}

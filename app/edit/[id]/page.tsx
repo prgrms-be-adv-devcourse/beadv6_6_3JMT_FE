@@ -290,6 +290,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
     <div className="!px-4 md:!px-8" style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 32px 0' }}>
       {/* 뒤로가기 */}
       <button
+        className="min-h-11 md:min-h-0"
         onClick={handleCancel}
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ph-text-secondary)', fontFamily: 'var(--ph-font-family)', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20, padding: 0 }}
       >
@@ -456,7 +457,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
               {/* 소개 이미지 */}
               <div>
                 <Label hint="최대 5장">소개 이미지</Label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+                <div className="!grid-cols-2 sm:!grid-cols-3 md:!grid-cols-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
                   {uploadedImages.map((image, i) => (
                     <ImageUpload
                       key={i}
@@ -489,7 +490,7 @@ function EditScreen({ id, prompt, versions }: { id: string; prompt: Prompt; vers
                     <History style={{ width: 16, height: 16, color: 'var(--ph-primary)' }} /> 버전 유형
                   </span>
                 </Label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="!grid-cols-1 sm:!grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   {(['PATCH', 'MAJOR'] as const).map((type) => {
                     const sel = isMajorChange === (type === 'MAJOR');
                     const isPatch = type === 'PATCH';

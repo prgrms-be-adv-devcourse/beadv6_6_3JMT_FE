@@ -42,6 +42,7 @@ import {
   Compass,
   User,
   Store,
+  Pencil,
   Receipt,
   Settings,
   LogOut,
@@ -482,6 +483,7 @@ function IconBtn({
   dot,
   count,
   active,
+  expanded,
   onClick,
 }: {
   icon: React.ElementType;
@@ -489,6 +491,7 @@ function IconBtn({
   dot?: boolean;
   count?: number;
   active?: boolean;
+  expanded?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -497,6 +500,7 @@ function IconBtn({
       onClick={onClick}
       title={label ?? undefined}
       aria-label={label ?? undefined}
+      aria-expanded={expanded}
       style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         height: 40, padding: label ? '0 12px' : '0', width: label ? 'auto' : 40,
         background: active ? 'var(--ph-secondary)' : 'none', border: 'none', borderRadius: 'var(--ph-radius-md)',
@@ -915,16 +919,31 @@ export default function Header() {
   );
 
   const Hamburger = (
-    <div className="ph-hamburger" style={{ position: 'relative' }}>
-      <IconBtn icon={menu === 'mobile' ? X : Menu} label={null} active={menu === 'mobile'} onClick={() => toggle('mobile')} />
+    <div className="!inline-flex md:!hidden" style={{ position: 'relative' }}>
+      <IconBtn icon={menu === 'mobile' ? X : Menu} label={null} active={menu === 'mobile'} expanded={menu === 'mobile'} onClick={() => toggle('mobile')} />
       {menu === 'mobile' && (
-        <Pop onClose={close} width={290}>
+        <React.Fragment>
+          <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 50 }}></div>
+          <div className="fixed left-4 right-4 top-[76px] z-[51] rounded-ph-lg border border-ph-border bg-white p-2">
           <div style={{ padding: 8 }}>
             <SearchBar value={query} onChange={setQuery} onSubmit={(q) => { close(); onSearch(q); }} size="header" />
           </div>
           <div style={{ borderTop: '1px solid var(--ph-border)', margin: '4px 0' }}></div>
           <MenuItem icon={Compass} label="탐색" onClick={() => { close(); onSearch(''); }} />
-        </Pop>
+          {hasRole('seller') && (
+            <React.Fragment>
+              <MenuItem icon={Pencil} label="판매하기" onClick={() => { close(); go('sell'); }} />
+              <MenuItem icon={Store} label="내 상점" onClick={() => { close(); go('shop'); }} />
+            </React.Fragment>
+          )}
+          {user && (
+            <React.Fragment>
+              <MenuItem icon={Heart} label="찜한 상품" onClick={() => openMy('wish')} />
+              <MenuItem icon={User} label="마이페이지" onClick={() => openMy('profile')} />
+            </React.Fragment>
+          )}
+          </div>
+        </React.Fragment>
       )}
     </div>
   );
@@ -933,10 +952,10 @@ export default function Header() {
     <header style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid var(--ph-border)' }}>
       <div className="!px-4 !gap-2 md:!px-8 md:!gap-5" style={{ maxWidth: 1200, margin: '0 auto', height: 66, padding: '0 32px', display: 'flex', alignItems: 'center', gap: 20 }}>
         <Logo onClick={() => go('home')} />
-        <nav className="ph-desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <nav className="!hidden md:!flex" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <NavLink label="탐색" active={current === 'browse'} onClick={() => onSearch('')} />
         </nav>
-        <div className="ph-header-search" style={{ flex: 1, maxWidth: 340, marginLeft: 8 }}>
+        <div className="!hidden md:!block" style={{ flex: 1, maxWidth: 340, marginLeft: 8 }}>
           <SearchBar value={query} onChange={setQuery} onSubmit={onSearch} size="header" />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', flexShrink: 0 }}>
@@ -950,23 +969,28 @@ export default function Header() {
           )}
           {hasRole('seller') && (
             <React.Fragment>
-              <button
-                onClick={() => go('sell')}
-                style={{ flexShrink: 0, border: 'none', cursor: 'pointer', fontFamily: 'var(--ph-font-family)', fontWeight: 600, color: '#fff', background: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-md)', height: 36, padding: '0 14px', fontSize: 14 }}
-              >판매하기</button>
-              <IconBtn icon={Store} label="내 상점" active={current === 'shop'} onClick={() => go('shop')} />
-              <IconBtn icon={Heart} label={null} count={wishItems.length || undefined} onClick={() => router.push('/mypage?tab=wish')} />
+              <div className="!hidden md:!flex md:items-center md:gap-1.5">
+                <button
+                  onClick={() => go('sell')}
+                  style={{ flexShrink: 0, border: 'none', cursor: 'pointer', fontFamily: 'var(--ph-font-family)', fontWeight: 600, color: '#fff', background: 'var(--ph-primary)', borderRadius: 'var(--ph-radius-md)', height: 36, padding: '0 14px', fontSize: 14 }}
+                >판매하기</button>
+                <IconBtn icon={Store} label="내 상점" active={current === 'shop'} onClick={() => go('shop')} />
+                <IconBtn icon={Heart} label={null} count={wishItems.length || undefined} onClick={() => router.push('/mypage?tab=wish')} />
+              </div>
+              {/* 장바구니·알림은 햄버거 메뉴에 대응 항목이 없어 모바일에서도 계속 노출한다 */}
               {CartDropdown}
               {BellDropdown}
-              {UserMenuDropdown}
+              <div className="!hidden md:!flex">{UserMenuDropdown}</div>
             </React.Fragment>
           )}
           {!hasRole('seller') && (hasRole('buyer') || hasRole('admin')) && (
             <React.Fragment>
-              <IconBtn icon={Heart} label={null} count={wishItems.length || undefined} onClick={() => router.push('/mypage?tab=wish')} />
+              <div className="!hidden md:!flex">
+                <IconBtn icon={Heart} label={null} count={wishItems.length || undefined} onClick={() => router.push('/mypage?tab=wish')} />
+              </div>
               {CartDropdown}
               {BellDropdown}
-              {UserMenuDropdown}
+              <div className="!hidden md:!flex">{UserMenuDropdown}</div>
             </React.Fragment>
           )}
         </div>

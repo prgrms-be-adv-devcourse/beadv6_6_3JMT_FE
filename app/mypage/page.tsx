@@ -96,7 +96,7 @@ function Switch({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 
 function Row({ children, last }: { children: React.ReactNode; last?: boolean }) {
   return (
-    <div style={{
+    <div className="flex-col !items-stretch sm:flex-row sm:!items-center" style={{
       display: 'flex', alignItems: 'center', gap: 16, padding: '18px 0',
       borderBottom: last ? 'none' : '1px solid var(--ph-border)',
     }}>
@@ -534,7 +534,7 @@ function MyPageContent() {
             <div>
               <SectionTitle sub="내 계정 정보를 확인하세요.">프로필</SectionTitle>
               <Card padding="28px">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 22, flexWrap: 'wrap' }}>
                   <div style={{
                     width: 96, height: 96, borderRadius: '50%', overflow: 'hidden',
                     border: '1px solid var(--ph-border)', flexShrink: 0,
@@ -548,9 +548,10 @@ function MyPageContent() {
                       style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                     />
                   </div>
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 22, fontWeight: 700 }}>{user.name}</div>
-                    <div style={{ color: 'var(--ph-text-muted)', fontSize: 15, marginTop: 4 }}>{user.email}</div>
+                    {/* 이메일은 공백 없는 한 단어라 좁은 화면에서 줄바꿈 없이는 가로로 넘친다 */}
+                    <div style={{ color: 'var(--ph-text-muted)', fontSize: 15, marginTop: 4, overflowWrap: 'break-word' }}>{user.email}</div>
                     <div style={{
                       display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12,
                       padding: '5px 11px', background: 'var(--ph-secondary)', color: 'var(--ph-primary)',
@@ -779,7 +780,7 @@ function MyPageContent() {
               <Card padding="8px 24px">
                 {/* 닉네임 */}
                 <Row>
-                  <div style={{ minWidth: 120 }}>
+                  <div className="min-w-0 sm:min-w-[120px]">
                     <div style={{ fontSize: 14, fontWeight: 600 }}>닉네임</div>
                     <div style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 2 }}>다른 사용자에게 표시돼요</div>
                   </div>
@@ -801,7 +802,7 @@ function MyPageContent() {
                 </Row>
                 {/* 이메일 */}
                 <Row last>
-                  <div style={{ minWidth: 120 }}>
+                  <div className="min-w-0 sm:min-w-[120px]">
                     <div style={{ fontSize: 14, fontWeight: 600 }}>이메일</div>
                     <div style={{ fontSize: 13, color: 'var(--ph-text-muted)', marginTop: 2 }}>로그인·알림에 사용돼요</div>
                   </div>

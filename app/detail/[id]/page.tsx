@@ -331,6 +331,7 @@ function DetailScreen({ p, recommended }: { p: Prompt; recommended: Prompt[] }) 
     <div className="!px-4 md:!px-8" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 32px 0' }}>
       {/* Back button */}
       <button
+        className="min-h-11 md:min-h-0"
         onClick={() => router.push('/browse')}
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ph-text-secondary)', fontFamily: 'var(--ph-font-family)', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 24, padding: 0 }}
       >
