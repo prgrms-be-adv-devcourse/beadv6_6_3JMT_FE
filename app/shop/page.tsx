@@ -8,11 +8,12 @@ import { useAuthStore } from '@/store/useAuthStore';
 import {
   Plus, Layers, ShoppingBag, Wallet,
   Info, SearchCheck, Pencil, CirclePause, Lock,
-  AlertTriangle, Receipt, Banknote, Send,
+  AlertTriangle, Receipt, Banknote, Send, Trash2,
 } from 'lucide-react';
 import PromptCard, { type PromptItem } from '@/components/ui/PromptCard';
 import { won, maskUuidsInText } from '@/lib/utils';
 import Button from '@/components/ui/Button';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 import {
   getSellerSettlementSummary,
   type SellerSettlementSummary,
@@ -45,6 +46,26 @@ type Prompt = {
 
 type ActiveTab = 'listings' | 'settlements';
 
+const SELLER_PRODUCTS_PAGE_SIZE = 20;
+
+function toSellerListingStatus(status: string) {
+  if (status === 'PENDING_REVIEW') return 'review';
+  if (status === 'ON_SALE') return 'active';
+  if (status === 'REJECTED') return 'rejected';
+  if (status === 'STOPPED') return 'stopped';
+  return 'draft';
+}
+
+function toSellerListing(p: { productId: string; status: string; rejectionReason?: string; averageRating?: number; thumbnailUrl?: string | null; [key: string]: unknown }) {
+  return {
+    ...p,
+    id: p.productId,
+    status: toSellerListingStatus(p.status),
+    rejectionReason: p.rejectionReason ?? null,
+    rating: p.averageRating,
+    thumbnail_url: p.thumbnailUrl ?? null,
+  };
+}
 
 /* ── ShopPage ───────────────────────────────────────────────────────── */
 
@@ -56,7 +77,14 @@ export default function ShopPage() {
   const [stopped, setStopped] = useState<Record<string, boolean>>({});
   const [expandedReason, setExpandedReason] = useState<Record<string, boolean>>({});
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [myListings, setMyListings] = useState<Prompt[]>([]);
+  // 상태 필터 탭 카운트는 지금까지 불러온(myListings) 항목 기준이다 — "더보기"로 마저
+  // 불러오기 전까지는 실제 등록 수보다 적게 보일 수 있다(page 1개 분량만 로드된 상태).
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [productSummary, setProductSummary] = useState<SellerProductSummary | null>(null);
   const [settlementSummary, setSettlementSummary] = useState<SellerSettlementSummary | null>(null);
 
@@ -72,28 +100,27 @@ export default function ShopPage() {
       .catch(() => setSettlementSummary(null));
   };
 
+  const loadMoreListings = () => {
+    if (loadingMore || !hasNext) return;
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    api.get(`${API_BASE}/products/sellers/me`, { params: { page: nextPage, size: SELLER_PRODUCTS_PAGE_SIZE } })
+      .then((res) => {
+        setMyListings((prev) => [...prev, ...(res.data.data ?? []).map(toSellerListing)]);
+        setPage(nextPage);
+        setHasNext(Boolean(res.data.meta?.hasNext));
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMore(false));
+  };
+
   useEffect(() => {
     // 프롬프트 목록(그리드)은 상품 서비스에서 그대로 사용
-    api.get(`${API_BASE}/products/sellers/me`)
+    api.get(`${API_BASE}/products/sellers/me`, { params: { page: 0, size: SELLER_PRODUCTS_PAGE_SIZE } })
       .catch(() => ({ data: { data: [] } }))
       .then((productsRes) => {
-        const raw = productsRes.data.data ?? [];
-        const toStatus = (s: string) => {
-          if (s === 'PENDING_REVIEW') return 'review'
-          if (s === 'ON_SALE') return 'active'
-          if (s === 'REJECTED') return 'rejected'
-          if (s === 'STOPPED') return 'stopped'
-          return 'draft'
-        }
-        const products = raw.map((p: { productId: string; status: string; rejectionReason?: string; averageRating?: number; thumbnailUrl?: string | null; [key: string]: unknown }) => ({
-          ...p,
-          id: p.productId,
-          status: toStatus(p.status),
-          rejectionReason: p.rejectionReason ?? null,
-          rating: p.averageRating,
-          thumbnail_url: p.thumbnailUrl ?? null,
-        }));
-        setMyListings(products);
+        setMyListings((productsRes.data.data ?? []).map(toSellerListing));
+        setHasNext(Boolean(productsRes.data.meta?.hasNext));
       });
     loadProductSummary();
     loadSettlementSummary();
@@ -120,6 +147,23 @@ export default function ShopPage() {
     }
   };
 
+  // DRAFT·REJECTED 전용 — 백엔드가 소프트 삭제해서 목록에서 실제로 사라진다(ON_SALE의
+  // "판매 중단"과 달리 되돌릴 수 없음). 같은 DELETE 엔드포인트를 쓰지만 성공 시 목록에서
+  // 바로 제거한다는 점이 stopSelling과 다르다.
+  const deleteListing = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`${API_BASE}/products/${deleteTarget}`);
+      setMyListings((prev) => prev.filter((p) => p.id !== deleteTarget));
+    } catch {
+      // 실패 무시 — stopSelling과 동일한 처리 방식
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
+
   const filteredListings = statusFilter === 'all'
     ? myListings
     : statusFilter === 'stopped'
@@ -134,6 +178,14 @@ export default function ShopPage() {
     { id: 'draft',    label: `미등록 ${myListings.filter((p) => p.status === 'draft').length}` },
     { id: 'stopped',  label: `판매중단 ${myListings.filter((p) => p.status === 'stopped' || isStopped(p.id)).length}` },
   ];
+
+  // DRAFT·REJECTED 줄의 "수정"/"검수요청·재요청" 버튼 옆에 붙는 삭제 아이콘 버튼 —
+  // fullWidth 버튼 두 개 폭을 뺏지 않도록 고정 크기로 둔다.
+  const deleteIconButtonStyle: React.CSSProperties = {
+    flexShrink: 0, width: 34, height: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    border: '1px solid var(--ph-border)', borderRadius: 'var(--ph-radius-sm)', background: 'transparent',
+    color: 'var(--ph-text-muted)', cursor: 'pointer', transition: 'all .15s ease',
+  };
 
   // 상품 통계와 정산 금액은 각 서비스의 공개 API에서 독립적으로 조회한다.
   const cards = [
@@ -255,6 +307,14 @@ export default function ShopPage() {
                       <Button variant="solid" size="sm" fullWidth onClick={() => submitForReview(p.id)}>
                         <Send style={{ width: 15, height: 15 }} /> 검수 요청
                       </Button>
+                      <button
+                        aria-label="상품 삭제"
+                        onClick={() => setDeleteTarget(p.id)}
+                        className="hover:border-ph-error hover:bg-[#fdeceb] hover:text-ph-error"
+                        style={deleteIconButtonStyle}
+                      >
+                        <Trash2 style={{ width: 15, height: 15 }} />
+                      </button>
                     </div>
                   ) : p.status === 'rejected' ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -284,6 +344,14 @@ export default function ShopPage() {
                         <Button variant="solid" size="sm" fullWidth onClick={() => submitForReview(p.id)}>
                           <Send style={{ width: 15, height: 15 }} /> 재요청
                         </Button>
+                        <button
+                          aria-label="상품 삭제"
+                          onClick={() => setDeleteTarget(p.id)}
+                          className="hover:border-ph-error hover:bg-[#fdeceb] hover:text-ph-error"
+                          style={deleteIconButtonStyle}
+                        >
+                          <Trash2 style={{ width: 15, height: 15 }} />
+                        </button>
                       </div>
                     </div>
                   ) : review ? (
@@ -322,6 +390,29 @@ export default function ShopPage() {
               );
             })}
           </div>
+
+          {hasNext && (
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '36px 0' }}>
+              <button
+                onClick={loadMoreListings}
+                disabled={loadingMore}
+                style={{
+                  padding: '12px 36px',
+                  borderRadius: 'var(--ph-radius-full)',
+                  border: '1px solid var(--ph-border)',
+                  background: 'var(--ph-surface)',
+                  color: 'var(--ph-text)',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: loadingMore ? 'default' : 'pointer',
+                  opacity: loadingMore ? 0.6 : 1,
+                  fontFamily: 'var(--ph-font-family)',
+                }}
+              >
+                {loadingMore ? '불러오는 중...' : '더보기'}
+              </button>
+            </div>
+          )}
         </section>
       )}
 
@@ -329,6 +420,17 @@ export default function ShopPage() {
       {activeTab === 'settlements' && (
         <SellerSettlementsPanel onSettlementChange={loadSettlementSummary} />
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="상품을 삭제할까요?"
+        description="삭제한 상품은 목록에서 완전히 사라지고 되돌릴 수 없어요."
+        confirmLabel="삭제"
+        confirmVariant="danger"
+        loading={deleting}
+        onConfirm={deleteListing}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

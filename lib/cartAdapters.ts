@@ -6,6 +6,7 @@ export type CartItem = {
   amount: number
   thumbnailUrl: string | null
   sellerId?: string
+  addedAt?: string
 }
 
 type CartProductResponse = {
@@ -20,6 +21,7 @@ type CartProductResponse = {
   thumbnail_url?: unknown
   thumbnailUrl?: unknown
   sellerId?: unknown
+  addedAt?: unknown
 }
 
 type CartResponseItem = CartProductResponse & {
@@ -54,6 +56,7 @@ function mapOneCartItem(value: unknown): CartItem | null {
 
   const thumbnail = source.thumbnailUrl ?? source.thumbnail_url ?? null
   const sellerId = source.sellerId ?? item.sellerId
+  const addedAt = source.addedAt ?? item.addedAt
 
   return {
     id: productId,
@@ -63,6 +66,7 @@ function mapOneCartItem(value: unknown): CartItem | null {
     amount,
     thumbnailUrl: typeof thumbnail === 'string' ? thumbnail : null,
     ...(typeof sellerId === 'string' ? { sellerId } : {}),
+    ...(typeof addedAt === 'string' ? { addedAt } : {}),
   }
 }
 

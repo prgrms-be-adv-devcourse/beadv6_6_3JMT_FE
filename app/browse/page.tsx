@@ -11,6 +11,7 @@ import { enrichBrowseProducts } from '@/lib/browseProducts';
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABEL, PRODUCT_TYPE_BROWSE_DESC } from '@/lib/productTypes';
 import { getSellerNames } from '@/lib/sellers';
 import { getRecommendations } from '@/lib/recommendations';
+import { productIdsByLatestActivity } from '@/lib/productActivity';
 import { getOrders } from '@/lib/orders';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -62,11 +63,18 @@ function RecommendationRow() {
     let cancelled = false;
 
     (async () => {
-      const cartProductIds = cartItems.map((i) => i.productId);
+      const cartProductIds = productIdsByLatestActivity(
+        cartItems.map((item) => ({ productId: item.productId, occurredAt: item.addedAt })),
+      );
       const orders = await getOrders().catch(() => []);
-      const purchasedProductIds = Array.from(new Set(
-        orders.filter((o) => o.orderProductStatus === 'PAID').map((o) => o.productId),
-      ));
+      const purchasedProductIds = productIdsByLatestActivity(
+        orders
+          .filter((order) => order.orderProductStatus === 'PAID')
+          .map((order) => ({
+            productId: order.productId,
+            occurredAt: order.paidAt ?? order.createdAt,
+          })),
+      );
 
       const recommended = await getRecommendations(cartProductIds, purchasedProductIds, 4);
       if (cancelled) return;

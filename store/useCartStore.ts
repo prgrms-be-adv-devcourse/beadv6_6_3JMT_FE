@@ -9,6 +9,7 @@ interface CartItem {
   amount: number
   thumbnailUrl: string | null
   sellerId?: string
+  addedAt?: string
 }
 
 interface CartState {

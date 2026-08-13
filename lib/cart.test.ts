@@ -128,6 +128,7 @@ test('mapCartResponseToItems maps backend cart response products', () => {
           productAmount: 1000,
           thumbnailUrl: '/thumb.png',
           sellerId: 'seller-1',
+          addedAt: '2026-08-14T10:00:00',
         },
       ],
     }),
@@ -140,6 +141,7 @@ test('mapCartResponseToItems maps backend cart response products', () => {
         amount: 1000,
         thumbnailUrl: '/thumb.png',
         sellerId: 'seller-1',
+        addedAt: '2026-08-14T10:00:00',
       },
     ],
   )
