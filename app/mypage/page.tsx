@@ -479,13 +479,17 @@ function MyPageContent() {
     <div className="!px-4 md:!px-8" style={{ maxWidth: 1100, margin: '0 auto', padding: '44px 32px 0' }}>
       <h1 style={{ fontSize: 33, fontWeight: 700, letterSpacing: '-0.015em', margin: '0 0 28px' }}>마이페이지</h1>
 
-      <div className="!grid-cols-1 md:!grid-cols-[224px_1fr]" style={{ display: 'grid', gridTemplateColumns: '224px 1fr', gap: 36, alignItems: 'start' }}>
+      <div className="!grid-cols-1 !gap-6 md:!grid-cols-[224px_1fr] md:!gap-9" style={{ display: 'grid', gridTemplateColumns: '224px 1fr', gap: 36, alignItems: 'start' }}>
 
         {/* ── 사이드바 ── */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, position: 'sticky', top: 88 }}>
+        <nav
+          className="!static !flex-row overflow-x-auto pb-2 md:!sticky md:!flex-col md:overflow-visible md:pb-0"
+          style={{ display: 'flex', flexDirection: 'column', gap: 4, position: 'sticky', top: 88 }}
+        >
           {NAV.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
+              className="shrink-0 whitespace-nowrap"
               onClick={() => {
                 setTab(id);
                 router.replace(`/mypage?tab=${id}`, { scroll: false });
@@ -502,8 +506,9 @@ function MyPageContent() {
               <Icon style={{ width: 18, height: 18 }} />{label}
             </button>
           ))}
-          <div style={{ borderTop: '1px solid var(--ph-border)', margin: '8px 0' }} />
+          <div className="hidden md:block" style={{ borderTop: '1px solid var(--ph-border)', margin: '8px 0' }} />
           <button
+            className="shrink-0 whitespace-nowrap"
             onClick={handleLogout}
             style={{
               display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
@@ -517,7 +522,7 @@ function MyPageContent() {
         </nav>
 
         {/* ── 컨텐츠 영역 ── */}
-        <div>
+        <div className="min-w-0">
           {userLoadError ? (
             <div style={{ padding: '60px 0', textAlign: 'center' }}>
               <p style={{ fontSize: 15, color: 'var(--ph-text-secondary)', marginBottom: 20 }}>
